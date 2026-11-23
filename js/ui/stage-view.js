@@ -15,10 +15,26 @@ import { cableHue, portLabel } from "./patch-view.js";
 import { figureSvg } from "./listen-bar.js";
 import { listenGroupOf } from "../mixer-state.js";
 import { sourceName } from "../names.js";
+import { t as translate } from "../i18n/index.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const DIR = { right: [1, 0], left: [-1, 0], down: [0, 1], up: [0, -1] };
 const PLUG_LEN = 15;
+const stageText = (label) => ({
+  "On stage": translate("ui.stageOn", label),
+  sources: translate("ui.stageSources", label),
+  "On stage · sub snake": translate("ui.stageSub", label),
+  "stage end → tails": translate("ui.stageSubDesc", label),
+  "Stage side · stage box": translate("ui.stageBox", label),
+  "one cable to FOH": translate("ui.stageBoxDesc", label),
+  "FOH · wireless rack": translate("ui.fohRack", label),
+  "beside the console": translate("ui.fohRackDesc", label),
+  "FOH · console": translate("ui.fohConsole", label),
+  "rear panel, and the computer": translate("ui.fohConsoleDesc", label),
+  "Stage side · amp racks & outboard": translate("ui.ampRack", label),
+  "Speakers & cameras": translate("ui.speakersCameras", label),
+  "stage and house": translate("ui.stageHouse", label),
+}[label] || label);
 
 // The plug a cable has on the end that goes into this jack (for drawing only).
 function plugKind(cableId, jack) {
@@ -74,8 +90,8 @@ export class StageView {
     this.selected = null;
     this.drag = null;
     root.innerHTML = `<div class="stage-gear" hidden></div><div class="stage-scroll"><div class="stage-canvas"></div></div>
-      <div class="stage-help"><span>Tap a jack to patch it, or drag from one jack to another. Drag a plugged-in jack to move its cable. Tap a box for its details.</span>
-        <span class="stage-legend"><i class="lg lg-signal"></i>signal <i class="lg lg-speaker"></i>speaker level <i class="lg lg-network"></i>network</span></div>
+      <div class="stage-help"><span>${translate("ui.stageHelp", "Tap a jack to patch it, or drag from one jack to another. Drag a plugged-in jack to move its cable. Tap a box for its details.")}</span>
+        <span class="stage-legend"><i class="lg lg-signal"></i>${translate("ui.signal", "signal")} <i class="lg lg-speaker"></i>${translate("ui.speakerLevel", "speaker level")} <i class="lg lg-network"></i>${translate("ui.network", "network")}</span></div>
       <div class="stage-inspector" aria-live="polite"></div>`;
     this.canvas = root.querySelector(".stage-canvas");
     this.inspector = root.querySelector(".stage-inspector");
@@ -186,7 +202,7 @@ export class StageView {
     // Column headings and faint bands.
     for (const c of L.columns) {
       parts.push(`<g class="col col-${c.id} zone-${c.zone || "stage"}"><rect class="col-band" x="${c.x - 10}" y="4" width="${c.w + 20}" height="${L.height - 4}" rx="14"/>
-        <text class="col-label" x="${c.x}" y="22">${esc(c.label.toUpperCase())}</text>${c.sub ? `<text class="col-sub" x="${c.x}" y="36">${esc(c.sub)}</text>` : ""}</g>`);
+        <text class="col-label" x="${c.x}" y="22">${esc(stageText(c.label).toUpperCase())}</text>${c.sub ? `<text class="col-sub" x="${c.x}" y="36">${esc(stageText(c.sub))}</text>` : ""}</g>`);
     }
     // Racks: one frame around each rack's gear (the amp rack, the hall's mains rack).
     for (const r of L.racks || []) parts.push(`<g class="rack-frame"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="10"/><text x="${r.x + 10}" y="${r.y + 17}">${esc(r.title.toUpperCase())}</text></g>`);

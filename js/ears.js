@@ -1,3 +1,5 @@
+import { t as translate } from "./i18n/index.js";
+
 // Which mix a scenario wants the student to hear, and whether to nudge them
 // toward it. Students who understand sends still miss that the listen control
 // ("Your ears") picks what they hear, so a wedge scenario heard from Main
@@ -37,6 +39,6 @@ export function earsNudge(def, listen) {
 // The nudge's words. `about`: what the mix feeds ("the singer's wedge"), or
 // null when it reaches no speaker yet; `target` / `current`: listen labels.
 export function earsNudgeText({ about, target, current }) {
-  if (!about) return `This one's about ${target}. It doesn't reach a speaker yet: once it does, switch Your ears to ${target} to hear it.`;
-  return `This one's about ${about}. You're hearing ${current}: switch Your ears to ${target} to hear what's in it.`;
+  if (!about) return translate("ui.earsNudgeNoSpeaker", `This one's about ${target}. It doesn't reach a speaker yet: once it does, switch Your ears to ${target} to hear it.`, { target });
+  return translate("ui.earsNudgeSwitch", `This one's about ${about}. You're hearing ${current}: switch Your ears to ${target} to hear what's in it.`, { about, current, target });
 }

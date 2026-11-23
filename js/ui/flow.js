@@ -3,6 +3,7 @@
 // enable (MUTE/ON) switch only affects the Main path.
 
 import { COMPACT } from "../compact-defs.js";
+import { t as translate } from "../i18n/index.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -21,43 +22,43 @@ export function renderFlow(root, skin) {
   const enableWord = c.litWhenEnabled ? `${c.label} (lit = in Main)` : `${c.label} (lit = out of Main)`;
   root.innerHTML = `
     <details class="flow">
-      <summary>How the signal flows on ${esc(skin.name)}</summary>
+      <summary>${esc(translate("ui.signalFlowOn", `How the signal flows on ${skin.name}`, { skin: skin.name }))}</summary>
       <div class="flow-body">
         <ol class="flow-trunk" aria-label="Every channel">
-          <li class="flow-node">Source</li>
-          <li class="flow-node">${esc(t.gain)} <small>preamp</small></li>
-          <li class="flow-node">Meter</li>
-          <li class="flow-split">splits four ways</li>
+          <li class="flow-node">${esc(translate("ui.source", "Source"))}</li>
+          <li class="flow-node">${esc(t.gain)} <small>${esc(translate("ui.preamp", "preamp"))}</small></li>
+          <li class="flow-node">${esc(translate("ui.meter", "Meter"))}</li>
+          <li class="flow-split">${esc(translate("ui.splitFour", "splits four ways"))}</li>
         </ol>
         <div class="flow-branches">
-          <ol class="flow-branch branch-main" aria-label="Main path">
+          <ol class="flow-branch branch-main" aria-label="${esc(translate("ui.mainPath", "Main path"))}">
             <li class="flow-node">${esc(enableWord)}</li>
             <li class="flow-node">${esc(t.levelShort)}</li>
             <li class="flow-node">${esc(t.pan)}</li>
-            <li class="flow-node">Main L/R bus → ${esc(t.mainShort)} master</li>
-            <li class="flow-node flow-end">House speakers</li>
+            <li class="flow-node">${esc(translate("ui.mainBus", "Main L/R bus"))} → ${esc(t.mainShort)} master</li>
+            <li class="flow-node flow-end">${esc(translate("ui.houseSpeakers", "House speakers"))}</li>
           </ol>
-          <ol class="flow-branch branch-aux" aria-label="Monitor path 1">
-            <li class="flow-node">${esc(t.aux1)} send <small>pre-fader</small></li>
+          <ol class="flow-branch branch-aux" aria-label="${esc(translate("ui.monitorPath1", "Monitor path 1"))}">
+            <li class="flow-node">${esc(t.aux1)} send <small>${esc(translate("ui.preFader", "pre-fader"))}</small></li>
             <li class="flow-node">${esc(t.aux1)} bus → ${esc(t.aux1Master)}</li>
-            <li class="flow-node flow-end">A wedge (e.g. the singer's)</li>
+            <li class="flow-node flow-end">${esc(translate("ui.wedge", "A wedge"))}</li>
           </ol>
-          <ol class="flow-branch branch-aux" aria-label="Monitor path 2">
-            <li class="flow-node">${esc(t.aux2)} send <small>pre-fader</small></li>
+          <ol class="flow-branch branch-aux" aria-label="${esc(translate("ui.monitorPath2", "Monitor path 2"))}">
+            <li class="flow-node">${esc(t.aux2)} send <small>${esc(translate("ui.preFader", "pre-fader"))}</small></li>
             <li class="flow-node">${esc(t.aux2)} bus → ${esc(t.aux2Master)}</li>
-            <li class="flow-node flow-end">Another wedge (e.g. the drummer's)</li>
+            <li class="flow-node flow-end">${esc(translate("ui.anotherWedge", "Another wedge (e.g. the drummer's)"))}</li>
           </ol>
-          <ol class="flow-branch branch-pfl" aria-label="Headphone path">
-            <li class="flow-node">${esc(t.pfl)} <small>pre-fader</small></li>
+          <ol class="flow-branch branch-pfl" aria-label="${esc(translate("ui.headphonePath", "Headphone path"))}">
+            <li class="flow-node">${esc(t.pfl)} <small>${esc(translate("ui.preFader", "pre-fader"))}</small></li>
             <li class="flow-node">${esc(t.phones)} level</li>
-            <li class="flow-node flow-end">Engineer's headphones</li>
+            <li class="flow-node flow-end">${esc(translate("ui.engineerHeadphones", "Engineer's headphones"))}</li>
           </ol>
         </div>
         <ul class="flow-notes">
-          <li><strong>${esc(t.gain)}</strong> changes everything after it: meter, Main, ${esc(t.aux1)}, ${esc(t.aux2)} and PFL.</li>
-          <li>The <strong>${esc(t.levelShort)}</strong> and <strong>${esc(c.label)}</strong> only change the Main (audience) path. In this lab the ${esc(t.aux1)} and ${esc(t.aux2)} sends and PFL are taken <em>before</em> them, so a muted channel can still be in the wedges. Real mixers vary — check yours.</li>
-          <li>Each monitor bus is its own mix: the same channel can be loud in one wedge and quiet in the other.</li>
-          <li>The mixer's outputs are line level. A speaker only makes sound if an amplifier is somewhere in the chain: inside it (powered) or in front of it (passive + power amp).</li>
+          <li>${esc(translate("ui.genericNoteGain", "changes everything after it: meter, Main, {aux1} and {aux2} and PFL.", { aux1: t.aux1, aux2: t.aux2 }))}</li>
+          <li>${esc(translate("ui.genericNoteLevel", "The {level} and {enable} only change the Main (audience) path. In this lab the {aux1} and {aux2} sends and PFL are taken before them, so a muted channel can still be in the wedges. Real mixers vary — check yours.", { level: t.levelShort, enable: c.label, aux1: t.aux1, aux2: t.aux2 }))}</li>
+          <li>${esc(translate("ui.genericNoteBus", "Each monitor bus is its own mix: the same channel can be loud in one wedge and quiet in the other."))}</li>
+          <li>${esc(translate("ui.genericNoteOutput", "The mixer's outputs are line level. A speaker only makes sound if an amplifier is somewhere in the chain: inside it (powered) or in front of it (passive + power amp)."))}</li>
         </ul>
       </div>
     </details>`;

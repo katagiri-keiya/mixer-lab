@@ -28,6 +28,9 @@ import { DanteView } from "./ui/dante-view.js";
 import { LogicView } from "./ui/logic-view.js";
 import { recordingMac } from "./recording.js";
 import { StageView } from "./ui/stage-view.js";
+import { initLanguage, language, localizeDom, onLanguageChange, setLanguage, t } from "./i18n/index.js";
+
+initLanguage();
 
 // What the views and the engine read: always the song that's on stage (manifest.useSong).
 const M = {
@@ -44,6 +47,32 @@ const M = {
   VOICES: manifest.VOICES,
 };
 const $ = (sel) => document.querySelector(sel);
+
+const languageButton = () => $("[data-language-toggle]");
+function renderLanguageButton() {
+  const button = languageButton();
+  if (!button) return;
+  button.textContent = t("ui.language", language() === "ja" ? "English" : "日本語");
+  button.setAttribute("aria-label", language() === "ja" ? "Switch to English" : "日本語に切り替え");
+}
+document.addEventListener("click", (event) => {
+  if (event.target.closest("[data-language-toggle]")) setLanguage(language() === "ja" ? "en" : "ja");
+});
+renderLanguageButton();
+document.documentElement.lang = language();
+localizeDom(document);
+let localizationQueued = false;
+const localizationObserver = new MutationObserver((records) => {
+  if (localizationQueued) return;
+  localizationQueued = true;
+  requestAnimationFrame(() => {
+    localizationQueued = false;
+    for (const record of records) {
+      if (record.target?.nodeType === Node.ELEMENT_NODE) localizeDom(record.target);
+    }
+  });
+});
+localizationObserver.observe(document.body, { childList: true, subtree: true });
 
 let skin = SKINS[DEFAULT_SKIN];
 // Three ways in: "topic" (the scenario picks the console), "mixer" (you pick
@@ -190,6 +219,27 @@ const listenBar = new ListenBar($("#listen-bar"), {
 
 renderFlow($("#flow"), skin);
 
+function refreshLocalizedViews() {
+  const scroll = new Map([
+    [$("#region-patch"), $("#region-patch")?.scrollTop || 0],
+    [$("#stage"), $("#stage")?.scrollTop || 0],
+    [$("#flow"), $("#flow")?.scrollTop || 0],
+  ]);
+  document.documentElement.lang = language();
+  renderLanguageButton();
+  localizeDom(document);
+  if (current?.def) missionView.render(current.def, evaluateNow(), { skinId: skin.id, mode });
+  if (lastMix) {
+    patchView.render(lastMix);
+    stageView.render(lastMix);
+    renderFlow($("#flow"), skin);
+  }
+  listenBar.render();
+  if (lastMix) listenBar.update(lastMix, { playing: engine.playing, ready, loadingText, buffering });
+  for (const [el, top] of scroll) if (el) el.scrollTop = top;
+}
+onLanguageChange(refreshLocalizedViews);
+
 // ---------- state changes ----------
 
 store.subscribe((state, change) => {
@@ -237,7 +287,7 @@ function refresh() {
       lastEval = key;
       if (result.complete) progress.add(current.def.id);
       missionView.update(result);
-      if (result.complete && !wasComplete) toast(`Solved: ${current.def.title}`, "ok");
+      if (result.complete && !wasComplete) toast(`${t("ui.solved", "Solved ✓")}: ${current.def.title}`, "ok");
     }
   }
   pending.any = false;
@@ -269,7 +319,7 @@ function undoLast() {
   undo.key = "";
   store.replace(prev);
   lastEval = "";
-  toast("Undone", "");
+  toast(t("ui.undo", "Undone"), "");
 }
 function resetUndo() {
   undo.stack = [];

@@ -32,6 +32,7 @@
     <button type="button" class="canvas-btn" data-open-canvas aria-label="Export to Canvas">
       <span>Canvas</span>
     </button>
+    <button type="button" class="canvas-btn language-btn" data-language-toggle aria-label="Change language">日本語</button>
     <div id="mission-dock" class="mission-dock" aria-label="Current scenario" hidden></div>
   </header>
 
@@ -84,10 +85,10 @@
         <h2 class="region-title" id="patch-title-main">Stage &amp; patch <small>Signal flows left to right: sources → console → amps and speakers.</small></h2>
         <div id="stage"></div>
         <details class="patch-lists-wrap">
-          <summary>Everything as a list <small>every input and output, with what it's plugged into</small></summary>
+          <summary><span data-i18n="ui.everythingAsList">Everything as a list</span> <small data-i18n="ui.listExplanation">every input and output, with what it's plugged into</small></summary>
         <div class="patch-lists">
           <section class="patch-col" aria-labelledby="sources-title">
-            <h3 class="patch-col-title" id="sources-title"><span class="flow-step">IN</span> Inputs <small>sources on stage</small></h3>
+            <h3 class="patch-col-title" id="sources-title"><span class="flow-step">IN</span> Inputs <small data-i18n="ui.sourcesOnStage">sources on stage</small></h3>
             <div id="sources"></div>
           </section>
           <section class="patch-col" aria-labelledby="outputs-title">

@@ -2266,6 +2266,14 @@ dialog::backdrop {
   color: var(--text-dim);
   writing-mode: vertical-rl;
   transform: rotate(180deg);
+  max-width: 7em;
+  overflow-wrap: anywhere;
+}
+:lang(ja) .listen-label {
+  writing-mode: horizontal-tb;
+  transform: none;
+  white-space: nowrap;
+  letter-spacing: 0.04em;
 }
 .ears-map {
   width: 300px;

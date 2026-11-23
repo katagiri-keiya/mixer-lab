@@ -6,8 +6,10 @@ import { earsTarget, earsNudge, earsNudgeText } from "../js/ears.js";
 import { ALL_BOARD_SCENARIOS, SCENARIOS, SCENARIOS_BY_ID, buildScenarioState } from "../js/scenarios.js";
 import { listenDestinations } from "../js/mixer-state.js";
 import { DEFAULT_SONG, SOURCES_BY_ID, useSong } from "../audio/source-manifest.js";
+import { setLanguage } from "../js/i18n/index.js";
 
 const BOARD = Object.fromEntries(ALL_BOARD_SCENARIOS.map((s) => [s.id, s]));
+setLanguage("en");
 
 describe("earsTarget", () => {
   it("finds the wedge in the scenarios students got stuck on", () => {

@@ -10,6 +10,7 @@
 import { MeterView } from "../meters.js";
 import { listenDestinations, listenGroupOf, modelOf } from "../mixer-state.js";
 import { earsNudge, earsNudgeText } from "../ears.js";
+import { t as translate } from "../i18n/index.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const GENERIC = ["main", "aux1", "aux2", "pfl"];
@@ -82,8 +83,8 @@ export class ListenBar {
   render() {
     this.root.innerHTML = `
       <div class="ears">
-        <span class="listen-label" aria-hidden="true">Your ears</span>
-        <svg class="ears-map" viewBox="0 0 ${MAP_W} ${MAP_H}" role="radiogroup" aria-label="Where are you listening from?"></svg>
+        <span class="listen-label" aria-hidden="true">${translate("ui.earsLabel", "Your ears")}</span>
+        <svg class="ears-map" viewBox="0 0 ${MAP_W} ${MAP_H}" role="radiogroup" aria-label="${esc(translate("ui.ariaListenFrom", "Where are you listening from?"))}"></svg>
       </div>
       <div class="listen-now">
         <div class="ears-nudge-box" role="status" hidden>
@@ -94,7 +95,7 @@ export class ListenBar {
         <p class="listen-msg" aria-live="polite"></p>
       </div>
       <button type="button" class="transport btn" disabled>…</button>`;
-    this.meter = new MeterView({ orientation: "horizontal", label: "What you hear", showText: false });
+    this.meter = new MeterView({ orientation: "horizontal", label: translate("ui.meter", "What you hear"), showText: false });
     this.meter.el.classList.add("listen-meter");
     this.root.querySelector(".ears-where").after(this.meter.el);
     this.map = this.root.querySelector(".ears-map");
@@ -114,17 +115,17 @@ export class ListenBar {
   placesFor(dests, ends, patchedEnds, devices, sub, dead) {
     const name = (id) => devices.get(id)?.short || devices.get(id)?.label || id;
     const where = (d) => {
-      if (d === "pfl" || d === "phones") return { kind: "desk", place: "Engineer's headphones" };
-      if (d === "rec") return { kind: "desk", place: "Recorder headphones" };
+      if (d === "pfl" || d === "phones") return { kind: "desk", place: translate("ui.engineerHeadphones", "Engineer's headphones") };
+      if (d === "rec") return { kind: "desk", place: translate("ui.recorderHeadphones", "Recorder headphones") };
       const eps = ends[d]?.length ? ends[d] : patchedEnds[d] || [];
-      if (!eps.length) return { kind: "nowhere", place: `${this.label(d)}: no speaker` };
+      if (!eps.length) return { kind: "nowhere", place: translate("ui.noSpeaker", `${this.label(d)}: no speaker`, { label: this.label(d) }) };
       const zone = eps[0].zone;
       const pan = eps.reduce((a, e) => a + (e.pan || 0), 0) / eps.length;
-      if (d === "main") return { kind: "audience", place: "In the audience", pan };
-      if (zone === "stage") return { kind: "stage", place: `At the ${eps.map((e) => name(e.deviceId)).join(" + ")}`, pan };
-      if (zone === "cam") return { kind: "side", place: `At the ${name(eps[0].deviceId)}`, pan };
-      if (zone === "lobby") return { kind: "side", place: "In the lobby", pan };
-      return { kind: "front", place: `Near the ${name(eps[0].deviceId)}`, pan };
+      if (d === "main") return { kind: "audience", place: translate("ui.inAudience", "In the audience"), pan };
+      if (zone === "stage") return { kind: "stage", place: translate("ui.atPlace", `At the ${eps.map((e) => name(e.deviceId)).join(" + ")}`, { place: eps.map((e) => name(e.deviceId)).join(" + ") }), pan };
+      if (zone === "cam") return { kind: "side", place: translate("ui.atPlace", `At the ${name(eps[0].deviceId)}`, { place: name(eps[0].deviceId) }), pan };
+      if (zone === "lobby") return { kind: "side", place: translate("ui.inLobby", "In the lobby"), pan };
+      return { kind: "front", place: translate("ui.nearPlace", `Near the ${name(eps[0].deviceId)}`, { place: name(eps[0].deviceId) }), pan };
     };
     const places = dests.map((d) => ({ dest: d, label: this.label(d), sub: sub(d), dead: dead(d), ...where(d), deviceIds: (ends[d] || []).map((e) => e.deviceId) }));
     // Spread the spots of each kind so two wedges never stand on each other.
@@ -174,10 +175,10 @@ export class ListenBar {
       })
       .join("");
     this.map.innerHTML = `
-      <rect class="map-stage" x="40" y="2" width="200" height="27" rx="4"/><text class="map-word" x="140" y="9" text-anchor="middle">STAGE</text>
-      <text class="map-word" x="140" y="${MAP_H - 2}" text-anchor="middle">AUDIENCE</text>
-      <rect class="map-desk" x="182" y="58" width="44" height="10" rx="2"/><text class="map-word" x="230" y="66">DESK</text>
-      ${this.places.some((p) => p.kind === "nowhere") ? `<text class="map-word" x="2" y="36">SILENT</text>` : ""}
+      <rect class="map-stage" x="40" y="2" width="200" height="27" rx="4"/><text class="map-word" x="140" y="9" text-anchor="middle">${esc(translate("ui.mapStage", "STAGE"))}</text>
+      <text class="map-word" x="140" y="${MAP_H - 2}" text-anchor="middle">${esc(translate("ui.mapAudience", "AUDIENCE"))}</text>
+      <rect class="map-desk" x="182" y="58" width="44" height="10" rx="2"/><text class="map-word" x="230" y="66">${esc(translate("ui.mapDesk", "DESK"))}</text>
+      ${this.places.some((p) => p.kind === "nowhere") ? `<text class="map-word" x="2" y="36">${esc(translate("ui.mapSilent", "SILENT"))}</text>` : ""}
       ${scenery}${spots}`;
   }
 
@@ -220,10 +221,10 @@ export class ListenBar {
     };
     const rec = recDev ? recorderText(recDev, this.getRecorder(), mix.rig.recorders?.[recDev.id]) : null;
     const sub = (d) => {
-      if (d === "pfl") return pfls.length ? `Ch ${pfls.join(", ")}` : "no PFL pressed";
+      if (d === "pfl") return pfls.length ? `Ch ${pfls.join(", ")}` : translate("ui.noPfl", "no PFL pressed");
       if (d === "phones") return phonesText();
       if (d === "rec") return rec.sub;
-      return ends[d]?.length ? names(ends[d]) : "no working speaker";
+      return ends[d]?.length ? names(ends[d]) : translate("ui.noWorkingSpeaker", "no working speaker");
     };
     const dead = (d) => (d === "pfl" ? !pfls.length : d === "phones" ? !phones.solo && (phones.selector ? phones.selector === "OFF" : !phones.sources.length) : d === "rec" ? rec.dead : !ends[d]?.length);
 
@@ -252,39 +253,39 @@ export class ListenBar {
       this.nudgeBtn.hidden = !nudge || !ends[nudge.dest]?.length;
       if (nudge) {
         this.nudgeBtn.dataset.earsSwitch = nudge.dest;
-        this.nudgeBtn.textContent = `Listen to ${this.label(nudge.dest)}`;
+        this.nudgeBtn.textContent = translate("ui.listenTo", `Listen to ${this.label(nudge.dest)}`, { label: this.label(nudge.dest) });
       }
     }
 
     const dest = state.listen;
     const here = this.places.find((p) => p.dest === dest);
-    const whereText = here ? `${here.place} · ${here.label}${here.dead ? " (silent)" : ""}` : this.label(dest);
+    const whereText = here ? `${here.place} · ${here.label}${here.dead ? ` (${translate("ui.silent", "silent")})` : ""}` : this.label(dest);
     if (this.where.textContent !== whereText) this.where.textContent = whereText;
 
     const busName = dest === "main" ? (real ? "the MAIN mix" : "Main L/R") : t[dest] || dest;
     let msg;
     if (dest === "rec" && this.getRecorder()?.playing) msg = rec.msg; // a take plays even with the band stopped
-    else if (!ready) msg = loadingText || "Loading…";
-    else if (!playing) msg = "Playback stopped.";
-    else if (buffering) msg = "Buffering the next part of the song…";
-    else if (dest === "pfl") msg = pfls.length ? `Engineer's headphones: PFL on Ch ${pfls.join(", ")} (before the ${t.levelShort.toLowerCase()}).` : "Headphones are quiet: press PFL on a channel to hear it here.";
+    else if (!ready) msg = loadingText || translate("ui.loading", "Loading…");
+    else if (!playing) msg = translate("ui.playbackStopped", "Playback stopped.");
+    else if (buffering) msg = translate("ui.buffering", "Buffering the next part of the song…");
+    else if (dest === "pfl") msg = pfls.length ? translate("ui.pflHeadphones", `Engineer's headphones: PFL on Ch ${pfls.join(", ")} (before the ${t.levelShort.toLowerCase()}).`, { channels: `Ch ${pfls.join(", ")}`, level: t.levelShort.toLowerCase() }) : translate("ui.pflQuiet", "Headphones are quiet: press PFL on a channel to hear it here.");
     else if (dest === "phones") msg = phonesMessage(phones, t);
     else if (dest === "rec") msg = rec.msg;
     else if (ends[dest]?.length) {
-      msg = `Hearing ${busName} through the ${names(ends[dest])}.`;
+      msg = translate("ui.hearing", `Hearing ${busName} through the ${names(ends[dest])}.`, { bus: busName, speakers: names(ends[dest]) });
       // A camera input whose MIC/LINE switch doesn't match what it's fed.
       for (const e of ends[dest].filter((e) => e.camera && e.status !== "ok")) msg += ` ${short(e)}: ${e.status === "hot" ? "distorting, its MIC input is fed line level" : "too quiet, its LINE input is fed mic level"}.`;
       // A speaker behind a line mixer set to MIC (BH 109).
       for (const e of ends[dest].filter((e) => !e.camera && e.hotWhy)) msg += ` ${short(e)}: distorting, ${e.hotWhy}.`;
     }
-    else msg = `Silence: ${busName} doesn't reach a working speaker. Check Stage & patch.`;
+    else msg = translate("ui.silence", `Silence: ${busName} doesn't reach a working speaker. Check Stage & patch.`, { bus: busName });
     if (msg !== this.lastMsg) {
       this.msg.textContent = msg;
       this.lastMsg = msg;
     }
     this.transport.disabled = !ready;
     this.transport.textContent = playing ? "■ Stop" : "▶ Play";
-    this.transport.setAttribute("aria-label", playing ? "Stop the band" : "Play the band");
+    this.transport.setAttribute("aria-label", playing ? translate("ui.ariaStopBand", "Stop the band") : translate("ui.ariaPlayBand", "Play the band"));
     this.transport.classList.toggle("btn-start", !playing);
     this.transport.classList.toggle("btn-stop", playing);
   }

@@ -1,0 +1,5 @@
+import { commonEn } from "./common.js";
+export const en = {
+  ui: { language: "English", goal: "Goal:", hint: "Hint", needHint: "Need a hint?", anotherHint: (n, total) => `Another hint (${n} of ${total})`, keep: "Keep:", solved: "Solved ✓", next: "Next:", startOver: "Start over", less: "Less", aboutTopic: "About this topic & the music", quickCheck: "Quick check (optional):", right: "Right.", notQuite: "Not quite.", done: "done", keepBroken: "That broke something you had to keep.", changedSince: "You've changed things since: the checklist shows what's true right now.", stageOn: "On stage", stageSources: "sources", stageSub: "On stage · sub snake", stageSubDesc: "stage end → tails", stageBox: "Stage side · stage box", stageBoxDesc: "one cable to FOH", fohRack: "FOH · wireless rack", fohRackDesc: "beside the console", fohConsole: "FOH · console", fohConsoleDesc: "rear panel, and the computer", ampRack: "Stage side · amp racks & outboard", speakersCameras: "Speakers & cameras", stageHouse: "stage and house" },
+  common: commonEn,
+};
