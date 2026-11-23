@@ -39,7 +39,7 @@ import { nameMode, sourceName } from "../names.js";
 import { dvsRunning } from "../dante.js";
 import { isRecordingMac, logicTracks } from "../recording.js";
 import { count } from "../submission.js";
-import { t as translate } from "../i18n/index.js";
+import { localized, t as translate } from "../i18n/index.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -48,9 +48,12 @@ export const cableHue = (id) => CABLE_HUES[[...id].reduce((a, c) => a + c.charCo
 
 const LEVEL_SHORT = { mic: "Mic level", instrument: "Instrument level", line: "Line level", speaker: "Speaker level", "mic-or-line": "Mic (XLR) or line (¼″)", any: "Passes whatever is plugged in at the other end", rf: "RF (antenna)" };
 const connectorKey = { "xlr-m": "xlrMale", "xlr-f": "xlrFemale", trs14: "trs14", ts14: "ts14", trs35: "trs35", rca: "rca", speakon: "speakon", ethercon: "ethercon", iec: "iec" };
-const connectorText = (name, field, fallback) => translate(`ui.connectors.${connectorKey[name]}.${field}`, fallback);
-const cableText = (id, field, fallback) => translate(`ui.cables.${id}.${field}`, fallback);
-const gearText = (value) => translate(`ui.gear.${value}`, value);
+const connectorText = (name, field, fallback) => localized("connectors", connectorKey[name], field, fallback);
+const cableText = (id, field, fallback) => localized("cables", id, field, fallback);
+const gearText = (value) => localized("gear", value, "", value);
+const gearTypeText = (id, field, fallback) => localized("gearById", id, field, fallback);
+const sourceText = (source, field, fallback = source?.[field] || "") => localized("sources", source?.id, field, fallback);
+const connectionMessage = (message) => message === "Line level can't drive a passive speaker — there's no amplifier. Put a power amp in between, or use a powered speaker." ? translate("ui.passiveNeedsAmp", message) : message;
 const displayDevice = (value) => value === "Laptop · Preshow Music" ? gearText("preshowLaptop") : value === "Powered speaker · house left" ? `${gearText("poweredSpeaker")} · ${gearText("houseLeft")}` : value === "Powered speaker · house right" ? `${gearText("poweredSpeaker")} · ${gearText("houseRight")}` : gearText(value);
 const inputText = (key, fallback, vars = {}) => translate(`ui.${key}`, fallback, vars);
 const connectionReason = (reason) => {
@@ -204,15 +207,15 @@ export class PatchView {
       const listNo = model === "generic" ? (own && !!own.stereo === !!src.stereo ? own.label : chInfo ? state.channels[chInfo.index].label : "—") : model === "cr1604" && src.stereo ? "TAPE" : chInfo ? state.channels[chInfo.index].label : "—";
       const note =
         model === "cr1604" && src.stereo
-          ? "A laptop's 3.5 mm headphone jack is a stereo line output. On the 1604 it goes into the TAPE INPUT RCA pair with a 3.5 mm ↔ RCA (Y) cable, then TAPE TO MAIN MIX puts it in the house."
+          ? sourceText(src, "noteCr1604", "A laptop's 3.5 mm headphone jack is a stereo line output. On the 1604 it goes into the TAPE INPUT RCA pair with a 3.5 mm ↔ RCA (Y) cable, then TAPE TO MAIN MIX puts it in the house.")
           : model !== "generic" && src.stereo
-            ? "A laptop's 3.5 mm headphone jack is a stereo line output: a stereo line channel or the tape input takes it, with a breakout, RCA (Y) or 3.5 mm cable to suit the jacks."
-          : d.sourceId === "preshow" ? gearText("preshowNote") : src.note;
+            ? sourceText(src, "noteStereo", "A laptop's 3.5 mm headphone jack is a stereo line output: a stereo line channel or the tape input takes it, with a breakout, RCA (Y) or 3.5 mm cable to suit the jacks.")
+            : sourceText(src, "note", d.sourceId === "preshow" ? gearText("preshowNote") : src.note);
       return this.card(d.id, `<li class="source-card status-${status}">
         <div class="source-top">
           <span class="source-order" aria-label="Input list number">${esc(listNo)}</span>
           <span class="dev-ico">${icon(deviceIconName(d), { size: 40 })}</span>
-          <div class="source-names"><strong>${esc(displayDevice(sourceName(src)))}</strong><span>${nameMode() === "musicians" && src.musician ? `${esc(src.name)} · ` : ""}${esc(gearText(src.device))}</span></div>
+          <div class="source-names"><strong>${esc(displayDevice(nameMode() === "musicians" && src.musician ? src.name : sourceText(src, "name", sourceName(src))))}</strong><span>${nameMode() === "musicians" && src.musician ? `${esc(src.name)} · ` : ""}${esc(sourceText(src, "device", gearText(src.device)))}</span></div>
           <span class="status-pill status-${status}">${pill}</span>
         </div>
         <div class="tags">${tags}</div>
@@ -459,7 +462,7 @@ export class PatchView {
       .map((d) => {
         const type = DEVICE_TYPES[d.type];
         return this.card(d.id, `<li class="device-card" data-device-card="${esc(d.id)}">
-        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span><div class="source-names"><strong>${esc(displayDevice(d.label || type.name))}</strong><span>${esc(gearText(type.blurb))}</span></div></div>
+        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span><div class="source-names"><strong>${esc(d.label ? displayDevice(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${esc(gearTypeText(d.type, "blurb", type.blurb || ""))}</span></div></div>
         ${type.receiver ? receiverHtml(rig, d, this.manifest.SOURCES_BY_ID) : ""}
         ${type.console ? "" : knobsHtml(d)}
         ${powerHtml(rig, d)}
@@ -470,14 +473,14 @@ export class PatchView {
       .join("");
 
     const speakers = rig.devices.filter((d) => DEVICE_TYPES[d.type].endpoint);
-    const zoneName = { foh: gearText("houseAudience"), stage: "Stage (performers)" };
+    const zoneName = { foh: gearText("houseAudience"), stage: translate("ui.stagePerformers", "Stage (performers)") };
     const spkHtml = speakers
       .map((d) => {
         const type = DEVICE_TYPES[d.type];
         const ep = endpoints.get(d.id);
         const status = ep.status === "off" ? "idle" : ep.valid ? (ep.status === "ok" && !ep.cableWarn ? "ok" : "warn") : ep.status === "unpatched" ? "idle" : ep.status === "danger" ? "bad" : "warn";
-        const statusText = ep.status === "off" ? `○ ${gearText("turnedDown")}: ${busName(ep.output)}` : ep.valid ? `${ep.cableWarn ? "⚠ Wrong cable" : ep.status === "hot" ? "⚠ Distorting" : ep.status === "weak" ? "⚠ Too quiet" : `✓ ${gearText("sound")}`}: ${busName(ep.output)}${ep.viaAmp ? " via amp" : ""}` : ep.status === "unpatched" ? "Silent" : ep.status === "danger" ? "✕ Danger" : `✕ ${gearText("noSound")}`;
-        const amp = type.camera ? "Records what it's fed" : type.amp === "internal" ? gearText("ampBuiltIn") : "Amp: none inside (passive)";
+        const statusText = ep.status === "off" ? `○ ${gearText("turnedDown")}: ${busName(ep.output)}` : ep.valid ? `${ep.cableWarn ? translate("ui.wrongCable", "⚠ Wrong cable") : ep.status === "hot" ? translate("ui.distorting", "⚠ Distorting") : ep.status === "weak" ? translate("ui.tooQuiet", "⚠ Too quiet") : `✓ ${gearText("sound")}`}: ${busName(ep.output)}${ep.viaAmp ? ` ${translate("ui.viaAmp", "via amp")}` : ""}` : ep.status === "unpatched" ? translate("ui.silent", "Silent") : ep.status === "danger" ? translate("ui.danger", "✕ Danger") : `✕ ${gearText("noSound")}`;
+        const amp = type.camera ? translate("ui.recordsFed", "Records what it's fed") : type.amp === "internal" ? gearText("ampBuiltIn") : translate("ui.ampNonePassive", "Amp: none inside (passive)");
         const settings = type.camera && d.type === "camera-input"
           ? `<div class="dev-settings"><label>INPUT <output data-readout="inputLevel">${d.inputLevel === 1 ? "LINE" : "MIC"}</output>
               <input type="range" min="0" max="1" step="1" value="${d.inputLevel ?? 0}" data-device="${esc(d.id)}" data-device-key="inputLevel" aria-label="${esc(d.label)} MIC/LINE switch" /></label></div>`
@@ -485,7 +488,7 @@ export class PatchView {
         return this.card(d.id, `<li class="device-card status-${status}" data-device-card="${esc(d.id)}">
           <div class="device-top">
             <span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span>
-            <div class="source-names"><strong>${esc(displayDevice(d.label))}</strong><span>${amp}${zoneName[d.zone] ? ` · ${zoneName[d.zone]}` : ""}</span></div>
+            <div class="source-names"><strong>${esc(d.label ? displayDevice(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${amp}${zoneName[d.zone] ? ` · ${zoneName[d.zone]}` : ""}</span></div>
             <span class="status-pill status-${status}">${statusText}</span>
           </div>
           ${listPorts(rig, d)
@@ -494,7 +497,7 @@ export class PatchView {
           ${settings}
           ${knobsHtml(d)}
           ${powerHtml(rig, d)}
-          ${ep.messages.map((m) => `<p class="port-msg">${esc(m)}</p>`).join("")}
+          ${ep.messages.map((m) => `<p class="port-msg">${esc(connectionMessage(m))}</p>`).join("")}
         </li>`);
       })
       .join("");
@@ -674,7 +677,7 @@ class PatchDialog {
     const farDir = p.dir === "out" ? "in" : "out";
     const speaker = c.kind === "speaker";
     return `<div class="pv-plugs"><span class="pv-near">${plugArt(ends.near, { into: p.dir, speaker, text: false })}</span><span class="pv-wire pv-wire-${c.kind}"></span><span class="pv-far">${plugArt(ends.far, { into: farDir, speaker })}</span></div>
-      <p class="pv-name"><strong>${esc(c.name)}</strong> <span>${esc(PLUGS[ends.near].name)} ⟷ ${esc(PLUGS[ends.far].name)}</span></p>`;
+      <p class="pv-name"><strong>${esc(cableText(cableId, "name", c.name))}</strong> <span>${esc(PLUGS[ends.near].name)} ⟷ ${esc(PLUGS[ends.far].name)}</span></p>`;
   }
 
   targetArt(ref) {
@@ -723,7 +726,7 @@ class PatchDialog {
       const ends = cableEndFor(c.id, a.jack);
       return `<button type="button" class="cable-card" data-act="pair-cable" data-cable="${c.id}">
         <span class="cable-art"><span class="ca-near">${icon(plugIconName(ends.near, a.dir), { size: 26 })}</span>${icon(c.kind === "speaker" ? "cable-speaker" : c.kind === "network" ? "cable-network" : "cable-signal", { size: 24 })}<span class="ca-far">${plugArt(ends.far, { into: b.dir, speaker: c.kind === "speaker" })}</span></span>
-        <strong>${esc(cableText(c.id, "name", c.name))}</strong>${c.kind === "speaker" ? '<span class="cable-kind">Speaker cable: speaker level only</span>' : ""}<span class="cable-plugs">${esc(PLUGS[ends.near].name)} ⟷ ${esc(PLUGS[ends.far].name)}</span><span class="cable-blurb">${esc(cableText(c.id, "blurb", c.blurb))}</span>
+        <strong>${esc(cableText(c.id, "name", c.name))}</strong>${c.kind === "speaker" ? `<span class="cable-kind">${translate("ui.speakerCableOnly", "Speaker cable: speaker level only")}</span>` : ""}<span class="cable-plugs">${esc(PLUGS[ends.near].name)} ⟷ ${esc(PLUGS[ends.far].name)}</span><span class="cable-blurb">${esc(cableText(c.id, "blurb", c.blurb))}</span>
       </button>`;
     };
     this.el.innerHTML = `<div class="patch-inner">
@@ -775,7 +778,7 @@ class PatchDialog {
       // The end that goes into this jack is the same on every fitting cable: greyed. The far end is what you're choosing.
       const pair = `<span class="cable-art"><span class="ca-near">${icon(plugIconName(near, p.dir), { size: 26 })}</span>${icon(c.kind === "speaker" ? "cable-speaker" : c.kind === "network" ? "cable-network" : "cable-signal", { size: 24 })}<span class="ca-far">${plugArt(far, { into: farDir, speaker: c.kind === "speaker" })}</span></span>`;
       return `<button type="button" class="cable-card" data-act="cable" data-cable="${c.id}">
-        ${pair}<strong>${esc(cableText(c.id, "name", c.name))}</strong>${c.kind === "speaker" ? '<span class="cable-kind">Speaker cable: speaker level only</span>' : ""}<span class="cable-plugs">${esc(plugs)}</span><span class="cable-blurb">${esc(cableText(c.id, "blurb", c.blurb))}</span>
+        ${pair}<strong>${esc(cableText(c.id, "name", c.name))}</strong>${c.kind === "speaker" ? `<span class="cable-kind">${translate("ui.speakerCableOnly", "Speaker cable: speaker level only")}</span>` : ""}<span class="cable-plugs">${esc(plugs)}</span><span class="cable-blurb">${esc(cableText(c.id, "blurb", c.blurb))}</span>
       </button>`;
     };
     this.el.innerHTML = `<div class="patch-inner">
@@ -783,7 +786,7 @@ class PatchDialog {
       ${this.visual()}
       <div class="cable-grid">${fits.map(card).join("")}</div>
       <details class="nofit"><summary>${translate("ui.noFit", `Cables that don't fit this ${JACKS[p.jack].name} jack (${nofit.length})`, { jack: JACKS[p.jack].name, count: nofit.length })}</summary>
-        <ul>${nofit.map((c) => `<li><strong>${esc(c.name)}</strong> — ${esc(PLUGS[c.ends[0]].name)} ⟷ ${esc(PLUGS[c.ends[1]].name)}</li>`).join("")}</ul>
+        <ul>${nofit.map((c) => `<li><strong>${esc(cableText(c.id, "name", c.name))}</strong> — ${esc(PLUGS[c.ends[0]].name)} ⟷ ${esc(PLUGS[c.ends[1]].name)}</li>`).join("")}</ul>
       </details>
     </div>`;
     const first = this.el.querySelector(".cable-card");

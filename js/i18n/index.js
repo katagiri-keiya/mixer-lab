@@ -12,10 +12,19 @@ import { cableEn, cableJa, gearEn, gearJa } from "./gear-ui.js";
 import { outputEn, outputJa } from "./output-ui.js";
 import { inputUiEn, inputUiJa } from "./input-ui.js";
 import { outputStatusEn, outputStatusJa } from "./output-status-ui.js";
-export const LANGUAGES = { ja: { ...ja, ui: { ...ja.ui, ...uiJa, ...patchUiJa, ...stageUiJa, ...flowJa, ...connectionJa, ...dialogJa, ...inputUiJa, ...outputStatusJa, cables: cableJa, gear: { ...gearJa, ...outputJa }, connectors: connectorJa }, common: { ...ja.common, ...commonExtraJa } }, en: { ...en, ui: { ...en.ui, ...uiEn, ...patchUiEn, ...stageUiEn, ...flowEn, ...connectionEn, ...dialogEn, ...inputUiEn, ...outputStatusEn, cables: cableEn, gear: { ...gearEn, ...outputEn }, connectors: connectorEn }, common: { ...en.common, ...commonExtraEn } } };
+import { scenarioTemplatesEn, scenarioTemplatesJa } from "./scenario-templates.js";
+import { canvasJa } from "./canvas-ja.js";
+import { stageGearEn, stageGearJa } from "./stage-gear-ui.js";
+import { stageTextEn, stageTextJa } from "./stage-text-ui.js";
+import { stageCableEn, stageCableJa } from "./stage-cable-ui.js";
+import { gearTypeJa } from "./gear-type-ja.js";
+import { flowModelEn, flowModelJa } from "./flow-model-ui.js";
+import { sourceEn, sourceJa } from "./source-ui.js";
+export const LANGUAGES = { ja: { ...ja, scenarios: { ...ja.scenarios, ...canvasJa }, ui: { ...ja.ui, ...uiJa, ...patchUiJa, ...stageUiJa, ...stageTextJa, ...flowJa, ...connectionJa, ...dialogJa, ...inputUiJa, ...outputStatusJa, cables: { ...cableJa, ...stageCableJa }, gear: { ...gearJa, ...outputJa, ...stageGearJa }, gearById: gearTypeJa, flowModels: flowModelJa, sources: sourceJa, connectors: connectorJa }, common: { ...ja.common, ...commonExtraJa } }, en: { ...en, ui: { ...en.ui, ...uiEn, ...patchUiEn, ...stageUiEn, ...stageTextEn, ...flowEn, ...connectionEn, ...dialogEn, ...inputUiEn, ...outputStatusEn, cables: { ...cableEn, ...stageCableEn }, gear: { ...gearEn, ...outputEn, ...stageGearEn }, gearById: {}, flowModels: flowModelEn, sources: sourceEn, connectors: connectorEn }, common: { ...en.common, ...commonExtraEn } } };
 export const LANGUAGE_KEY = "mixer-lab-language";
 let current = "ja";
 const listeners = new Set();
+const missingTranslations = new Map();
 const originalText = new WeakMap();
 const originalAttributes = new WeakMap();
 function readLanguage() { try { return localStorage.getItem(LANGUAGE_KEY); } catch (e) { return null; } }
@@ -26,8 +35,29 @@ export function onLanguageChange(listener) { listeners.add(listener); return () 
 export function initLanguage() { const saved = readLanguage(); current = LANGUAGES[saved] ? saved : "ja"; return current; }
 function get(object, path) { return path.split(".").reduce((value, key) => value?.[key], object); }
 export function t(key, fallback = key, vars = {}) { let value = get(LANGUAGES[current], key) ?? get(en, key) ?? fallback; if (typeof value === "function") value = value(vars.n, vars.total); return String(value).replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? `{${name}}`); }
-export function scenarioText(def, field, fallback = get(def, field) ?? "") { return t(`scenarios.${def?.id}.${field}`, fallback); }
-export function conditionText(def, id, fallback = "") { return t(`scenarios.${def?.id}.conditions.${id}`, fallback); }
+export function localized(kind, id, field, fallback = "", vars = {}) {
+  const key = `ui.${kind}.${id}${field ? `.${field}` : ""}`;
+  const value = get(LANGUAGES[current], key);
+  const english = get(en, key);
+  if (current === "ja" && value == null && english == null && fallback !== "") {
+    const diagnosticKey = `${kind}|${id}|${field}`;
+    if (!missingTranslations.has(diagnosticKey)) missingTranslations.set(diagnosticKey, { kind, id, field, key, fallback });
+  }
+  return t(key, fallback, vars);
+}
+export function getMissingTranslations() { return [...missingTranslations.values()]; }
+export function clearMissingTranslations() { missingTranslations.clear(); }
+function scenarioTemplateText(def, field) {
+  const template = def?.translationTemplate;
+  if (!template) return undefined;
+  return get(current === "ja" ? scenarioTemplatesJa : scenarioTemplatesEn, `${template}.${field}`) ?? get(scenarioTemplatesEn, `${template}.${field}`);
+}
+export function scenarioText(def, field, fallback = get(def, field) ?? "") {
+  return t(`scenarios.${def?.id}.${field}`, scenarioTemplateText(def, field) ?? fallback);
+}
+export function conditionText(def, id, fallback = "") {
+  return t(`scenarios.${def?.id}.conditions.${id}`, scenarioTemplateText(def, `conditions.${id}`) ?? fallback);
+}
 
 export function localizeDom(root = document) {
   const source = LANGUAGES[current]?.common || {};
