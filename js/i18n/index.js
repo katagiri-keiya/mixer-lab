@@ -47,6 +47,11 @@ export function localized(kind, id, field, fallback = "", vars = {}) {
 }
 export function getMissingTranslations() { return [...missingTranslations.values()]; }
 export function clearMissingTranslations() { missingTranslations.clear(); }
+export function sourceText(source, field, fallback = source?.[field] || "") {
+  if (!source) return fallback;
+  const variant = LANGUAGES[current].ui.sources[source.id]?.variants?.[source.name]?.[field];
+  return variant ?? localized("sources", source.id, field, fallback);
+}
 function scenarioTemplateText(def, field) {
   const template = def?.translationTemplate;
   if (!template) return undefined;

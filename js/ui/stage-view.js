@@ -372,6 +372,7 @@ export class StageView {
     const d = rig.devices.find((x) => x.id === b.deviceId);
     const type = DEVICE_TYPES[d.type];
     const st = b.kind === "source" || b.kind === "endpoint" ? status.devices.get(d.id) : null;
+    const src = d.sourceId ? this.manifest.SOURCES_BY_ID[d.sourceId] : null;
     const title = b.title || d.label || type.name;
     const label = `${title}${st ? `, ${st.text}` : ""}`;
     const parts = [`<rect class="box-bg" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="10"/>`];
@@ -387,8 +388,8 @@ export class StageView {
       const icoX = b.kind === "source" ? b.x + 10 : b.x + b.w - 50;
       parts.push(`<g class="box-ico" transform="translate(${icoX} ${b.y + 8})">${icon(ico, { size: 40 })}</g>`);
       const tx = b.kind === "source" ? b.x + 56 : b.kind === "endpoint" ? b.x + 40 : b.x + 12;
-      const short = DEVICE_TYPES[d.type].source && d.sourceId ? sourceName(this.manifest.SOURCES_BY_ID[d.sourceId]) || title : title.replace(/^(Powered|Passive) (speaker|wedge) · /, "");
-      const sub = b.kind === "source" ? (d.sourceId ? this.manifest.SOURCES_BY_ID[d.sourceId]?.device || type.name : type.name) : b.kind === "endpoint" ? (type.camera ? "Camera input" : type.amp === "internal" ? "Powered: amp inside" : "Passive: needs an amp") : type.name;
+      const short = type.source && src ? sourceName(src) || title : title.replace(/^(Powered|Passive) (speaker|wedge) · /, "");
+      const sub = b.kind === "source" ? src?.device || type.name : b.kind === "endpoint" ? (type.camera ? "Camera input" : type.amp === "internal" ? "Powered: amp inside" : "Passive: needs an amp") : type.name;
       parts.push(`<text class="box-name" x="${tx}" y="${b.y + 22}">${esc(clip(short, b.kind === "rack" ? 17 : 20))}</text><text class="box-sub" x="${tx}" y="${b.y + 37}">${esc(clip(sub, 26))}</text>`);
       if (st) parts.push(`<g class="pill pill-${st.tone}" transform="translate(${tx} ${b.y + 44})"><rect width="${8 + st.text.length * 6.2}" height="16" rx="8"/><text x="6" y="11.5">${esc(st.text)}</text></g>`);
       if (type.dante) parts.push(`<text class="box-sub" x="${tx}" y="${b.y + b.h - 10}">Tracks go out over Dante</text>`);

@@ -28,7 +28,7 @@ import { DanteView } from "./ui/dante-view.js";
 import { LogicView } from "./ui/logic-view.js";
 import { recordingMac } from "./recording.js";
 import { StageView } from "./ui/stage-view.js";
-import { initLanguage, language, localizeDom, onLanguageChange, setLanguage, t } from "./i18n/index.js";
+import { initLanguage, language, localizeDom, onLanguageChange, scenarioText, setLanguage, t } from "./i18n/index.js";
 
 initLanguage();
 
@@ -227,9 +227,11 @@ function refreshLocalizedViews() {
   ]);
   document.documentElement.lang = language();
   renderLanguageButton();
+  if (!overlay.classList.contains("dismissed")) showStart();
   localizeDom(document);
   if (current?.def) missionView.render(current.def, evaluateNow(), { skinId: skin.id, mode });
   if (lastMix) {
+    mixerView.sync(lastMix);
     patchView.render(lastMix);
     stageView.render(lastMix);
     renderFlow($("#flow"), skin);
@@ -616,7 +618,7 @@ function showStart() {
   const target = resumeHash || (last ? `#/${last}` : "");
   resumeHash = target;
   const s = SCENARIO_BY_ID[target.replace(/^#\/(by-mixer\/)?/, "")];
-  const label = target.startsWith("#/free-play") ? `Free play on the ${SKINS[target.split("/")[2]]?.name || "mixer"}` : s ? `${s.title} · ${SKINS[skinOf(consoleOf(s))].name}` : "";
+  const label = target.startsWith("#/free-play") ? `Free play on the ${SKINS[target.split("/")[2]]?.name || "mixer"}` : s ? `${scenarioText(s, "title")} · ${SKINS[skinOf(consoleOf(s))].name}` : "";
   startScreen.render({ resume: label });
   overlay.classList.remove("dismissed");
   overlay.removeAttribute("aria-hidden");

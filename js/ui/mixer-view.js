@@ -16,6 +16,8 @@ import { renderF8 } from "./mixer-f8-view.js";
 import { renderL20 } from "./mixer-l20-view.js";
 import { COMPACT } from "../compact-defs.js";
 import { sourceAlt, sourceName, sourceShort } from "../names.js";
+import { language } from "../i18n/index.js";
+import { connectionMessage } from "./patch-view.js";
 
 const FADER_MARKS = [10, 5, 0, -5, -10, -20, -30, -50].map((db) => ({ value: dbToLevel(db), label: db === 0 ? "U" : db > 0 ? `+${db}` : `${db}` }));
 FADER_MARKS.push({ value: 0, label: "−∞" });
@@ -476,14 +478,16 @@ export class MixerView {
         b.el.classList.toggle("empty", !c.input.connected);
         b.el.classList.toggle("warn", warn);
         const html = `<span class="strip-num">${s.channels[b.index].label}</span><span class="strip-name">${src ? sourceShort(src) : c.input.connected ? "?" : "—"}</span>${warn ? '<span class="strip-warn" aria-hidden="true">!</span>' : ""}`;
-        if (html === b.html) continue;
+        if (html === b.html && b.language === language()) continue;
         b.html = html;
+        b.language = language();
         b.el.innerHTML = html;
+        const problem = warn ? connectionMessage(c.input.messages[0]) : "";
         b.el.setAttribute(
           "aria-label",
-          `Channel ${s.channels[b.index].label} input: ${src ? `${sourceName(src)}${sourceAlt(src) ? ` (${sourceAlt(src)})` : ""}${c.input.stereo ? ", on the stereo line input" : c.input.path === "line" ? ", on the line input" : ", on the mic input"}` : "nothing patched"}${warn ? ". Problem: " + c.input.messages[0].replace(/[.!]$/, "") : ""}. Tap to patch.`,
+          `Channel ${s.channels[b.index].label} input: ${src ? `${sourceName(src)}${sourceAlt(src) ? ` (${sourceAlt(src)})` : ""}${c.input.stereo ? ", on the stereo line input" : c.input.path === "line" ? ", on the line input" : ", on the mic input"}` : "nothing patched"}${warn ? ". Problem: " + problem.replace(/[.!]$/, "") : ""}. Tap to patch.`,
         );
-        b.el.title = warn ? c.input.messages[0] : src ? `${sourceName(src)}${sourceAlt(src) ? ` (${sourceAlt(src)})` : ""} · ${src.device}` : "Tap to patch a source";
+        b.el.title = warn ? problem : src ? `${sourceName(src)}${sourceAlt(src) ? ` (${sourceAlt(src)})` : ""} · ${src.device}` : "Tap to patch a source";
       } else if (b.kind === "status" && mix) {
         const ch = s.channels[b.index];
         const words = [];

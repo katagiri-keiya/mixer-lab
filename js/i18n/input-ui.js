@@ -19,6 +19,17 @@ export const inputUiEn = {
 };
 
 export const inputUiJa = {
+  roomPair: "ルームマイクペア",
+  roomPairOnBar: "ルームマイクペア · FOHのステレオバー",
+  roomLeftOut: "左マイクのXLR出力",
+  roomRightOut: "右マイクのXLR出力",
+  pairCondenser: "単一指向性コンデンサーマイク×2",
+  pairXlrOut: "XLR出力",
+  pairSpacing: "マイク間隔",
+  pairAngle: "マイク間の角度",
+  pairTechnique: "✓ <strong>{name}</strong>（{spacing} cm、{angle}°）",
+  pairCustom: "任意の設定。参考：{techniques}",
+  condenserNoPhantom: "コンデンサーマイクに+48 Vが届いていません。接続されていますが音は出ません。ファンタム電源をオンにしてください。",
   sourcesOnStage: "ステージ上の音源",
   signalPresent: "✓ 信号あり",
   unpatched: "未接続",

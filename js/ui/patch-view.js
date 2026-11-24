@@ -39,7 +39,7 @@ import { nameMode, sourceName } from "../names.js";
 import { dvsRunning } from "../dante.js";
 import { isRecordingMac, logicTracks } from "../recording.js";
 import { count } from "../submission.js";
-import { localized, t as translate } from "../i18n/index.js";
+import { localized, sourceText, t as translate } from "../i18n/index.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -50,10 +50,20 @@ const LEVEL_SHORT = { mic: "Mic level", instrument: "Instrument level", line: "L
 const connectorKey = { "xlr-m": "xlrMale", "xlr-f": "xlrFemale", trs14: "trs14", ts14: "ts14", trs35: "trs35", rca: "rca", speakon: "speakon", ethercon: "ethercon", iec: "iec" };
 const connectorText = (name, field, fallback) => localized("connectors", connectorKey[name], field, fallback);
 const cableText = (id, field, fallback) => localized("cables", id, field, fallback);
-const gearText = (value) => localized("gear", value, "", value);
+const roomDisplayKeys = {
+  "Room pair · stereo bar at FOH": "roomPairOnBar",
+  "Left mic XLR out": "roomLeftOut",
+  "Right mic XLR out": "roomRightOut",
+};
+const gearText = (value) => Object.hasOwn(roomDisplayKeys, value)
+  ? translate(`ui.${roomDisplayKeys[value]}`, value)
+  : localized("gear", value, "", value);
 const gearTypeText = (id, field, fallback) => localized("gearById", id, field, fallback);
-const sourceText = (source, field, fallback = source?.[field] || "") => localized("sources", source?.id, field, fallback);
-const connectionMessage = (message) => message === "Line level can't drive a passive speaker — there's no amplifier. Put a power amp in between, or use a powered speaker." ? translate("ui.passiveNeedsAmp", message) : message;
+export const connectionMessage = (message) => {
+  if (message === "Line level can't drive a passive speaker — there's no amplifier. Put a power amp in between, or use a powered speaker.") return translate("ui.passiveNeedsAmp", message);
+  if (message === "Condenser mic, no +48 V: it's plugged in but silent. Turn on phantom power.") return translate("ui.condenserNoPhantom", message);
+  return message;
+};
 const displayDevice = (value) => value === "Laptop · Preshow Music" ? gearText("preshowLaptop") : value === "Powered speaker · house left" ? `${gearText("poweredSpeaker")} · ${gearText("houseLeft")}` : value === "Powered speaker · house right" ? `${gearText("poweredSpeaker")} · ${gearText("houseRight")}` : gearText(value);
 const inputText = (key, fallback, vars = {}) => translate(`ui.${key}`, fallback, vars);
 const connectionReason = (reason) => {
@@ -209,13 +219,13 @@ export class PatchView {
         model === "cr1604" && src.stereo
           ? sourceText(src, "noteCr1604", "A laptop's 3.5 mm headphone jack is a stereo line output. On the 1604 it goes into the TAPE INPUT RCA pair with a 3.5 mm ↔ RCA (Y) cable, then TAPE TO MAIN MIX puts it in the house.")
           : model !== "generic" && src.stereo
-            ? sourceText(src, "noteStereo", "A laptop's 3.5 mm headphone jack is a stereo line output: a stereo line channel or the tape input takes it, with a breakout, RCA (Y) or 3.5 mm cable to suit the jacks.")
+            ? sourceText(src, model === "x32c" && src.id === "synths" ? "noteX32c" : "noteStereo", "A laptop's 3.5 mm headphone jack is a stereo line output: a stereo line channel or the tape input takes it, with a breakout, RCA (Y) or 3.5 mm cable to suit the jacks.")
             : sourceText(src, "note", d.sourceId === "preshow" ? gearText("preshowNote") : src.note);
       return this.card(d.id, `<li class="source-card status-${status}">
         <div class="source-top">
           <span class="source-order" aria-label="Input list number">${esc(listNo)}</span>
           <span class="dev-ico">${icon(deviceIconName(d), { size: 40 })}</span>
-          <div class="source-names"><strong>${esc(displayDevice(nameMode() === "musicians" && src.musician ? src.name : sourceText(src, "name", sourceName(src))))}</strong><span>${nameMode() === "musicians" && src.musician ? `${esc(src.name)} · ` : ""}${esc(sourceText(src, "device", gearText(src.device)))}</span></div>
+          <div class="source-names"><strong>${esc(displayDevice(sourceText(src, "name", src.name)))}</strong><span>${nameMode() === "musicians" && src.musician ? `${esc(sourceText(src, "name"))} · ` : ""}${esc(sourceText(src, "device", gearText(src.device)))}</span></div>
           <span class="status-pill status-${status}">${pill}</span>
         </div>
         <div class="tags">${tags}</div>
@@ -223,7 +233,7 @@ export class PatchView {
         ${sourceGearHtml(d, src, rig)}
         ${isRecordingMac(d) ? this.logicHtml(mix) : ""}
         ${powerHtml(rig, d)}
-        ${msgs.map((m) => `<p class="port-msg">${esc(m)}</p>`).join("")}
+        ${msgs.map((m) => `<p class="port-msg">${esc(connectionMessage(m))}</p>`).join("")}
         ${note ? `<p class="source-note">${esc(note)}</p>` : ""}
       </li>`);
     });
@@ -242,7 +252,10 @@ export class PatchView {
     const state = this.store.state;
     const lands = DEVICE_TYPES[d.type].ports.map((p) => {
       const c = mix.channels.find((x) => x.input.sourceDeviceId === d.id && x.input.sourceId === p.sourceId);
-      return `<li><span>${esc(p.name)} · ${esc(sourceName(SOURCES_BY_ID[p.sourceId]) || p.sourceId)}</span><b>${c ? `→ CH ${esc(state.channels[c.index].label)}` : "not reaching the console"}</b></li>`;
+      const src = SOURCES_BY_ID[p.sourceId];
+      const name = sourceName(src);
+      const displayName = name === src?.name ? sourceText(src, "name") : name;
+      return `<li><span>${esc(p.name)} · ${esc(displayName || p.sourceId)}</span><b>${c ? `→ CH ${esc(state.channels[c.index].label)}` : "not reaching the console"}</b></li>`;
     });
     const n = lands.filter((l) => l.includes("→ CH")).length;
     const status = n === lands.length ? "ok" : n ? "warn" : "idle";
@@ -286,16 +299,16 @@ export class PatchView {
       <div class="source-top">
         <span class="source-order">ST</span>
         <span class="dev-ico">${icon(deviceIconName({ type: "condenser-mic" }), { size: 40 })}</span>
-        <div class="source-names"><strong>${d.type === "piano-mic-pair" ? "Piano mics" : "Room pair"}</strong><span>${esc(d.label)}</span></div>
-        <span class="status-pill status-${status}">${status === "ok" ? "✓ Signal" : status === "idle" ? "Unpatched" : "! Check"}</span>
+        <div class="source-names"><strong>${d.type === "piano-mic-pair" ? "Piano mics" : inputText("roomPair", "Room pair")}</strong><span>${esc(gearText(d.label))}</span></div>
+        <span class="status-pill status-${status}">${status === "ok" ? inputText("signalPresent", "✓ Signal") : status === "idle" ? inputText("unpatched", "Unpatched") : inputText("checkStatus", "! Check")}</span>
       </div>
-      <div class="tags"><span class="tag">2× condenser (cardioid)</span><span class="tag">XLR outs</span><span class="tag tag-phantom">Needs +48 V</span></div>
+      <div class="tags"><span class="tag">${inputText("pairCondenser", "2× condenser (cardioid)")}</span><span class="tag">${inputText("pairXlrOut", "XLR outs")}</span><span class="tag tag-phantom">${inputText("needs48", "Needs +48 V")}</span></div>
       ${listPorts(this.store.state.rig, d).map((p) => this.portButton(p.ref, "out")).join("")}
-      ${(bad ? bad.messages : []).map((m) => `<p class="port-msg">${esc(m)}</p>`).join("")}
+      ${(bad ? bad.messages : []).map((m) => `<p class="port-msg">${esc(connectionMessage(m))}</p>`).join("")}
       ${d.type === "piano-mic-pair" ? `<p class="source-note">Stand-ins: the ensemble's recording has no piano track, so these two mics hear the singers from the piano's side of the stage.</p>` : `<div class="dev-settings">
-        <label>Spacing <output data-readout="spacingCm">${d.spacingCm} cm</output>
+        <label>${inputText("pairSpacing", "Spacing")} <output data-readout="spacingCm">${d.spacingCm} cm</output>
           <input type="range" min="0" max="${PAIR.spacingMax}" step="1" value="${d.spacingCm}" data-device="${esc(d.id)}" data-device-key="spacingCm" /></label>
-        <label>Angle between the mics <output data-readout="angleDeg">${d.angleDeg}°</output>
+        <label>${inputText("pairAngle", "Angle between the mics")} <output data-readout="angleDeg">${d.angleDeg}°</output>
           <input type="range" min="0" max="${PAIR.angleMax}" step="1" value="${d.angleDeg}" data-device="${esc(d.id)}" data-device-key="angleDeg" /></label>
         <p class="dev-technique" data-readout="technique">${techniqueText(d)}</p>
       </div>`}
@@ -846,8 +859,9 @@ class PatchDialog {
 
 function techniqueText(d) {
   const t = techniqueOf(d);
-  if (t) return `✓ This is <strong>${esc(t.name)}</strong> (${t.spacingCm} cm, ${t.angleDeg}°).`;
-  return `Custom setting. For reference: ${TECHNIQUES.map((x) => `${esc(x.name)} ${x.spacingCm} cm / ${x.angleDeg}°`).join(" · ")}.`;
+  if (t) return inputText("pairTechnique", "✓ This is <strong>{name}</strong> ({spacing} cm, {angle}°).", { name: esc(t.name), spacing: t.spacingCm, angle: t.angleDeg });
+  const techniques = TECHNIQUES.map((x) => `${esc(x.name)} ${x.spacingCm} cm / ${x.angleDeg}°`).join(" · ");
+  return inputText("pairCustom", "Custom setting. For reference: {techniques}.", { techniques });
 }
 
 function formatHours(sec) {

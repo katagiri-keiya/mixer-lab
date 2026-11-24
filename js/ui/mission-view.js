@@ -51,7 +51,10 @@ const displayShortTitle = (s) => {
 };
 const textOf = (s, field) => scenarioText(s, field, s[field]);
 const progressText = (done, total) => done ? translate("ui.progressSolved", `${done} of ${total} solved`, { done, total }) : translate("ui.scenarioCount", count(total, "scenario"), { count: total });
-const topicText = (theme, field) => theme.id === "patch" ? translate(`ui.topicPatch${field[0].toUpperCase()}${field.slice(1)}`, theme[field]) : theme[field];
+const topicText = (theme, field) => translate(
+  `ui.topic${theme.id[0].toUpperCase()}${theme.id.slice(1)}${field[0].toUpperCase()}${field.slice(1)}`,
+  theme[field],
+);
 
 // The consoles Free play offers, in learning order (the generic one first).
 export const FREE_CONSOLES = ["analog", "b207mp3", "mix8", "stagepas400bt", "mg102", "vlz1202", "x1204usb", "mackie1604", "gdig", "ui16", "l20", "x32c", "yam01v96", "dm2000", "x32", "cl3", "sd442", "f8n"].filter((id) => SKINS[id]);

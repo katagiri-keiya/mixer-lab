@@ -7,3 +7,8 @@ export const uiJa = {
 };
 Object.assign(uiEn, { topicPatchTitle: "Plugging in", topicPatchQuestion: "Which jack, which cable?", topicPatchConcept: "Mics, instruments, laptops and players each have their own level and connector. Get each one into an input that suits it, and into the house." });
 Object.assign(uiJa, { topicPatchTitle: "接続する", topicPatchQuestion: "どの端子に、どのケーブル？", topicPatchConcept: "マイク、楽器、ノートPC、再生機器には、それぞれ適したレベルと端子があります。各音源を合った入力へ接続し、会場へ送りましょう。" });
+Object.assign(uiJa, {
+  topicPhantomTitle: "ファンタム電源",
+  topicPhantomQuestion: "コンデンサーマイクから音が出ないのはなぜ？",
+  topicPhantomConcept: "コンデンサーマイクには+48 Vのファンタム電源が必要です。ミキサーのマイク入力からXLRケーブルを通じて供給します。スピーカーには不要で、電源は壁のコンセントかパワーアンプから取ります。スイッチの場所はミキサーによって異なります。",
+});
