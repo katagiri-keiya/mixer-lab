@@ -199,9 +199,9 @@ function display(view, def, ui, rerender) {
         "y96-row",
         procOn(view, def, i, "compOn", "DYNAMICS ON", "compressor"),
         compGraph(view, def, i, { theme: "lcd" }),
-        knob(view, { label: "THRESHOLD", sheetLabel: `Ch ${c.label} compressor threshold`, min: DYN.threshold[0], max: DYN.threshold[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => (v >= 0 ? "off" : `${v} dB`), onInput: (v) => store.setChannel(i, "dyn.threshold", v) }, (s) => ch(s).dyn.threshold),
-        knob(view, { label: "RATIO", sheetLabel: `Ch ${c.label} compressor ratio`, min: DYN.ratio[0], max: DYN.ratio[1], step: 0.1, defaultValue: 1, tone: "gain", format: (v) => `${v.toFixed(1)}:1`, onInput: (v) => store.setChannel(i, "dyn.ratio", v) }, (s) => ch(s).dyn.ratio),
-        knob(view, { label: "OUT GAIN", sheetLabel: `Ch ${c.label} compressor out gain`, min: DYN.makeup[0], max: DYN.makeup[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => `+${v} dB`, onInput: (v) => store.setChannel(i, "dyn.makeup", v) }, (s) => ch(s).dyn.makeup),
+        knob(view, { label: "THRESHOLD", sheetLabel: () => translate("ui.compSheet", "Ch {channel} compressor threshold", { channel: c.label, control: "THRESHOLD" }), min: DYN.threshold[0], max: DYN.threshold[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => (v >= 0 ? "off" : `${v} dB`), onInput: (v) => store.setChannel(i, "dyn.threshold", v) }, (s) => ch(s).dyn.threshold),
+        knob(view, { label: "RATIO", sheetLabel: () => translate("ui.compSheet", "Ch {channel} compressor ratio", { channel: c.label, control: "RATIO" }), min: DYN.ratio[0], max: DYN.ratio[1], step: 0.1, defaultValue: 1, tone: "gain", format: (v) => `${v.toFixed(1)}:1`, onInput: (v) => store.setChannel(i, "dyn.ratio", v) }, (s) => ch(s).dyn.ratio),
+        knob(view, { label: "OUT GAIN", sheetLabel: () => translate("ui.compSheet", "Ch {channel} compressor out gain", { channel: c.label, control: "OUT GAIN" }), min: DYN.makeup[0], max: DYN.makeup[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => `+${v} dB`, onInput: (v) => store.setChannel(i, "dyn.makeup", v) }, (s) => ch(s).dyn.makeup),
         gr,
       ),
     );

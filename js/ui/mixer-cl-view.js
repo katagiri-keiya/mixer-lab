@@ -151,7 +151,7 @@ function selectedChannelSection(view, def, ui) {
       knob(view, { label: "GAIN", sheetLabel: `${name} gain`, min: c.gain.min, max: c.gain.max, step: 0.5, defaultValue: c.gain.min, tone: "gain", format: (v) => `${v > 0 ? "+" : ""}${Math.round(v)} dB`, onInput: (v) => store.setChannel(i, "gainDb", v) }, (s) => ch(s).gainDb),
       c.hpf ? knob(view, { label: "HPF", sheetLabel: `${name} HPF`, defaultValue: 0, tone: "eq", format: (v) => (v <= 0.02 ? "off" : `${hz(hpfHz(c, v))} Hz`), onInput: (v) => store.setChannel(i, "hpf", v) }, (s) => ch(s).hpf) : null,
       knob(view, { label: c.kind === "stereo" ? "BAL" : "PAN", sheetLabel: `${name} pan`, min: -1, max: 1, step: 0.02, defaultValue: 0, bipolar: true, tone: "pan", format: formatPan, onInput: (v) => store.setChannel(i, "pan", v) }, (s) => ch(s).pan),
-      c.dyn ? knob(view, { label: "DYN THR", sheetLabel: `${name} compressor threshold`, min: DYN.threshold[0], max: DYN.threshold[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => (v >= 0 ? "0 dB" : `${v} dB`), onInput: (v) => store.setChannel(i, "dyn.threshold", v) }, (s) => ch(s).dyn.threshold) : null,
+      c.dyn ? knob(view, { label: "DYN THR", sheetLabel: () => translate("ui.compNamedSheet", "{channel} compressor threshold", { channel: name, control: "DYN THR" }), min: DYN.threshold[0], max: DYN.threshold[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => (v >= 0 ? "0 dB" : `${v} dB`), onInput: (v) => store.setChannel(i, "dyn.threshold", v) }, (s) => ch(s).dyn.threshold) : null,
     ),
   );
   if (c.peq) {
@@ -170,7 +170,7 @@ function selectedChannelSection(view, def, ui) {
     box.appendChild(grid);
     // The knobs move the EQ even while it's switched off: say so where you turn them.
     const warn = el("p", "cl-warn");
-    view.bindings.push({ kind: "fn", run: (s) => (warn.textContent = [!eqIsOn(ch(s)) ? translate("ui.clEqOffWarning", "EQ is OFF") : "", c.dyn && !compIsOn(ch(s)) && ch(s).dyn.threshold < 0 ? "DYNAMICS is OFF" : ""].filter(Boolean).join(" · ")) });
+    view.bindings.push({ kind: "fn", run: (s) => (warn.textContent = [!eqIsOn(ch(s)) ? translate("ui.clEqOffWarning", "EQ is OFF") : "", c.dyn && !compIsOn(ch(s)) && ch(s).dyn.threshold < 0 ? translate("ui.clDynamicsOffWarning", "DYNAMICS is OFF") : ""].filter(Boolean).join(" · ")) });
     box.appendChild(warn);
   }
   return box;

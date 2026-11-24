@@ -51,6 +51,8 @@ const displayShortTitle = (s) => {
 };
 const textOf = (s, field) => scenarioText(s, field, s[field]);
 const progressText = (done, total) => done ? translate("ui.progressSolved", `${done} of ${total} solved`, { done, total }) : translate("ui.scenarioCount", count(total, "scenario"), { count: total });
+const solvedProgress = (done, total) => translate("ui.progressSolved", "{done} of {total} solved", { done, total });
+const solvedStatus = () => translate("ui.solvedStatus", "solved");
 const topicText = (theme, field) => translate(
   `ui.topic${theme.id[0].toUpperCase()}${theme.id.slice(1)}${field[0].toUpperCase()}${field.slice(1)}`,
   theme[field],
@@ -77,7 +79,7 @@ function mixerCard(m, p, attrs) {
   return `<button type="button" class="theme-card mixer-card" ${attrs}>
     <strong>${esc(mixerName(m))}</strong>
     <span class="theme-q">${esc(m.why)}</span>
-    <span class="theme-meter" aria-label="${done} of ${total} solved"><i style="width:${(100 * done) / total}%"></i></span>
+    <span class="theme-meter" aria-label="${esc(solvedProgress(done, total))}"><i style="width:${(100 * done) / total}%"></i></span>
     <small>${progressText(done, total)}</small>
   </button>`;
 }
@@ -96,7 +98,7 @@ function gigCard(g, p, attrs) {
   return `<button type="button" class="theme-card gig-card" ${attrs}>
     <strong>${esc(g.question)}</strong>
     <span class="theme-q">${esc(g.title)} · ${esc(consoleName(themeScenarios(g)[0]))}</span>
-    <span class="theme-meter" aria-label="${done} of ${total} solved"><i style="width:${(100 * done) / total}%"></i></span>
+    <span class="theme-meter" aria-label="${esc(solvedProgress(done, total))}"><i style="width:${(100 * done) / total}%"></i></span>
     <small>${progressText(done, total)}</small>
   </button>`;
 }
@@ -123,8 +125,8 @@ export class StartScreen {
         <span class="theme-num">${i + 1}</span>
         <strong>${esc(topicText(t, "question"))}</strong>
         <span class="theme-q">${esc(topicText(t, "title"))}</span>
-        <span class="theme-meter" aria-label="${done} of ${total} solved"><i style="width:${(100 * done) / total}%"></i></span>
-        <small>${done ? `${done} of ${total} solved` : count(total, "scenario")}</small>
+        <span class="theme-meter" aria-label="${esc(solvedProgress(done, total))}"><i style="width:${(100 * done) / total}%"></i></span>
+        <small>${done ? esc(solvedProgress(done, total)) : count(total, "scenario")}</small>
       </button>`;
     };
     this.root.innerHTML = `<div class="start-inner">
@@ -194,7 +196,7 @@ export class ThemeDrawer {
       <span class="dr-tick" aria-hidden="true">${p.has(s.id) ? "✓" : n}</span>
       <span class="dr-title">${esc(displayShortTitle(s))}</span>
       <span class="dr-console">${console ? esc(consoleName(s)) : esc(themeOf(s.id)?.title || "")}</span>
-      ${p.has(s.id) ? '<span class="visually-hidden">solved</span>' : ""}
+      ${p.has(s.id) ? `<span class="visually-hidden">${esc(solvedStatus())}</span>` : ""}
     </button></li>`;
     const current = themeOf(currentId)?.id;
     const theme = (t, i) => {
@@ -347,8 +349,8 @@ export class MissionView {
         const done = this.progress.has(s.id);
         const here = s.id === def.id;
         const where = seq.mixer || consoleOf(s) === consoleOf(def) ? "" : `<small>${esc(consoleName(s))}</small>`;
-        return `<li><button type="button" class="mstep-chip ${here ? "current" : ""} ${done ? "done" : ""}" data-act="go" data-id="${esc(s.id)}" ${here ? 'aria-current="step"' : ""} title="${esc(titleOf(s))}${done ? " (solved)" : ""}">
-          <span class="ms-num" aria-hidden="true">${done ? "✓" : k + 1}</span><span class="ms-name">${esc(displayShortTitle(s))}${where}</span>${done ? '<span class="visually-hidden">, solved</span>' : ""}</button></li>`;
+        return `<li><button type="button" class="mstep-chip ${here ? "current" : ""} ${done ? "done" : ""}" data-act="go" data-id="${esc(s.id)}" ${here ? 'aria-current="step"' : ""} title="${esc(titleOf(s))}${done ? ` (${esc(solvedStatus())})` : ""}">
+          <span class="ms-num" aria-hidden="true">${done ? "✓" : k + 1}</span><span class="ms-name">${esc(displayShortTitle(s))}${where}</span>${done ? `<span class="visually-hidden">, ${esc(solvedStatus())}</span>` : ""}</button></li>`;
       })
       .join("");
     // Who's on stage, when it isn't simply the whole band (doors, speeches, someone sitting out).

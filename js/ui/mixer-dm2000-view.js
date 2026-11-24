@@ -143,9 +143,9 @@ function selectedChannel(view, def, ui, rerender) {
     block(
       "DYNAMICS",
       procOn(view, def, i, "compOn", "COMP ON", "compressor"),
-      knob(view, { label: "THRESH", sheetLabel: `${name} compressor threshold`, min: DYN.threshold[0], max: DYN.threshold[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => `${v} dB`, onInput: (v) => store.setChannel(i, "dyn.threshold", v) }, (s) => ch(s).dyn.threshold),
-      knob(view, { label: "RATIO", sheetLabel: `${name} compressor ratio`, min: DYN.ratio[0], max: DYN.ratio[1], step: 0.1, defaultValue: 1, tone: "gain", format: (v) => `${v.toFixed(1)}:1`, onInput: (v) => store.setChannel(i, "dyn.ratio", v) }, (s) => ch(s).dyn.ratio),
-      knob(view, { label: "GAIN", sheetLabel: `${name} compressor gain`, min: DYN.makeup[0], max: DYN.makeup[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => `+${v} dB`, onInput: (v) => store.setChannel(i, "dyn.makeup", v) }, (s) => ch(s).dyn.makeup),
+      knob(view, { label: "THRESH", sheetLabel: () => translate("ui.compNamedSheet", "{channel} compressor threshold", { channel: name, control: "THRESH" }), min: DYN.threshold[0], max: DYN.threshold[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => `${v} dB`, onInput: (v) => store.setChannel(i, "dyn.threshold", v) }, (s) => ch(s).dyn.threshold),
+      knob(view, { label: "RATIO", sheetLabel: () => translate("ui.compNamedSheet", "{channel} compressor ratio", { channel: name, control: "RATIO" }), min: DYN.ratio[0], max: DYN.ratio[1], step: 0.1, defaultValue: 1, tone: "gain", format: (v) => `${v.toFixed(1)}:1`, onInput: (v) => store.setChannel(i, "dyn.ratio", v) }, (s) => ch(s).dyn.ratio),
+      knob(view, { label: "GAIN", sheetLabel: () => translate("ui.compNamedSheet", "{channel} compressor gain", { channel: name, control: "GAIN" }), min: DYN.makeup[0], max: DYN.makeup[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => `+${v} dB`, onInput: (v) => store.setChannel(i, "dyn.makeup", v) }, (s) => ch(s).dyn.makeup),
     ),
   );
 
@@ -200,7 +200,15 @@ function display(view, def, ui, rerender) {
     body.append(row("y96-row", procOn(view, def, i, "eqOn", "EQ ON", "EQ")), eqGraph(view, def, i, { theme: "dm" }), t);
   } else if (ui.page === "dyn") {
     const t = el("div", "x32-lines");
-    view.bindings.push({ kind: "fn", run: (s) => (t.innerHTML = `<p>COMP ${compIsOn(ch(s)) ? "ON" : "OFF"} · THRESHOLD ${ch(s).dyn.threshold} dB · RATIO ${ch(s).dyn.ratio.toFixed(1)}:1 · GAIN +${ch(s).dyn.makeup} dB</p>`) });
+    const status = el("p");
+    t.appendChild(status);
+    view.bindings.push({ kind: "fn", run: (s) => {
+      const channel = ch(s);
+      const { threshold, ratio, makeup } = channel.dyn;
+      status.textContent = translate("ui.dmDynamicsStatus", "COMP {state} · THRESHOLD {threshold} dB · RATIO {ratio}:1 · GAIN +{makeup} dB", {
+        state: compIsOn(channel) ? "ON" : "OFF", threshold, ratio: ratio.toFixed(1), makeup,
+      });
+    } });
     body.append(row("y96-row", procOn(view, def, i, "compOn", "COMP ON", "compressor"), compGraph(view, def, i, { theme: "dm" })), t);
   } else if (ui.page === "aux") {
     body.appendChild(

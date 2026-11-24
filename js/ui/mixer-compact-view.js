@@ -134,7 +134,7 @@ function buildStrip(view, def, i) {
       if (!c.comp) return null;
       const l = led("led-comp", "COMP");
       view.compLeds.push({ index: i, el: l.querySelector("i") });
-      return row("cm-comp", knob(view, { label: "COMP", sheetLabel: `Ch ${n} compressor`, defaultValue: 0, tone: "gain", format: (v) => (v <= 0 ? "off" : `${Math.round(v * 10)}`), onInput: set("comp") }, (s) => ch(s).comp), l);
+      return row("cm-comp", knob(view, { label: "COMP", sheetLabel: () => translate("ui.compSheet", "Ch {channel} compressor", { channel: n, control: "COMP" }), defaultValue: 0, tone: "gain", format: (v) => (v <= 0 ? "off" : `${Math.round(v * 10)}`), onInput: set("comp") }, (s) => ch(s).comp), l);
     },
     minus10: () =>
       c.gain.minus10

@@ -188,7 +188,10 @@ export function compGraph(view, def, i, opts = {}) {
       thr.style.display = active ? "" : "none";
       box.classList.toggle("is-off", !on);
       tag.textContent = on ? "" : "COMP OFF";
-      root.setAttribute("aria-label", `Compressor, channel ${c.label}: ${on ? `on, threshold ${ch.dyn.threshold} dB, ratio ${ch.dyn.ratio.toFixed(1)}:1, make-up ${ch.dyn.makeup} dB` : "switched off"}`);
+      const { threshold, ratio, makeup } = ch.dyn;
+      root.setAttribute("aria-label", on
+        ? translate("ui.compGraphOn", "Compressor, channel {channel}: on, threshold {threshold} dB, ratio {ratio}:1, make-up {makeup} dB", { channel: c.label, threshold, ratio: ratio.toFixed(1), makeup })
+        : translate("ui.compGraphOff", "Compressor, channel {channel}: switched off", { channel: c.label }));
     },
   });
   return box;

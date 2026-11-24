@@ -20,7 +20,14 @@ export const vizTheme = (def) => (def.id === "yam01v96" ? "lcd" : def.id === "cl
 // The ON switch of a channel's EQ or compressor ("eqOn" / "compOn").
 export function procOn(view, def, i, key, label, what) {
   const isOn = (s) => (key === "eqOn" ? eqIsOn(s.channels[i]) : compIsOn(s.channels[i]));
-  return button(view, { label, tone: "assign", get: isOn, onPress: () => view.store.setChannel(i, key, !isOn(view.store.state)), aria: (s) => `Channel ${def.channels[i].label} ${what}: ${isOn(s) ? "on" : "off, bypassed"}` });
+  return button(view, { label, tone: "assign", get: isOn, onPress: () => view.store.setChannel(i, key, !isOn(view.store.state)), aria: (s) => {
+    const channel = def.channels[i].label;
+    const on = isOn(s);
+    if (key !== "compOn") return `Channel ${channel} ${what}: ${on ? "on" : "off, bypassed"}`;
+    return on
+      ? translate("ui.compButtonOn", "Channel {channel} compressor: on", { channel })
+      : translate("ui.compButtonOff", "Channel {channel} compressor: off, bypassed", { channel });
+  } });
 }
 
 const lawFormat = (law) => (v) => formatDb(law.toDb(v), { unity: true });
@@ -306,9 +313,9 @@ export function buildSelPanel(view, def, ui, rerender) {
         "COMPRESSOR",
         procOn(view, def, i, "compOn", "COMP ON", "compressor"),
         compGraph(view, def, i, { theme }),
-        knob(view, { label: "THRESH", sheetLabel: `Ch ${n} compressor threshold`, min: DYN.threshold[0], max: DYN.threshold[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => (v >= 0 ? "off" : `${v} dB`), onInput: set("dyn.threshold") }, (s) => ch(s).dyn.threshold),
-        knob(view, { label: "RATIO", sheetLabel: `Ch ${n} compressor ratio`, min: DYN.ratio[0], max: DYN.ratio[1], step: 0.1, defaultValue: 1, tone: "gain", format: (v) => `${v.toFixed(1)}:1`, onInput: set("dyn.ratio") }, (s) => ch(s).dyn.ratio),
-        knob(view, { label: "GAIN", sheetLabel: `Ch ${n} compressor make-up gain`, min: DYN.makeup[0], max: DYN.makeup[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => `+${v} dB`, onInput: set("dyn.makeup") }, (s) => ch(s).dyn.makeup),
+        knob(view, { label: "THRESH", sheetLabel: () => translate("ui.compSheet", "Ch {channel} compressor threshold", { channel: n, control: "THRESH" }), min: DYN.threshold[0], max: DYN.threshold[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => (v >= 0 ? "off" : `${v} dB`), onInput: set("dyn.threshold") }, (s) => ch(s).dyn.threshold),
+        knob(view, { label: "RATIO", sheetLabel: () => translate("ui.compSheet", "Ch {channel} compressor ratio", { channel: n, control: "RATIO" }), min: DYN.ratio[0], max: DYN.ratio[1], step: 0.1, defaultValue: 1, tone: "gain", format: (v) => `${v.toFixed(1)}:1`, onInput: set("dyn.ratio") }, (s) => ch(s).dyn.ratio),
+        knob(view, { label: "GAIN", sheetLabel: () => translate("ui.compSheet", "Ch {channel} compressor make-up gain", { channel: n, control: "GAIN" }), min: DYN.makeup[0], max: DYN.makeup[1], step: 0.5, defaultValue: 0, tone: "gain", format: (v) => `+${v} dB`, onInput: set("dyn.makeup") }, (s) => ch(s).dyn.makeup),
         gr,
       ),
     );

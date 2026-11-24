@@ -13,6 +13,18 @@ Object.assign(uiJa, {
   topicPhantomConcept: "コンデンサーマイクには+48 Vのファンタム電源が必要です。ミキサーのマイク入力からXLRケーブルを通じて供給します。スピーカーには不要で、電源は壁のコンセントかパワーアンプから取ります。スイッチの場所はミキサーによって異なります。",
 });
 Object.assign(uiJa, {
+  topicDynamicsTitle: "コンプレッサー",
+  topicDynamicsQuestion: "なぜ音量が急に大きくなったり、小さくなったりするのか？",
+  topicDynamicsConcept: "コンプレッサーは、しきい値を超える大きな音を抑え、音量の差を縮めます。THRESHOLDで圧縮を始める基準を、RATIOで圧縮の強さを設定します。実際の圧縮量はゲインリダクション（GR）メーターで確認できます。",
+  compGraphOn: "{channel}chのコンプレッサー：ON、しきい値 {threshold} dB、レシオ {ratio}:1、出力補正 {makeup} dB",
+  compGraphOff: "{channel}chのコンプレッサー：OFF",
+  compButtonOn: "{channel}chのコンプレッサー：ON",
+  compButtonOff: "{channel}chのコンプレッサー：OFF（バイパス中）",
+  clDynamicsOffWarning: "DYNAMICSはオフです",
+  dmDynamicsStatus: "COMP {state} · THRESHOLD {threshold} dB · RATIO {ratio}:1 · GAIN +{makeup} dB（出力補正）",
+  compSheet: "{channel}chのコンプレッサー：{control}",
+  compNamedSheet: "{channel}のコンプレッサー：{control}",
+  solvedStatus: "達成済み",
   topicEqTitle: "イコライザー（EQ）",
   topicEqQuestion: "低音が膨らむ？ こもる？ 鼻にかかる？ 耳に刺さる？",
   topicEqConcept: "EQは周波数帯域ごとのバランスを調整する機能です。まず音の問題を言葉にし、原因となる帯域を探します。むやみにブーストするより、出すぎている帯域をカットしましょう。デジタルミキサーではEQをONにして、調整を音に反映させます。",

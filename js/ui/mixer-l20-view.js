@@ -127,7 +127,7 @@ function buildStrip(view, def, i, ui, rerender) {
       ? button(view, { label: "Hi-Z", tone: "pfl", get: (s) => !!ch(s).hiZ, onPress: () => store.setChannel(i, "hiZ", !ch(store.state).hiZ), aria: (s) => `Channel ${n} Hi-Z: ${ch(s).hiZ ? "on" : "off"}` })
       : null;
   const comp = c.comp
-    ? knob(view, { label: "COMP", sheetLabel: `Ch ${n} compressor`, defaultValue: 0, tone: "gain", format: (v) => (v <= 0.02 ? "off" : `${Math.round(v * 100)}%`), onInput: (v) => store.setChannel(i, "comp", v) }, (s) => ch(s).comp)
+    ? knob(view, { label: "COMP", sheetLabel: () => translate("ui.compSheet", "Ch {channel} compressor", { channel: n, control: "COMP" }), defaultValue: 0, tone: "gain", format: (v) => (v <= 0.02 ? "off" : `${Math.round(v * 100)}%`), onInput: (v) => store.setChannel(i, "comp", v) }, (s) => ch(s).comp)
     : el("span", "dg-note", "");
 
   const sel = el("button", `dg-sel${ui.sel === i ? " on" : ""}`, "SEL");
