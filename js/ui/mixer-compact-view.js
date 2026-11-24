@@ -146,7 +146,7 @@ function buildStrip(view, def, i) {
       row(
         "c16-eq cm-eq",
         ...EQ_FOR(c.eq).map((b) =>
-          knob(view, { label: b.label, sheetLabel: `Ch ${n} ${b.label} EQ`, min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: eqFormat, onInput: set(`eq.${b.id}`) }, (s) => ch(s).eq[b.id]),
+          knob(view, { label: b.label, sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} {control} EQ", { channel: n, control: b.label }), min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: eqFormat, onInput: set(`eq.${b.id}`) }, (s) => ch(s).eq[b.id]),
         ),
       ),
     pan: () => knob(view, { label: c.kind === "stereo" ? "BAL" : "PAN", sheetLabel: `Ch ${n} pan`, min: -1, max: 1, step: 0.02, defaultValue: 0, bipolar: true, tone: "pan", format: formatPan, onInput: set("pan") }, (s) => ch(s).pan),
@@ -341,7 +341,7 @@ function buildMaster(view, def) {
       ),
     );
   }
-  if (def.mainEq) blocks.push(block("EQ", ...EQ_FOR(def.mainEq).map((b) => knob(view, { label: b.label, sheetLabel: `EQ ${b.label} (${b.hz >= 1000 ? `${b.hz / 1000} kHz` : `${b.hz} Hz`}), the whole box`, min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: (v) => formatDb(v), onInput: (v) => store.setBus("mainEq", b.id, v) }, (s) => s.mainEq[b.id]))));
+  if (def.mainEq) blocks.push(block("EQ", ...EQ_FOR(def.mainEq).map((b) => knob(view, { label: b.label, sheetLabel: () => translate("ui.eqMainSheet", "EQ {band} ({frequency}), the whole box", { band: b.label, frequency: b.hz >= 1000 ? `${b.hz / 1000} kHz` : `${b.hz} Hz` }), min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: (v) => formatDb(v), onInput: (v) => store.setBus("mainEq", b.id, v) }, (s) => s.mainEq[b.id]))));
   if (def.thru) blocks.push(block(def.thru.label, busKnob("thru", "level", "LEVEL", LAWS.master, { sheetLabel: `${def.thru.label} level` }), Object.assign(document.createElement("p"), { className: "c16-note", textContent: "Before MAIN LEVEL and EQ" })));
   if (def.monitorOut) blocks.push(block("MONITOR OUT", busKnob("monitor", "level", "LEVEL", LAWS.master, { defaultValue: 0 })));
   if (def.masterEq || def.feedbackSuppressor) {
@@ -349,7 +349,7 @@ function buildMaster(view, def) {
       block(
         "MASTER",
         def.masterEq
-          ? knob(view, { label: "MASTER EQ", sheetLabel: "Master EQ: speech, music, bass boost", defaultValue: 0.5, tone: "eq", format: (v) => (v < 0.4 ? "SPEECH" : v > 0.9 ? "BASS BOOST" : v > 0.6 ? "MUSIC +" : "MUSIC"), onInput: (v) => store.setBus("masterEq", "pos", v) }, (s) => s.masterEq.pos)
+          ? knob(view, { label: "MASTER EQ", sheetLabel: () => translate("ui.eqMasterSheet", "Master EQ: speech, music, bass boost"), defaultValue: 0.5, tone: "eq", format: (v) => (v < 0.4 ? "SPEECH" : v > 0.9 ? "BASS BOOST" : v > 0.6 ? "MUSIC +" : "MUSIC"), onInput: (v) => store.setBus("masterEq", "pos", v) }, (s) => s.masterEq.pos)
           : null,
         def.feedbackSuppressor ? busButton("fbs", "on", "FEEDBACK SUPP.", "FEEDBACK SUPPRESSOR") : null,
       ),

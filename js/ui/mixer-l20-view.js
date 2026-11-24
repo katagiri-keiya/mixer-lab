@@ -273,7 +273,7 @@ function buildSidePanel(view, def, ui, rerender) {
   // CHANNEL STRIP: SEND EFX, EQ, PAN, LOW CUT, Φ, EQ OFF.
   const gainDb = (v) => (Math.abs(v) < 0.25 ? "0 dB" : `${v > 0 ? "+" : "−"}${Math.abs(v)} dB`);
   const midBand = peqBands(def).find((b) => b.id === "mid");
-  const eqKnob = (id, label, what) => knob(view, { label, sheetLabel: `Ch ${n} EQ ${what}`, min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: gainDb, onInput: set(`peq.${id}.gain`) }, (s) => ch(s).peq[id].gain);
+  const eqKnob = (id, label, what) => knob(view, { label, sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} EQ {control}", { channel: n, control: what }), min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: gainDb, onInput: set(`peq.${id}.gain`) }, (s) => ch(s).peq[id].gain);
   panel.appendChild(
     section(
       "SEND EFX",
@@ -285,7 +285,7 @@ function buildSidePanel(view, def, ui, rerender) {
       "EQ",
       eqKnob("high", "HIGH", "HIGH (10 kHz shelf)"),
       eqKnob("mid", "MID", "MID"),
-      knob(view, { label: "MID FREQ", sheetLabel: `Ch ${n} EQ MID FREQ`, defaultValue: logPos(midBand.freq, midBand.min, midBand.max), tone: "eq", format: (v) => `${hz(logFreq(v, midBand.min, midBand.max))} Hz`, onInput: (v) => store.setChannel(i, "peq.mid.freq", logFreq(v, midBand.min, midBand.max)) }, (s) => logPos(ch(s).peq.mid.freq, midBand.min, midBand.max)),
+      knob(view, { label: "MID FREQ", sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} EQ MID FREQ", { channel: n, control: "MID FREQ" }), defaultValue: logPos(midBand.freq, midBand.min, midBand.max), tone: "eq", format: (v) => `${hz(logFreq(v, midBand.min, midBand.max))} Hz`, onInput: (v) => store.setChannel(i, "peq.mid.freq", logFreq(v, midBand.min, midBand.max)) }, (s) => logPos(ch(s).peq.mid.freq, midBand.min, midBand.max)),
       eqKnob("low", "LOW", "LOW (100 Hz shelf)"),
       button(view, { label: "EQ OFF", tone: "assign", get: (s) => !eqIsOn(ch(s)), onPress: () => store.setChannel(i, "eqOn", !eqIsOn(ch(store.state))), aria: (s) => eqIsOn(ch(s))
         ? translate("ui.l20EqOffClear", "Channel {channel} EQ OFF: off, the EQ and LOW CUT are working", { channel: n })

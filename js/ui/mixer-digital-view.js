@@ -283,10 +283,10 @@ export function buildSelPanel(view, def, ui, rerender) {
       row(
         "dg-band",
         el("span", "dg-band-name", b.label),
-        knob(view, { label: "GAIN", sheetLabel: `Ch ${n} EQ ${b.label} gain`, min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: (v) => (Math.abs(v) < 0.25 ? "0 dB" : `${v > 0 ? "+" : "−"}${Math.abs(v)} dB`), onInput: set(`peq.${b.id}.gain`) }, (s) => ch(s).peq[b.id].gain),
-        knob(view, { label: "FREQ", sheetLabel: `Ch ${n} EQ ${b.label} frequency`, defaultValue: logPos(b.freq, b.min, b.max), tone: "eq", format: (v) => `${hz(logFreq(v, b.min, b.max))} Hz`, onInput: (v) => store.setChannel(i, `peq.${b.id}.freq`, logFreq(v, b.min, b.max)) }, (s) => logPos(ch(s).peq[b.id].freq, b.min, b.max)),
+        knob(view, { label: "GAIN", sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} EQ {band} gain", { channel: n, band: b.label, control: `${b.label} GAIN` }), min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: (v) => (Math.abs(v) < 0.25 ? "0 dB" : `${v > 0 ? "+" : "−"}${Math.abs(v)} dB`), onInput: set(`peq.${b.id}.gain`) }, (s) => ch(s).peq[b.id].gain),
+        knob(view, { label: "FREQ", sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} EQ {band} frequency", { channel: n, band: b.label, control: `${b.label} FREQ` }), defaultValue: logPos(b.freq, b.min, b.max), tone: "eq", format: (v) => `${hz(logFreq(v, b.min, b.max))} Hz`, onInput: (v) => store.setChannel(i, `peq.${b.id}.freq`, logFreq(v, b.min, b.max)) }, (s) => logPos(ch(s).peq[b.id].freq, b.min, b.max)),
         b.type === "peaking"
-          ? knob(view, { label: "Q", sheetLabel: `Ch ${n} EQ ${b.label} width (Q)`, min: PEQ_Q.min, max: PEQ_Q.max, step: 0.05, defaultValue: 0.7, tone: "eq", format: (v) => v.toFixed(1), onInput: set(`peq.${b.id}.q`) }, (s) => ch(s).peq[b.id].q)
+          ? knob(view, { label: "Q", sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} EQ {band} width (Q)", { channel: n, band: b.label, control: `${b.label} Q` }), min: PEQ_Q.min, max: PEQ_Q.max, step: 0.05, defaultValue: 0.7, tone: "eq", format: (v) => v.toFixed(1), onInput: set(`peq.${b.id}.q`) }, (s) => ch(s).peq[b.id].q)
           : el("span", "dg-q-blank", "shelf"),
       ),
     );

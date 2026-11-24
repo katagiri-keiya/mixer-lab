@@ -113,7 +113,7 @@ function buildStrip(view, i) {
   const send = (k, label, tone) =>
     knob(view, { label, sheetLabel: `Ch ${n} ${label} send`, defaultValue: 0, tone, format: lawFormat(CR.LAWS.send), onInput: (v) => store.setSend(i, k, v) }, (s) => ch(s).auxSends[k]);
   const eqKnob = (k, label) =>
-    knob(view, { label, sheetLabel: `Ch ${n} ${label} EQ`, min: -CR.EQ_RANGE_DB, max: CR.EQ_RANGE_DB, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: eqFormat, onInput: set(`eq.${k}`) }, (s) => ch(s).eq[k]);
+    knob(view, { label, sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} {control} EQ", { channel: n, control: label }), min: -CR.EQ_RANGE_DB, max: CR.EQ_RANGE_DB, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: eqFormat, onInput: set(`eq.${k}`) }, (s) => ch(s).eq[k]);
 
   const pre = button(view, {
     label: "PRE",
@@ -133,7 +133,7 @@ function buildStrip(view, i) {
     view,
     {
       label: "FREQ",
-      sheetLabel: `Ch ${n} MID frequency`,
+      sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} MID frequency", { channel: n, control: "MID FREQ" }),
       defaultValue: CR.midFreqToPos(1000),
       tone: "eq",
       format: (v) => hzFormat(CR.posToMidFreq(v)),

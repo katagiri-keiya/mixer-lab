@@ -132,15 +132,16 @@ function selectedChannel(view, def, ui, rerender) {
     }),
   );
   const band = PEQ_BANDS.find((b) => b.id === ui.band);
+  const bandKey = BAND_KEYS.find(([, id]) => id === ui.band)[0];
   const peq = (s) => s.channels[i].peq[ui.band];
   const knobs = row(
     "y96-row",
     knob(view, { label: "PAN", sheetLabel: `Ch ${c.label} pan`, min: -1, max: 1, step: 0.02, defaultValue: 0, bipolar: true, tone: "pan", size: undefined, format: formatPan, onInput: (v) => store.setChannel(i, "pan", v) }, (s) => s.channels[i].pan),
     band.type === "peaking"
-      ? knob(view, { label: "Q", sheetLabel: `Ch ${c.label} ${band.label} Q`, min: PEQ_Q.min, max: PEQ_Q.max, step: 0.05, defaultValue: 0.7, tone: "eq", size: undefined, format: (v) => v.toFixed(1), onInput: (v) => store.setChannel(i, `peq.${ui.band}.q`, v) }, (s) => peq(s).q)
+      ? knob(view, { label: "Q", sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} {band} Q", { channel: c.label, band: band.label, control: `${bandKey} Q` }), min: PEQ_Q.min, max: PEQ_Q.max, step: 0.05, defaultValue: 0.7, tone: "eq", size: undefined, format: (v) => v.toFixed(1), onInput: (v) => store.setChannel(i, `peq.${ui.band}.q`, v) }, (s) => peq(s).q)
       : el("span", "dg-q-blank", "shelf"),
-    knob(view, { label: "FREQUENCY", sheetLabel: `Ch ${c.label} ${band.label} frequency`, defaultValue: logPos(band.freq, band.min, band.max), tone: "eq", size: undefined, format: (v) => `${hz(logFreq(v, band.min, band.max))} Hz`, onInput: (v) => store.setChannel(i, `peq.${ui.band}.freq`, logFreq(v, band.min, band.max)) }, (s) => logPos(peq(s).freq, band.min, band.max)),
-    knob(view, { label: "GAIN", sheetLabel: `Ch ${c.label} ${band.label} gain`, min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", size: undefined, format: (v) => `${v > 0 ? "+" : ""}${v} dB`, onInput: (v) => store.setChannel(i, `peq.${ui.band}.gain`, v) }, (s) => peq(s).gain),
+    knob(view, { label: "FREQUENCY", sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} {band} frequency", { channel: c.label, band: band.label, control: `${bandKey} FREQUENCY` }), defaultValue: logPos(band.freq, band.min, band.max), tone: "eq", size: undefined, format: (v) => `${hz(logFreq(v, band.min, band.max))} Hz`, onInput: (v) => store.setChannel(i, `peq.${ui.band}.freq`, logFreq(v, band.min, band.max)) }, (s) => logPos(peq(s).freq, band.min, band.max)),
+    knob(view, { label: "GAIN", sheetLabel: () => translate("ui.eqChannelSheet", "Ch {channel} {band} gain", { channel: c.label, band: band.label, control: `${bandKey} GAIN` }), min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", size: undefined, format: (v) => `${v > 0 ? "+" : ""}${v} dB`, onInput: (v) => store.setChannel(i, `peq.${ui.band}.gain`, v) }, (s) => peq(s).gain),
   );
   box.append(bands, knobs);
   return box;
@@ -184,7 +185,11 @@ function display(view, def, ui, rerender) {
   } else if (page(ui, "eq")) {
     const t = el("div", "x32-lines");
     view.bindings.push({ kind: "fn", run: (s) => (t.innerHTML = PEQ_BANDS.slice().reverse().map((b) => { const v = ch(s).peq[b.id]; return `<p>${b.label}: ${v.gain > 0 ? "+" : ""}${v.gain} dB @ ${hz(v.freq)} Hz${b.type === "peaking" ? ` Q ${v.q.toFixed(1)}` : ""}</p>`; }).join("")) });
-    body.append(row("y96-row", procOn(view, def, i, "eqOn", "EQ ON", "EQ"), el("p", "dg-note", "Edit with the SELECTED CHANNEL knobs: pick a band, then Q, FREQUENCY, GAIN.")), eqGraph(view, def, i, { theme: "lcd", band: () => ui.band }), t);
+    const note = el("p", "dg-note");
+    view.bindings.push({ kind: "fn", run: () => {
+      note.textContent = translate("ui.y96EqPageNote", "Edit with the SELECTED CHANNEL knobs: pick a band, then Q, FREQUENCY, GAIN.");
+    } });
+    body.append(row("y96-row", procOn(view, def, i, "eqOn", "EQ ON", "EQ"), note), eqGraph(view, def, i, { theme: "lcd", band: () => ui.band }), t);
   } else if (page(ui, "dyn")) {
     const gr = el("span", "c16-led led-comp");
     gr.innerHTML = '<i aria-hidden="true"></i><small>GR</small>';

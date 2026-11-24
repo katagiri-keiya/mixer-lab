@@ -15,6 +15,7 @@
 // each channel's groups (ch.fgrp, ch.mgrp).
 // Layer, modes, page, bank and selection are the view's own (view.dm).
 
+import { t as translate } from "../i18n/index.js";
 import { DYN, LAWS, PEQ_BANDS, PEQ_Q, compIsOn, eqIsOn, levelLaw } from "../compact.js";
 import { formatDb, formatPan } from "../levels.js";
 import { button, el, fader, knob, meterBar, procOn, row } from "./mixer-digital-view.js";
@@ -131,9 +132,9 @@ function selectedChannel(view, def, ui, rerender) {
       row(
         "dm-band",
         el("span", "dg-band-name", b.label),
-        b.type === "peaking" ? knob(view, { label: "Q", sheetLabel: `${name} ${b.label} Q`, min: PEQ_Q.min, max: PEQ_Q.max, step: 0.05, defaultValue: 0.7, tone: "eq", format: (v) => v.toFixed(1), onInput: (v) => store.setChannel(i, `peq.${b.id}.q`, v) }, (s) => ch(s).peq[b.id].q) : el("span", "dg-q-blank", b.type === "lowshelf" ? "L.SHELF" : "H.SHELF"),
-        knob(view, { label: "F", sheetLabel: `${name} ${b.label} frequency`, defaultValue: logPos(b.freq, b.min, b.max), tone: "eq", format: (v) => hz(logFreq(v, b.min, b.max)), onInput: (v) => store.setChannel(i, `peq.${b.id}.freq`, logFreq(v, b.min, b.max)) }, (s) => logPos(ch(s).peq[b.id].freq, b.min, b.max)),
-        knob(view, { label: "G", sheetLabel: `${name} ${b.label} gain`, min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: (v) => `${v > 0 ? "+" : ""}${v}`, onInput: (v) => store.setChannel(i, `peq.${b.id}.gain`, v) }, (s) => ch(s).peq[b.id].gain),
+        b.type === "peaking" ? knob(view, { label: "Q", sheetLabel: () => translate("ui.eqNamedChannelSheet", "{channel} {band} Q", { channel: name, band: b.label, control: `${b.label} Q` }), min: PEQ_Q.min, max: PEQ_Q.max, step: 0.05, defaultValue: 0.7, tone: "eq", format: (v) => v.toFixed(1), onInput: (v) => store.setChannel(i, `peq.${b.id}.q`, v) }, (s) => ch(s).peq[b.id].q) : el("span", "dg-q-blank", b.type === "lowshelf" ? "L.SHELF" : "H.SHELF"),
+        knob(view, { label: "F", sheetLabel: () => translate("ui.eqNamedChannelSheet", "{channel} {band} frequency", { channel: name, band: b.label, control: `${b.label} F` }), defaultValue: logPos(b.freq, b.min, b.max), tone: "eq", format: (v) => hz(logFreq(v, b.min, b.max)), onInput: (v) => store.setChannel(i, `peq.${b.id}.freq`, logFreq(v, b.min, b.max)) }, (s) => logPos(ch(s).peq[b.id].freq, b.min, b.max)),
+        knob(view, { label: "G", sheetLabel: () => translate("ui.eqNamedChannelSheet", "{channel} {band} gain", { channel: name, band: b.label, control: `${b.label} G` }), min: -15, max: 15, step: 0.5, defaultValue: 0, bipolar: true, tone: "eq", format: (v) => `${v > 0 ? "+" : ""}${v}`, onInput: (v) => store.setChannel(i, `peq.${b.id}.gain`, v) }, (s) => ch(s).peq[b.id].gain),
       ),
     );
   box.appendChild(block("EQUALIZER", procOn(view, def, i, "eqOn", "EQ ON", "EQ"), ...eqBands));
@@ -195,7 +196,7 @@ function display(view, def, ui, rerender) {
   const body = el("div", "y96-lcd-body");
   if (ui.page === "eq") {
     const t = el("div", "x32-lines");
-    view.bindings.push({ kind: "fn", run: (s) => (t.innerHTML = `<p>${eqIsOn(ch(s)) ? "EQ ON" : "EQ OFF: the knobs move, nothing changes"}</p>`) });
+    view.bindings.push({ kind: "fn", run: (s) => (t.innerHTML = `<p>${eqIsOn(ch(s)) ? "EQ ON" : translate("ui.dm2000EqBypass", "EQ OFF: the knobs move, nothing changes")}</p>`) });
     body.append(row("y96-row", procOn(view, def, i, "eqOn", "EQ ON", "EQ")), eqGraph(view, def, i, { theme: "dm" }), t);
   } else if (ui.page === "dyn") {
     const t = el("div", "x32-lines");

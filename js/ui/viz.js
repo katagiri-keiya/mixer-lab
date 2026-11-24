@@ -7,6 +7,8 @@
 import { compIsOn, eqIsOn, hpfHz, peqBands } from "../compact.js";
 import { shelfHz } from "../graph-kit.js";
 
+import { t as translate } from "../i18n/index.js";
+
 const SR = 48000;
 const F_LO = 20;
 const F_HI = 20000;
@@ -125,7 +127,18 @@ export function eqGraph(view, def, i, opts = {}) {
       });
       box.classList.toggle("is-off", !on);
       tag.textContent = on ? "" : "EQ OFF";
-      root.setAttribute("aria-label", `EQ curve, channel ${c.label}: ${on ? bands.map((b) => `${b.label} ${ch.peq[b.id].gain > 0 ? "+" : ""}${ch.peq[b.id].gain} dB at ${Math.round(ch.peq[b.id].freq)} Hz`).join(", ") : "EQ switched off, flat"}`);
+      const hpfActive = !def.eqOffBypassesHpf && c.hpf && hpfHz(c, ch.hpf) > 0;
+      const details = on
+        ? bands.map((b) => {
+          const p = ch.peq[b.id];
+          return translate("ui.eqCurveBand", "{band} {gain} dB at {frequency} Hz", {
+            band: b.label, gain: p.gain > 0 ? `+${p.gain}` : p.gain, frequency: Math.round(p.freq),
+          });
+        }).join(", ")
+        : hpfActive
+          ? translate("ui.eqCurveOffWithHpf", "EQ switched off, high-pass filter active")
+          : translate("ui.eqCurveOff", "EQ switched off, flat");
+      root.setAttribute("aria-label", translate("ui.eqCurve", "EQ curve, channel {channel}: {details}", { channel: c.label, details }));
     },
   });
   return box;
