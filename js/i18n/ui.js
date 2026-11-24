@@ -13,6 +13,34 @@ Object.assign(uiJa, {
   topicPhantomConcept: "コンデンサーマイクには+48 Vのファンタム電源が必要です。ミキサーのマイク入力からXLRケーブルを通じて供給します。スピーカーには不要で、電源は壁のコンセントかパワーアンプから取ります。スイッチの場所はミキサーによって異なります。",
 });
 Object.assign(uiJa, {
+  topicSoloTitle: "ヘッドホンとSOLO",
+  topicSoloQuestion: "特定の音だけを聞き分けられる？",
+  topicSoloConcept: "PFLやSOLOを使うと、客席に送る音を変えずに、エンジニアがヘッドホンで特定のチャンネルを確認できます。入力信号の確認やゲイン調整に使います。",
+  phonesNoSourceShort: "C-R：試聴ソース未選択",
+  phonesSelectorOff: "ヘッドホンは無音です。HEADPHONEがOFFになっています。",
+  phonesSelectorSignal: "エンジニア用ヘッドホン：{signal}{tone}。",
+  phonesSelectorSignals: {
+    L: "左出力を両耳で試聴中",
+    R: "右出力を両耳で試聴中",
+    M: "左右をモノラルに合成して両耳で試聴中（位相の問題の確認用）",
+    ST: "ステレオミックスを左右それぞれの耳で試聴中",
+  },
+  phonesTone: "。TONEはオンで、ヘッドホンには20 dB下げて送られています",
+  phonesCompactSolo: "エンジニア用ヘッドホン：{what}をSOLOで試聴中。{mode}。",
+  phonesTrackSolo: "エンジニア用ヘッドホン：トラック{tracks}のつまみより前の信号をPFLで試聴中。",
+  phonesSoloModes: {
+    pfl: "PFL（フェーダー前）",
+    mono: "PFL（フェーダー前、モノラル）",
+    sip: "通常のSOLO（フェーダーとPANの後）",
+  },
+  phonesLevelSet: "エンジニア用ヘッドホン：{what}をLEVEL SET (PFL) モードのSOLOで試聴中。信号はフェーダー前で、レベルは左側のメーターに表示されます。",
+  phonesNormal: "エンジニア用ヘッドホン：{what}をNORMAL (AFL) モードのSOLOで試聴中。信号はフェーダーとPANの後です。",
+  phonesNoSource: "ヘッドホンは無音です。C-R/PHONES SOURCEで試聴ソースを選ぶか、チャンネルのSOLOを押してください。",
+  phonesSources: "エンジニア用ヘッドホン：C-R SOURCEで選んだ{sources}を試聴中。",
+  f8PflNote: "PFL：ヘッドホンではトラック{tracks}のつまみより前の信号だけを聴けます。",
+  f8TrackKnobsNote: "トラックのつまみはL/Rミックス内の音量を調整します。各トラックの録音レベルは変わりません。",
+});
+Object.assign(uiJa, {
   topicGainTitle: "ゲイン調整",
   topicGainQuestion: "入力が強すぎる？ 弱すぎる？ それともちょうどいい？",
   topicGainConcept: "まず各入力のGAIN（またはTRIM）で信号レベルを整え、メーターが適正な範囲を示すようにします。その後でフェーダーを調整します。入力が強すぎるとクリッピングが起き、弱すぎるとノイズが目立ちます。",

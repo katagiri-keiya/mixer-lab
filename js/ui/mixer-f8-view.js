@@ -12,6 +12,7 @@
 
 import { LAWS, hpfHz, linkOf } from "../compact.js";
 import { formatDb, formatPan } from "../levels.js";
+import { t as translate } from "../i18n/index.js";
 import { button, el, knob, meterBar, row } from "./mixer-digital-view.js";
 
 const lawFormat = (law) => (v) => formatDb(law.toDb(v), { unity: true });
@@ -98,7 +99,9 @@ function mixerScreen(view, def, ui, rerender) {
     kind: "fn",
     run: (s) => {
       const pfl = s.channels.filter((c) => c.solo).map((c) => c.label);
-      note.textContent = pfl.length ? `PFL: the headphones hear track ${pfl.join(", ")} alone, before its fader.` : "Track knobs set each track's level in the L/R mix. They don't change what each track records.";
+      note.textContent = pfl.length
+        ? translate("ui.f8PflNote", `PFL: the headphones hear track ${pfl.join(", ")} alone, before its fader.`, { tracks: pfl.join("、") })
+        : translate("ui.f8TrackKnobsNote", "Track knobs set each track's level in the L/R mix. They don't change what each track records.");
     },
   });
   const wrap = el("div", "f8-screen");

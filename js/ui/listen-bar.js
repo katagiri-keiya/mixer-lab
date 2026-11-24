@@ -217,7 +217,7 @@ export class ListenBar {
         const what = [...phones.soloed.map((n) => `Ch ${n}`), ...phones.auxSolo.map((b) => t[b])].join(", ");
         return `SOLO: ${what}`;
       }
-      return phones.sources.length ? `C-R: ${phones.sources.map((s) => SOURCE_NAMES[s]).join(" + ")}` : "C-R: no SOURCE";
+      return phones.sources.length ? `C-R: ${phones.sources.map((s) => SOURCE_NAMES[s]).join(" + ")}` : translate("ui.phonesNoSourceShort", "C-R: no SOURCE");
     };
     const rec = recDev ? recorderText(recDev, this.getRecorder(), mix.rig.recorders?.[recDev.id]) : null;
     const sub = (d) => {
@@ -269,7 +269,7 @@ export class ListenBar {
     else if (!playing) msg = translate("ui.playbackStopped", "Playback stopped.");
     else if (buffering) msg = translate("ui.buffering", "Buffering the next part of the song…");
     else if (dest === "pfl") msg = pfls.length ? translate("ui.pflHeadphones", `Engineer's headphones: PFL on Ch ${pfls.join(", ")} (before the ${t.levelShort.toLowerCase()}).`, { channels: `Ch ${pfls.join(", ")}`, level: t.levelShort.toLowerCase() }) : translate("ui.pflQuiet", "Headphones are quiet: press PFL on a channel to hear it here.");
-    else if (dest === "phones") msg = phonesMessage(phones, t);
+    else if (dest === "phones") msg = phonesMessage(phones, t, modelOf(state));
     else if (dest === "rec") msg = rec.msg;
     else if (ends[dest]?.length) {
       msg = translate("ui.hearing", `Hearing ${busName} through the ${names(ends[dest])}.`, { bus: busName, speakers: names(ends[dest]) });
@@ -314,18 +314,25 @@ const SELECTOR_TEXT = {
   ST: "the stereo mix, left in the left ear",
 };
 
-function phonesMessage(p, t) {
+function phonesMessage(p, t, model) {
   if (p.selector && !p.solo) {
-    if (p.selector === "OFF") return "Headphones are quiet: the HEADPHONE selector is OFF.";
-    return `Engineer's headphones: ${SELECTOR_TEXT[p.selector]}${p.tone ? ". TONE is on, 20 dB down in the headphones" : ""}.`;
+    if (p.selector === "OFF") return translate("ui.phonesSelectorOff", "Headphones are quiet: the HEADPHONE selector is OFF.");
+    const signal = translate(`ui.phonesSelectorSignals.${p.selector}`, SELECTOR_TEXT[p.selector]);
+    const tone = p.tone ? translate("ui.phonesTone", ". TONE is on, 20 dB down in the headphones") : "";
+    return translate("ui.phonesSelectorSignal", "Engineer's headphones: {signal}{tone}.", { signal, tone });
   }
   if (p.solo) {
     const what = [...p.soloed.map((n) => `Ch ${n}`), ...p.auxSolo.map((b) => t[b])].join(", ");
-    if (p.modeText) return `Engineer's headphones: SOLO ${what}, ${p.modeText}.`;
+    if (p.modeText) {
+      const english = `Engineer's headphones: SOLO ${what}, ${p.modeText}.`;
+      if (model === "f8n") return translate("ui.phonesTrackSolo", english, { tracks: p.soloed.join("、") });
+      const mode = translate(`ui.phonesSoloModes.${p.selector ? "mono" : p.mode}`, p.modeText);
+      return translate("ui.phonesCompactSolo", english, { what, mode });
+    }
     return p.mode === "pfl"
-      ? `Engineer's headphones: SOLO ${what} in LEVEL SET (PFL), before the fader. The left meter shows its level.`
-      : `Engineer's headphones: SOLO ${what} in NORMAL (AFL), after the fader and pan.`;
+      ? translate("ui.phonesLevelSet", "Engineer's headphones: SOLO {what} in LEVEL SET (PFL), before the fader. The left meter shows its level.", { what })
+      : translate("ui.phonesNormal", "Engineer's headphones: SOLO {what} in NORMAL (AFL), after the fader and pan.", { what });
   }
-  if (!p.sources.length) return "Headphones are quiet: pick a C-R/PHONES SOURCE, or press SOLO on a channel.";
-  return `Engineer's headphones: the C-R SOURCE ${p.sources.map((s) => SOURCE_NAMES[s]).join(" + ")}.`;
+  if (!p.sources.length) return translate("ui.phonesNoSource", "Headphones are quiet: pick a C-R/PHONES SOURCE, or press SOLO on a channel.");
+  return translate("ui.phonesSources", "Engineer's headphones: the C-R SOURCE {sources}.", { sources: p.sources.map((s) => SOURCE_NAMES[s]).join(" + ") });
 }
