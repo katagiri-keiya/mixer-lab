@@ -62,6 +62,15 @@ const gearTypeText = (id, field, fallback) => localized("gearById", id, field, f
 export const connectionMessage = (message) => {
   if (message === "Line level can't drive a passive speaker — there's no amplifier. Put a power amp in between, or use a powered speaker.") return translate("ui.passiveNeedsAmp", message);
   if (message === "Condenser mic, no +48 V: it's plugged in but silent. Turn on phantom power.") return translate("ui.condenserNoPhantom", message);
+  if (message === "Speaker level into a camera input can damage it. Cameras take mic or line level.") return translate("ui.cameraSpeakerLevel", message);
+  if (message === "This camera input isn't fed from a mixer output.") return translate("ui.cameraNoMixerFeed", message);
+  if (message === "Mic level into the camera's LINE input: about 40 dB too quiet, so it records mostly noise. Set the camera to MIC, or the mixer's OUTPUT LEVEL to LINE.") return translate("ui.cameraWeakLineInput", message);
+  const hotCamera = message?.match(/^(Line|−10 \(tape\)|−10) level into the camera's (3\.5 mm )?MIC input: about (40|26) dB too hot,/);
+  if (hotCamera) {
+    const [, level, mini, db] = hotCamera;
+    const levelKey = { Line: "cameraLineLevel", "−10 (tape)": "cameraTapeLevel", "−10": "cameraMinus10Level" }[level];
+    return translate(mini ? "ui.cameraHotMiniInput" : "ui.cameraHotMicInput", message, { level: translate(`ui.${levelKey}`, level), db });
+  }
   return message;
 };
 const displayDevice = (value) => value === "Laptop · Preshow Music" ? gearText("preshowLaptop") : value === "Powered speaker · house left" ? `${gearText("poweredSpeaker")} · ${gearText("houseLeft")}` : value === "Powered speaker · house right" ? `${gearText("poweredSpeaker")} · ${gearText("houseRight")}` : gearText(value);
@@ -219,7 +228,7 @@ export class PatchView {
         model === "cr1604" && src.stereo
           ? sourceText(src, "noteCr1604", "A laptop's 3.5 mm headphone jack is a stereo line output. On the 1604 it goes into the TAPE INPUT RCA pair with a 3.5 mm ↔ RCA (Y) cable, then TAPE TO MAIN MIX puts it in the house.")
           : model !== "generic" && src.stereo
-            ? sourceText(src, model === "x32c" && src.id === "synths" ? "noteX32c" : "noteStereo", "A laptop's 3.5 mm headphone jack is a stereo line output: a stereo line channel or the tape input takes it, with a breakout, RCA (Y) or 3.5 mm cable to suit the jacks.")
+            ? sourceText(src, (model === "x32c" || model === "gdig") && src.id === "synths" ? "noteAux12" : "noteStereo", "A laptop's 3.5 mm headphone jack is a stereo line output: a stereo line channel or the tape input takes it, with a breakout, RCA (Y) or 3.5 mm cable to suit the jacks.")
             : sourceText(src, "note", d.sourceId === "preshow" ? gearText("preshowNote") : src.note);
       return this.card(d.id, `<li class="source-card status-${status}">
         <div class="source-top">
@@ -437,11 +446,15 @@ export class PatchView {
         const rt = this.getRecorder(d.id);
         const card = cardStats(d, rt ? rt.usedBytes : 0);
         const armed = d.tracks.map((t, i) => (t.arm ? i + 1 : 0)).filter(Boolean);
-        const state = rt && rt.recording ? "● Recording" : rt && rt.playing ? "▶ Playing" : "Stopped";
+        const state = rt && rt.recording ? translate("ui.recorderRecording", "● Recording") : rt && rt.playing ? translate("ui.recorderPlaying", "▶ Playing") : translate("ui.recorderStopped", "Stopped");
+        const cardStatus = translate("ui.recorderCardStatus", "{state} · armed: {armed} · {size} GB card", {
+          state, armed: armed.length ? armed.join(", ") : translate("ui.recorderNoArmedTracks", "none"), size: F8.cardGB,
+        });
+        const timeLeft = Number.isFinite(card.secondsLeft) ? translate("ui.recorderCardTimeLeft", ", {time} left", { time: formatHours(card.secondsLeft) }) : "";
         return this.card(d.id, `<li class="device-card">
-          <div class="device-top"><span class="dev-ico">${icon("role-destination", { size: 40 })}</span><div class="source-names"><strong>${esc(d.label)}</strong><span>${state} · armed: ${armed.length ? armed.join(", ") : "none"} · ${F8.cardGB} GB card${Number.isFinite(card.secondsLeft) ? `, ${formatHours(card.secondsLeft)} left` : ""}</span></div></div>
+          <div class="device-top"><span class="dev-ico">${icon("role-destination", { size: 40 })}</span><div class="source-names"><strong>${esc(d.label)}</strong><span>${esc(cardStatus + timeLeft)}</span></div></div>
           <div class="rec-jacks">${listPorts(rig, d).map((p) => this.portButton(p.ref, p.dir)).join("")}</div>
-          <button type="button" class="btn btn-start" data-open-recorder="${esc(d.id)}">Open the recorder</button>
+          <button type="button" class="btn btn-start" data-open-recorder="${esc(d.id)}">${translate("ui.openRecorder", "Open the recorder")}</button>
         </li>`);
       })
       .join("");
@@ -520,10 +533,10 @@ export class PatchView {
       <h3 class="group-title">${icon("role-source", { size: 22 })}${translate("ui.mixerOutputs", "Mixer outputs")} <small>${translate("ui.outputLineLevel", "line level")} · ${translate("ui.outputSection", "amps, speakers, recorders")}</small></h3>
       ${outList}
       ${reverbs.length ? `<h3 class="group-title">Effects</h3><ul class="device-list">${reverbHtml}</ul>` : ""}
-      ${recorders.length ? `<h3 class="group-title">Recorder</h3><ul class="device-list">${recHtml}</ul>` : ""}
+      ${recorders.length ? `<h3 class="group-title">${translate("ui.recorderHeading", "Recorder")}</h3><ul class="device-list">${recHtml}</ul>` : ""}
       ${amps.length ? `<h3 class="group-title">Amplifier</h3><ul class="device-list">${ampHtml}</ul>` : ""}
       ${gear.length ? `<h3 class="group-title">Rack gear</h3><ul class="device-list">${gearHtml}</ul>` : ""}
-      <h3 class="group-title">${icon("role-destination", { size: 22 })}${speakers.every((d) => DEVICE_TYPES[d.type].camera) ? "Camera — does the level match?" : translate("ui.speakersWhereAmp", "Speakers — where is the amplifier?")}</h3>
+      <h3 class="group-title">${icon("role-destination", { size: 22 })}${speakers.every((d) => DEVICE_TYPES[d.type].camera) ? translate("ui.cameraLevelHeading", "Camera — does the level match?") : translate("ui.speakersWhereAmp", "Speakers — where is the amplifier?")}</h3>
       <ul class="device-list">${spkHtml}</ul>`;
   }
 }

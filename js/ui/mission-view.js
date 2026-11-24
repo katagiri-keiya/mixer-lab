@@ -352,7 +352,7 @@ export class MissionView {
       })
       .join("");
     // Who's on stage, when it isn't simply the whole band (doors, speeches, someone sitting out).
-    const stageLine = this.getMusic().stageNote;
+    const stageLine = scenarioText(def, "stageNote", this.getMusic().stageNote ?? "");
     // By mixer, the console is yours to choose; by topic, the scenario chooses it.
     const on = seq.mixer
       ? `<label class="mixer-pick">on the <select class="mixer-console" aria-label="Mixer">${MIXERS.map((m) => `<option value="${esc(m.model)}" ${m.model === consoleOf(def) ? "selected" : ""}>${esc(mixerName(m))}</option>`).join("")}</select></label>`
@@ -360,18 +360,18 @@ export class MissionView {
     this.root.innerHTML = `<div class="mission-inner">
       <div class="mission-head">
         <button type="button" class="mission-theme" data-act="drawer" title="${seq.mixer ? "Every scenario on this mixer" : "Every topic and scenario"}">
-          <span class="mt-label">${esc(seq.mixer ? "By mixer" : seq.label)}</span><span class="mt-step">${i + 1} of ${seq.list.length}</span>
+          <span class="mt-label">${esc(seq.mixer ? translate("ui.byMixer", "By mixer") : seq.label)}</span><span class="mt-step">${translate("ui.scenarioStep", "{current} of {total}", { current: i + 1, total: seq.list.length })}</span>
         </button>
         <div class="mission-title">
           <h1>${esc(titleOf(def))}</h1>
-          <p class="mission-on">${on}${def.who ? ` · ${esc(def.who)}` : ""}</p>
+          <p class="mission-on">${on}${def.who ? ` · ${esc(textOf(def, "who"))}` : ""}</p>
         </div>
       </div>
       <ol class="mission-steps" aria-label="${esc(seq.mixer ? `Scenarios on the ${consoleName(def)}` : seq.label)}">${steps}</ol>
       <p class="mission-prompt">${esc(fillTerms(textOf(def, "prompt"), t))}${stageLine ? `<span class="mission-stage">${esc(stageLine)}</span>` : ""}</p>
       <div class="mission-goalrow">
         <p class="mission-goal"><strong>${translate("ui.goal", "Goal:")}</strong> ${esc(fillTerms(textOf(def, "goal"), t))}</p>
-        <ul class="checklist" aria-label="Progress"></ul>
+        <ul class="checklist" aria-label="${esc(translate("ui.scenarioProgress", "Progress"))}"></ul>
       </div>
       <div class="complete-banner" hidden></div>
       <ol class="hint-list"></ol>
@@ -470,7 +470,7 @@ export class MissionView {
         (i) => `<li class="check ${i.met ? "met" : "unmet"} kind-${i.kind}">
           <span class="check-box" aria-hidden="true">${i.met ? "✓" : i.kind === "keep" ? "!" : ""}</span>
           <span class="check-text">${i.kind === "keep" ? `<em>${translate("ui.keep", "Keep:")}</em> ` : ""}${esc(fillTerms(conditionText(this.def, i.id, i.label), t))}
-            <span class="visually-hidden">${i.met ? "— done" : "— not yet"}</span>
+            <span class="visually-hidden">${i.met ? translate("ui.conditionMet", "— done") : translate("ui.conditionUnmet", "— not yet")}</span>
             ${i.detail && !i.met ? `<small>${esc(i.detail)}</small>` : ""}
             ${i.kind === "keep" && !i.met ? `<span class="keep-fix">${translate("ui.keepBroken", "That broke something you had to keep.")} ${this.canUndo() ? `<button type="button" class="chip" data-act="undo">${translate("ui.undo", "Undo")}</button>` : ""}<button type="button" class="chip" data-act="reset">${translate("ui.startOver", "Start over")}</button></span>` : ""}
           </span>
@@ -548,21 +548,21 @@ export class MissionView {
     const nextUp = seq.list.slice(i + 1).find((x) => !this.progress.has(x.id)) || seq.list[i + 1];
     const shown = def.hints.slice(0, this.hints).map((h, i) => scenarioText(def, `hints.${i}`, h));
     dock.innerHTML = `<div class="dock-inner ${solved ? "is-solved" : ""}">
-      <span class="dock-where">${esc(seq.mixer ? "By mixer" : seq.label)} · ${i + 1}/${seq.list.length}</span>
-      <strong class="dock-title">${esc(def.title)}</strong>
-      <span class="dock-ticks" role="img" aria-label="${goals.filter((g) => g.met).length} of ${count(goals.length, "goal")} met">${ticks}</span>
+      <span class="dock-where">${esc(seq.mixer ? translate("ui.byMixer", "By mixer") : seq.label)} · ${i + 1}/${seq.list.length}</span>
+      <strong class="dock-title">${esc(titleOf(def))}</strong>
+      <span class="dock-ticks" role="img" aria-label="${esc(translate("ui.goalProgress", `{done} of ${count(goals.length, "goal")} met`, { done: goals.filter((g) => g.met).length, total: goals.length }))}">${ticks}</span>
       <span class="dock-next ${broken && !solved ? "is-broken" : ""}">${esc(next)}</span>
       <span class="dock-actions">
-        ${hintsLeft && !solved && !broken ? `<button type="button" class="chip dock-btn" data-act="hint">${this.hints ? "Another hint" : "Hint"}</button>` : ""}
+        ${hintsLeft && !solved && !broken ? `<button type="button" class="chip dock-btn" data-act="hint">${this.hints ? translate("ui.dockAnotherHint", "Another hint") : translate("ui.hint", "Hint")}</button>` : ""}
         ${broken && !solved ? `${this.canUndo() ? `<button type="button" class="chip dock-btn" data-act="undo">${translate("ui.undo", "Undo")}</button>` : ""}<button type="button" class="chip dock-btn" data-act="reset">${translate("ui.startOver", "Start over")}</button>` : ""}
-        ${solved && nextUp ? `<button type="button" class="btn btn-start dock-btn" data-act="next" data-id="${esc(nextUp.id)}">Next: ${esc(displayShortTitle(nextUp))} →</button>` : ""}
-        <button type="button" class="chip dock-btn" data-act="dock-more" aria-expanded="${!!this.dockOpen}">Story &amp; goals</button>
+        ${solved && nextUp ? `<button type="button" class="btn btn-start dock-btn" data-act="next" data-id="${esc(nextUp.id)}">${translate("ui.dockNext", "Next:")} ${esc(displayShortTitle(nextUp))} →</button>` : ""}
+        <button type="button" class="chip dock-btn" data-act="dock-more" aria-expanded="${!!this.dockOpen}">${esc(translate("ui.storyAndGoals", "Story & goals"))}</button>
       </span>
       <div class="dock-more" ${this.dockOpen ? "" : "hidden"}>
-        <p class="mission-prompt">${esc(fillTerms(def.prompt, t))}</p>
+        <p class="mission-prompt">${esc(fillTerms(textOf(def, "prompt"), t))}</p>
         <ul class="checklist">${items.map((x) => `<li class="check ${x.met ? "met" : "unmet"} kind-${x.kind}"><span class="check-box" aria-hidden="true">${x.met ? "✓" : x.kind === "keep" ? "!" : ""}</span><span class="check-text">${x.kind === "keep" ? `<em>${translate("ui.keep", "Keep:")}</em> ` : ""}${esc(fillTerms(conditionText(def, x.id, x.label), t))}</span></li>`).join("")}</ul>
         ${shown.length ? `<ol class="hint-list">${shown.map((h, k) => `<li><span class="hint-num">${translate("ui.hint", "Hint")} ${k + 1}</span> ${esc(fillTerms(h, t))}</li>`).join("")}</ol>` : ""}
-        <button type="button" class="linkish" data-act="dock-top">Back to the full scenario ↑</button>
+        <button type="button" class="linkish" data-act="dock-top">${translate("ui.backToFullScenario", "Back to the full scenario ↑")}</button>
       </div>
     </div>`;
   }

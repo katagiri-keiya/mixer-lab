@@ -8,6 +8,7 @@ import { MeterView } from "../meters.js";
 import { F8, cardStats, trackInputs } from "../devices.js";
 import { encodeWav } from "../wav.js";
 import { formatDb } from "../levels.js";
+import { t as translate } from "../i18n/index.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const MARKS = [
@@ -64,7 +65,7 @@ export class RecorderView {
 
   async record() {
     const rt = this.rt();
-    if (!rt) return this.toast("Press Start Audio first: the recorder needs the audio engine.", "bad");
+    if (!rt) return this.toast(translate("ui.recorderStartBeforeRecording", "Press Start Audio first: the recorder needs the audio engine."), "bad");
     const r = await rt.record();
     if (!r.ok) this.toast(r.reason, "bad");
     else this.recStart = performance.now();
@@ -221,7 +222,7 @@ export class RecorderView {
     this.el.querySelector(".rec-card").textContent = `SD card ${F8.cardGB} GB · ${(card.free / 1e9).toFixed(1)} GB free · ${card.armed ? `${hours(card.secondsLeft)} left for ${card.armed} track${card.armed > 1 ? "s" : ""} at ${F8.sampleRate / 1000} kHz / ${F8.bitDepth}-bit` : "arm a track to see the time left"}`;
     const status = this.el.querySelector(".rec-status");
     const recording = rt && rt.recording;
-    status.textContent = !rt ? "Press Start Audio to use the recorder." : recording ? `● REC ${clock((performance.now() - (this.recStart || performance.now())) / 1000)}` : rt.playing ? "▶ PLAY" : rt.error || "■ STOP";
+    status.textContent = !rt ? translate("ui.recorderStartAudio", "Press Start Audio to use the recorder.") : recording ? `● REC ${clock((performance.now() - (this.recStart || performance.now())) / 1000)}` : rt.playing ? "▶ PLAY" : rt.error || "■ STOP";
     status.classList.toggle("is-rec", !!recording);
     this.el.querySelector('[data-rec="rec"]').classList.toggle("lit", !!recording);
     const takes = rt ? rt.takes : [];
@@ -235,7 +236,7 @@ export class RecorderView {
               ${t.data ? `<button type="button" class="chip" data-rec="play" data-take="${t.id}">${rt.playing?.takeId === t.id ? "▶ playing" : "▶ Play"}</button><button type="button" class="chip" data-rec="download" data-take="${t.id}">Download WAV</button>` : `<small>(audio not kept: only the three newest takes stay in the lab's memory)</small>`}</li>`,
           )
           .join("")
-      : '<li class="rec-empty">No takes yet. Arm tracks, then press REC.</li>';
+      : `<li class="rec-empty">${esc(translate("ui.recorderNoTakes", "No takes yet. Arm tracks, then press REC."))}</li>`;
   }
 
   updateMeters(readings, now) {
