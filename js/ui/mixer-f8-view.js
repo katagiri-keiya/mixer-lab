@@ -138,7 +138,9 @@ function inputScreen(view, def, ui, rerender) {
       linkPair ? button(view, { label: `LINK ${def.link.pair.map((k) => k + 1).join("/")}`, tone: "assign", get: (s) => s.link?.mode === "on", onPress: () => store.setBus("link", "mode", store.state.link.mode === "on" ? "off" : "on"), aria: (s) => `Stereo Link ${def.link.pair.map((k) => k + 1).join("/")}: ${s.link?.mode === "on" ? "on" : "off"}` }) : null,
     ),
   );
-  wrap.appendChild(el("p", "f8-note", "TRIM sets the recording level of this track (its iso). Set it for the loudest moment; the track knob only changes the mix."));
+  const note = el("p", "f8-note");
+  view.bindings.push({ kind: "text", el: note, get: () => translate("ui.f8InputNote", "TRIM sets the recording level of this track (its iso). Set it for the loudest moment; the track knob only changes the mix.") });
+  wrap.appendChild(note);
   return wrap;
 }
 
@@ -202,7 +204,9 @@ function outputScreen(view, def) {
       ),
     );
   }
-  wrap.appendChild(el("p", "f8-note", "LINE (+4 dBu) suits a camera's LINE input, NORMAL (−10 dBV) a consumer line input, MIC (−40 dBV) a camera's mic jack."));
+  const note = el("p", "f8-note");
+  view.bindings.push({ kind: "text", el: note, get: () => translate("ui.f8OutputNote", "LINE (+4 dBu) suits a camera's LINE input, NORMAL (−10 dBV) a consumer line input, MIC (−40 dBV) a camera's mic jack.") });
+  wrap.appendChild(note);
   return wrap;
 }
 

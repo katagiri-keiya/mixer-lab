@@ -300,11 +300,26 @@ function recorderText(dev, rt, inputs = []) {
   const live = inputs.map((inp, i) => (inp && inp.connected ? i + 1 : 0)).filter(Boolean);
   if (rt && rt.playing) {
     const take = rt.takes.find((t) => t.id === rt.playing.takeId);
-    return { sub: `▶ ${take ? take.name : "take"}`, dead: false, msg: `Recorder headphones: playing back ${take ? take.name : "a take"} from the card.` };
+    return {
+      sub: `▶ ${take ? take.name : translate("ui.recorderListenTake", "take")}`,
+      dead: false,
+      msg: translate("ui.recorderListenPlayback", "Recorder headphones: playing back {take} from the card.", { take: take ? take.name : translate("ui.recorderListenTake", "a take") }),
+    };
   }
   const recording = rt && rt.recording ? " ● REC" : "";
-  if (!live.length) return { sub: `No inputs${recording}`, dead: true, msg: "Recorder headphones are quiet: nothing is plugged into the recorder." };
-  return { sub: `Inputs ${live.join(", ")}${recording}`, dead: false, msg: `Recorder headphones: what inputs ${live.join(", ")} are hearing${recording ? ", while recording" : ""}.` };
+  if (!live.length) return {
+    sub: translate("ui.recorderListenNoInputsShort", "No inputs") + recording,
+    dead: true,
+    msg: translate("ui.recorderListenNoInputs", "Recorder headphones are quiet: nothing is plugged into the recorder."),
+  };
+  const vars = { inputs: live.join(", ") };
+  return {
+    sub: translate("ui.recorderListenInputsShort", "Inputs {inputs}", vars) + recording,
+    dead: false,
+    msg: recording
+      ? translate("ui.recorderListenRecording", "Recorder headphones: what inputs {inputs} are hearing, while recording.", vars)
+      : translate("ui.recorderListenLive", "Recorder headphones: what inputs {inputs} are hearing.", vars),
+  };
 }
 
 const SELECTOR_TEXT = {

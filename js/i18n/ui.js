@@ -13,6 +13,22 @@ Object.assign(uiJa, {
   topicPhantomConcept: "コンデンサーマイクには+48 Vのファンタム電源が必要です。ミキサーのマイク入力からXLRケーブルを通じて供給します。スピーカーには不要で、電源は壁のコンセントかパワーアンプから取ります。スイッチの場所はミキサーによって異なります。",
 });
 Object.assign(uiJa, {
+  topicMainTitle: "客席のミックス",
+  topicMainQuestion: "客席にはどんな音が聞こえている？",
+  topicMainConcept: "フェーダー、PAN、MUTE / ON、メインミックスへのルーティングで、客席に聞こえる音のバランスが決まります。問題のある部分だけを調整しましょう。",
+  internalSpeakerDescription: "は本体に内蔵され、内蔵アンプで鳴るためケーブルは不要です。",
+  internalSpeakerStatus: "✓ 本体スピーカーからミックスが聞こえます。MAIN LEVELで音量、EQで音色を調整します。",
+  f8InputNote: "TRIMは、このトラックの個別録音レベルを調整します。最も大きな音に合わせて設定してください。トラックのつまみが変えるのはミックスの音量だけです。",
+  f8OutputNote: "LINE（+4 dBu）はカメラのLINE入力、NORMAL（−10 dBV）は民生機器のライン入力、MIC（−40 dBV）はカメラのマイク入力に適しています。",
+  recorderListenTake: "テイク",
+  recorderListenPlayback: "レコーダー用ヘッドホン：カードから「{take}」を再生中。",
+  recorderListenNoInputsShort: "入力接続なし",
+  recorderListenNoInputs: "レコーダー用ヘッドホンは無音です。レコーダーに入力が接続されていません。",
+  recorderListenInputsShort: "入力 {inputs}",
+  recorderListenLive: "レコーダー用ヘッドホン：入力{inputs}を試聴中。",
+  recorderListenRecording: "レコーダー用ヘッドホン：録音しながら入力{inputs}を試聴中。",
+});
+Object.assign(uiJa, {
   topicSoloTitle: "ヘッドホンとSOLO",
   topicSoloQuestion: "特定の音だけを聞き分けられる？",
   topicSoloConcept: "PFLやSOLOを使うと、客席に送る音を変えずに、エンジニアがヘッドホンで特定のチャンネルを確認できます。入力信号の確認やゲイン調整に使います。",

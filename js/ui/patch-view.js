@@ -408,7 +408,7 @@ export class PatchView {
     const outRows = outs
       .map((p) => {
         // B207MP3: the speaker is inside the mixer, so there is nothing to patch.
-        if (p.internal) return { p, html: `<li class="out-row out-internal"><p class="port-internal"><strong>${esc(p.name)}</strong> inside the box: its own amp drives it, no cable.</p><p class="port-msg ok">✓ The mix plays from this box. MAIN LEVEL and the EQ set how loud and how it sounds.</p></li>` };
+        if (p.internal) return { p, html: `<li class="out-row out-internal"><p class="port-internal"><strong>${esc(p.name)}</strong>${esc(translate("ui.internalSpeakerDescription", " inside the box: its own amp drives it, no cable."))}</p><p class="port-msg ok">${esc(translate("ui.internalSpeakerStatus", "✓ The mix plays from this box. MAIN LEVEL and the EQ set how loud and how it sounds."))}</p></li>` };
         const reached = mix.rig.buses[p.id] || [];
         const cable = cableAt(rig, p.ref);
         const target = cable ? getPort(rig, cable.to) : null;
