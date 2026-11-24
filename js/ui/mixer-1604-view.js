@@ -335,7 +335,7 @@ function buildMaster(view) {
       row(
         "c16-sub",
         row("c16-assign c16-tomain", busButton(sub, "toMainL", "L", `SUB ${n} ASSIGN TO MAIN MIX, LEFT`), busButton(sub, "toMainR", "R", `SUB ${n} ASSIGN TO MAIN MIX, RIGHT`)),
-        fader(view, { label: `SUB ${n}`, sheetLabel: `SUB ${n} fader`, get: (s) => s[sub].level, onInput: (v) => store.setBus(sub, "level", v) }),
+        fader(view, { label: `SUB ${n}`, sheetLabel: () => translate("ui.groupFaderSheet", "{group} fader", { group: `SUB ${n}` }), get: (s) => s[sub].level, onInput: (v) => store.setBus(sub, "level", v) }),
       ),
     );
   }

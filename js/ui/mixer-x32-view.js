@@ -257,7 +257,15 @@ export function channelStrip(view, def, i, ui, rerender) {
       rerender();
     },
   });
-  if (a) sel.classList.add("assigning");
+  if (a) {
+    sel.classList.add("assigning");
+    view.bindings.push({ kind: "fn", run: (s) => {
+      const group = a.type === "dca" ? `DCA ${a.n}` : translate("ui.muteGroupName", "mute group {number}", { number: a.n });
+      sel.setAttribute("aria-label", member(s)
+        ? translate("ui.groupChannelRemove", "Channel {channel}: take out of {group}", { channel: n, group })
+        : translate("ui.groupChannelAdd", "Channel {channel}: add to {group}", { channel: n, group }));
+    } });
+  }
 
   // The fader: the channel level, or (SENDS ON FADERS with a MIX selected) its send to that MIX.
   const sofBus = ui.sof && ui.sel.kind === "bus" && c.sends?.includes(ui.sel.b) ? ui.sel.b : null;
@@ -328,7 +336,7 @@ export function groupStrip(view, def, id, ui, rerender) {
   const control =
     sofCh !== null
       ? fader(view, { label: "", sheetLabel: `Ch ${def.channels[sofCh].label} send to ${label}`, defaultValue: 0, tone: "aux1", format: lawFormat(LAWS[def.sends[id].law]), get: (s) => s.channels[sofCh].sends[id], onInput: (v) => store.setChannel(sofCh, `sends.${id}`, v) })
-      : fader(view, { label: "", sheetLabel: `${label} fader`, format: lawFormat(LAWS.level), get: (s) => s[id].level, onInput: (v) => store.setBus(id, "level", v) });
+      : fader(view, { label: "", sheetLabel: () => translate("ui.groupFaderSheet", "{group} fader", { group: label }), format: lawFormat(LAWS.level), get: (s) => s[id].level, onInput: (v) => store.setBus(id, "level", v) });
   const mute = muteKey(view, def, label, (s) => !!s[id].mute, (m) => store.setBus(id, "mute", m));
   const out = el("p", "dg-note");
   view.bindings.push({ kind: "fn", run: (s) => (out.textContent = [outsOf(def, s, id), kind === "bus" && s[id].lr ? (T.onKey ? "→ ST" : "→ LR") : ""].filter(Boolean).join(" · ")) });
@@ -343,7 +351,7 @@ export function dcaStrip(view, def, k, ui, rerender) {
   const strip = el("section", `strip dg-strip x32-strip x32-dca${assigning ? " is-sel" : ""}`);
   strip.setAttribute("aria-label", `DCA ${k}`);
   const members = el("p", "dg-note");
-  view.bindings.push({ kind: "fn", run: (s) => (members.textContent = s.channels.filter((c) => c.dca?.[`d${k}`]).map((c) => c.label).join(" ") || "empty") });
+  view.bindings.push({ kind: "fn", run: (s) => (members.textContent = s.channels.filter((c) => c.dca?.[`d${k}`]).map((c) => c.label).join(" ") || translate("ui.groupNoMembers", "empty")) });
   // A DCA's SEL can't select it (the manual): here it opens and closes its assignment.
   const sel = selButton({
     lit: assigning,
@@ -353,8 +361,9 @@ export function dcaStrip(view, def, k, ui, rerender) {
       rerender();
     },
   });
+  view.bindings.push({ kind: "fn", run: () => sel.setAttribute("aria-label", assigning ? translate("ui.dcaAssignFinish", "Finish assigning DCA {number}", { number: k }) : translate("ui.dcaAssignStart", "Assign channels to DCA {number}", { number: k })) });
   const mute = muteKey(view, def, `DCA ${k}`, (s) => s[id].mute, (m) => store.setBus(id, "mute", m), ", its channels are muted");
-  strip.append(el("div", "dg-master-name", `DCA ${k}`), sel, row("dg-extra", members), row("dg-fader", fader(view, { label: "", sheetLabel: `DCA ${k} fader`, format: lawFormat(LAWS.level), get: (s) => s[id].level, onInput: (v) => store.setBus(id, "level", v) })), row("dg-btns", mute));
+  strip.append(el("div", "dg-master-name", `DCA ${k}`), sel, row("dg-extra", members), row("dg-fader", fader(view, { label: "", sheetLabel: () => translate("ui.groupFaderSheet", "{group} fader", { group: `DCA ${k}` }), format: lawFormat(LAWS.level), get: (s) => s[id].level, onInput: (v) => store.setBus(id, "level", v) })), row("dg-btns", mute));
   return strip;
 }
 
@@ -392,7 +401,7 @@ export function muteGroupBar(view, def, ui, rerender) {
   const edit = el("button", `x32-layer${ui.mgrpEdit ? " on" : ""}`, "MUTE GRP");
   edit.type = "button";
   edit.setAttribute("aria-pressed", String(ui.mgrpEdit));
-  edit.setAttribute("aria-label", ui.mgrpEdit ? "Finish assigning mute groups" : "Assign channels to mute groups");
+  view.bindings.push({ kind: "fn", run: () => edit.setAttribute("aria-label", ui.mgrpEdit ? translate("ui.muteAssignFinish", "Finish assigning mute groups") : translate("ui.muteAssignStart", "Assign channels to mute groups")) });
   edit.addEventListener("click", () => {
     ui.mgrpEdit = !ui.mgrpEdit;
     if (!ui.mgrpEdit && ui.assign?.type === "mgrp") ui.assign = null;
@@ -404,14 +413,14 @@ export function muteGroupBar(view, def, ui, rerender) {
     if (ui.mgrpEdit) {
       const b = el("button", `x32-group${ui.assign?.type === "mgrp" && ui.assign.n === k ? " on" : ""}`, String(k));
       b.type = "button";
-      b.setAttribute("aria-label", `Assign channels to mute group ${k}`);
+      view.bindings.push({ kind: "fn", run: () => b.setAttribute("aria-label", translate("ui.muteGroupAssign", "Assign channels to mute group {number}", { number: k })) });
       b.addEventListener("click", () => {
         ui.assign = { type: "mgrp", n: k };
         rerender();
       });
       barEl.appendChild(b);
     } else {
-      barEl.appendChild(button(view, { label: String(k), tone: "mute", get: (s) => s.mgrp[g], onPress: () => store.setBus("mgrp", g, !store.state.mgrp[g]), aria: (s) => `Mute group ${k}: ${s.mgrp[g] ? "muting its channels" : "off"}` }));
+      barEl.appendChild(button(view, { label: String(k), tone: "mute", get: (s) => s.mgrp[g], onPress: () => store.setBus("mgrp", g, !store.state.mgrp[g]), aria: (s) => s.mgrp[g] ? translate("ui.muteGroupOn", "Mute group {number}: muting its channels", { number: k }) : translate("ui.muteGroupOff", "Mute group {number}: off", { number: k }) }));
     }
   }
   return barEl;
@@ -446,14 +455,14 @@ export function busPanel(view, def, b) {
   const sections = [
     [
       "BUS MASTER",
-      knob(view, { label: "LEVEL", sheetLabel: `${bus.label} master`, defaultValue: 0.75, tone: "level", size: undefined, format: lawFormat(LAWS[bus.master.law]), onInput: (v) => store.setBus(b, "level", v) }, (s) => s[b].level),
+      knob(view, { label: "LEVEL", sheetLabel: () => translate("ui.groupMasterSheet", "{bus} master", { bus: bus.label }), defaultValue: 0.75, tone: "level", size: undefined, format: lawFormat(LAWS[bus.master.law]), onInput: (v) => store.setBus(b, "level", v) }, (s) => s[b].level),
       muteKey(view, def, bus.label, (s) => !!s[b].mute, (m) => store.setBus(b, "mute", m)),
     ],
   ];
   if (def.busToMain)
     sections.push([
       T.onKey ? "TO STEREO (group)" : "MAIN BUS (subgroup)",
-      button(view, { label: T.lr, tone: "assign", get: (s) => !!s[b].lr, onPress: () => store.setBus(b, "lr", !store.state[b].lr), aria: (s) => `${bus.label} to ${T.main}: ${s[b].lr ? "on, it is a subgroup" : "off"}` }),
+      button(view, { label: T.lr, tone: "assign", get: (s) => !!s[b].lr, onPress: () => store.setBus(b, "lr", !store.state[b].lr), aria: (s) => s[b].lr ? translate("ui.subgroupMainOn", "{bus} to {main}: on, it is a subgroup", { bus: bus.label, main: T.main }) : translate("ui.subgroupMainOff", "{bus} to {main}: off", { bus: bus.label, main: T.main }) }),
       knob(view, { label: "PAN", sheetLabel: `${bus.label} pan into ${T.main}`, min: -1, max: 1, step: 0.02, defaultValue: 0, bipolar: true, tone: "pan", format: formatPan, onInput: (v) => store.setBus(b, "pan", v) }, (s) => s[b].pan),
     ]);
   if (def.matrix) sections.push(["MATRIX SENDS", ...matrixSends(view, def, b, bus.label)]);
@@ -853,17 +862,20 @@ function homeText(def, s, ui, view) {
     lines.push(`<p class="x32-big">Ch ${esc(c.label)} · ${esc(name)}</p>`);
   } else lines.push(`<p class="x32-big">${esc(ui.sel.kind === "main" ? termsOf(def).main : ui.sel.kind === "mc" ? "M/C" : ui.sel.kind === "mtx" ? `MATRIX ${ui.sel.b.slice(3)}` : def.buses[ui.sel.b].label)} selected</p>`);
   if (ui.assign) {
-    const what = ui.assign.type === "dca" ? `DCA ${ui.assign.n}` : `mute group ${ui.assign.n}`;
-    lines.push(`<p class="x32-warn">Assigning ${what}: press SEL on the input channels to add or remove them. ${ui.assign.type === "dca" ? `Press DCA ${ui.assign.n}'s SEL again` : "Switch MUTE GRP off"} to finish.</p>`);
+    const vars = { number: ui.assign.n };
+    const guide = ui.assign.type === "dca"
+      ? translate("ui.dcaAssignGuide", "Assigning DCA {number}: press SEL on the input channels to add or remove them. Press DCA {number}'s SEL again to finish.", vars)
+      : translate("ui.muteAssignGuide", "Assigning mute group {number}: press SEL on the input channels to add or remove them. Switch MUTE GRP off to finish.", vars);
+    lines.push(`<p class="x32-warn">${esc(guide)}</p>`);
   } else if (ui.sof && ui.sel.kind === "bus") lines.push(`<p class="x32-warn">${esc(translate("ui.sofDisplayMix", "SENDS ON FADERS: the input faders are each channel's send to {mix}.", { mix: def.buses[ui.sel.b].label }))}</p>`);
   else if (ui.sof && ui.sel.kind === "ch") lines.push(`<p class="x32-warn">${esc(translate("ui.sofDisplayChannel", "SENDS ON FADERS: on a BUS layer, the bus faders are channel {ch}'s sends to each MIX.", { ch: s.channels[ui.sel.i].label }))}</p>`);
   else if (ui.sof) lines.push(`<p class="x32-warn">${esc(translate("ui.sofDisplaySelect", "SENDS ON FADERS: select a MIX (or a channel) to see its sends on the faders."))}</p>`);
   else lines.push(`<p>Input faders: channel levels into ${esc(termsOf(def).main)}.</p>`);
   const dcaUsed = Array.from({ length: def.dca || 0 }, (_, k) => k + 1).filter((k) => s.channels.some((c) => c.dca?.[`d${k}`]));
-  if (dcaUsed.length) lines.push(`<p>${dcaUsed.map((k) => `DCA ${k}: ${s.channels.filter((c) => c.dca[`d${k}`]).map((c) => esc(c.label)).join(", ")}${s[`dca${k}`].mute ? " (muted)" : ""}`).join("<br>")}</p>`);
+  if (dcaUsed.length) lines.push(`<p>${dcaUsed.map((k) => `DCA ${k}: ${s.channels.filter((c) => c.dca[`d${k}`]).map((c) => esc(c.label)).join(", ")}${s[`dca${k}`].mute ? esc(translate("ui.groupMutedSuffix", " (muted)")) : ""}`).join("<br>")}</p>`);
   const groups = Object.keys(s.mgrp || {}).filter((g) => s.channels.some((c) => c.mgrp?.[g]));
-  if (groups.length) lines.push(`<p>${groups.map((g) => `Mute group ${g.slice(1)}: ${s.channels.filter((c) => c.mgrp[g]).map((c) => esc(c.label)).join(", ")}${s.mgrp[g] ? " (muted)" : ""}`).join("<br>")}</p>`);
+  if (groups.length) lines.push(`<p>${groups.map((g) => `${esc(translate("ui.muteGroupName", "Mute group {number}", { number: g.slice(1) }))}: ${s.channels.filter((c) => c.mgrp[g]).map((c) => esc(c.label)).join(", ")}${s.mgrp[g] ? esc(translate("ui.groupMutedSuffix", " (muted)")) : ""}`).join("<br>")}</p>`);
   const subs = Object.keys(def.buses).filter((b) => s[b]?.lr);
-  if (subs.length) lines.push(`<p>Subgroups into MAIN LR: ${subs.map((b) => esc(def.buses[b].label)).join(", ")}</p>`);
+  if (subs.length) lines.push(`<p>${esc(translate("ui.subgroupSummary", "Subgroups into MAIN LR: {buses}", { buses: subs.map((b) => def.buses[b].label).join(", ") }))}</p>`);
   return lines.join("");
 }

@@ -224,7 +224,9 @@ function display(view, def, ui, rerender) {
       ),
     );
   } else if (ui.page === "routing") {
-    body.appendChild(el("p", "dg-note", "BUS TO ST: a bus reaches the house only when it's routed to the STEREO bus."));
+    const note = el("p", "dg-note");
+    view.bindings.push({ kind: "fn", run: () => { note.textContent = translate("ui.dmBusToStNote", "BUS TO ST: a bus reaches the house only when it's routed to the STEREO bus."); } });
+    body.appendChild(note);
     for (const b of BUSES) {
       const members = el("span", "dg-note");
       view.bindings.push({ kind: "fn", run: (s) => (members.textContent = s.channels.filter((x) => x.sends?.[b] >= 0.5).map((x) => x.label).join(" ") || "—") });
@@ -258,6 +260,10 @@ function display(view, def, ui, rerender) {
 }
 
 // FADER GROUP A–H and MUTE GROUP I–P: pick a group, then press SEL on its channels.
+function groupName(type, label, english = type === "fgrp" ? "fader group {number}" : "mute group {number}") {
+  return translate(type === "fgrp" ? "ui.faderGroupName" : "ui.muteGroupName", english, { number: label });
+}
+
 function groupPage(view, def, ui, rerender) {
   const box = el("div", "dm-groups");
   const pick = (type, g, label) => {
@@ -265,7 +271,12 @@ function groupPage(view, def, ui, rerender) {
     const b = el("button", `x32-group${on ? " on" : ""}`, label);
     b.type = "button";
     b.setAttribute("aria-pressed", String(on));
-    b.setAttribute("aria-label", `${type === "fgrp" ? "Fader" : "Mute"} group ${label}: ${on ? "assigning, press SEL on its channels" : "pick to assign"}`);
+    view.bindings.push({ kind: "fn", run: () => {
+      const group = groupName(type, label, type === "fgrp" ? "Fader group {number}" : "Mute group {number}");
+      b.setAttribute("aria-label", on
+        ? translate("ui.dmGroupAssignAria", "{group}: assigning, press SEL on its channels", { group })
+        : translate("ui.dmGroupPickAria", "{group}: pick to assign", { group }));
+    } });
     b.addEventListener("click", () => ((ui.assign = on ? null : { type, g, label }), rerender()));
     return b;
   };
@@ -274,11 +285,22 @@ function groupPage(view, def, ui, rerender) {
     view.bindings.push({ kind: "fn", run: (s) => (p.textContent = s.channels.filter((c) => c[type]?.[g]).map((c) => c.label).join(" ") || "—") });
     return p;
   };
+  const guide = el("p", "dg-note");
+  const faderHeading = el("h5");
+  const muteHeading = el("h5");
+  view.bindings.push({ kind: "fn", run: () => {
+    const a = ui.assign;
+    guide.textContent = a
+      ? translate("ui.dmGroupAssignGuide", "Assigning {group}: press SEL on its channels. Press {letter} again to finish.", { group: groupName(a.type, a.label), letter: a.label })
+      : translate("ui.dmGroupPickGuide", "Pick a group, then press SEL on the channels that belong to it.");
+    faderHeading.textContent = translate("ui.dmFaderGroupNote", "FADER GROUP (move one fader, the rest follow)");
+    muteHeading.textContent = translate("ui.dmMuteGroupNote", "MUTE GROUP (press one ON key, the rest follow)");
+  } });
   box.append(
-    el("p", "dg-note", ui.assign ? `Assigning ${ui.assign.type === "fgrp" ? "fader" : "mute"} group ${ui.assign.label}: press SEL on its channels. Press ${ui.assign.label} again to finish.` : "Pick a group, then press SEL on the channels that belong to it."),
-    el("h5", "", "FADER GROUP (move one fader, the rest follow)"),
+    guide,
+    faderHeading,
     ...def.faderGroups.map((g) => row("dm-grp", pick("fgrp", g, g.toUpperCase()), members("fgrp", g))),
-    el("h5", "", "MUTE GROUP (press one ON key, the rest follow)"),
+    muteHeading,
     ...Object.keys(view.store.state.mgrp).map((g) => row("dm-grp", pick("mgrp", g, MUTE_LETTER(g)), members("mgrp", g))),
   );
   return box;
@@ -351,7 +373,14 @@ function channelStrip(view, def, i, ui, rerender) {
   const member = (s) => (a ? !!ch(s)[a.type]?.[a.g] : false);
   const sel = el("button", `dg-sel${(a ? member(store.state) : ui.sel === i) ? " on" : ""}${a ? " assigning" : ""}`, "SEL");
   sel.type = "button";
-  sel.setAttribute("aria-label", a ? `Channel ${c.label}: ${member(store.state) ? "take out of" : "add to"} ${a.type === "fgrp" ? "fader" : "mute"} group ${a.label}` : `Select channel ${c.label}`);
+  if (a) {
+    view.bindings.push({ kind: "fn", run: (s) => {
+      const vars = { channel: c.label, group: groupName(a.type, a.label) };
+      sel.setAttribute("aria-label", member(s)
+        ? translate("ui.groupChannelRemove", "Channel {channel}: take out of {group}", vars)
+        : translate("ui.groupChannelAdd", "Channel {channel}: add to {group}", vars));
+    } });
+  } else sel.setAttribute("aria-label", `Select channel ${c.label}`);
   sel.addEventListener("click", () => {
     if (a) {
       const join = !member(store.state);
@@ -419,7 +448,7 @@ function masterStrip(view, def, b) {
     },
   });
   const onKey = button(view, { label: "ON", tone: "on", small: false, get: (s) => !s[b].mute, onPress: () => store.setBus(b, "mute", !store.state[b].mute), aria: (s) => `${label} ON: ${s[b].mute ? "dark, off" : "lit"}` });
-  strip.append(el("div", "dg-master-name", label), row("dg-extra", where), row("dg-fader", fader(view, { label: "", sheetLabel: `${label} master`, format: lawFormat(LAWS.level), get: (s) => s[b].level, onInput: (v) => store.setBus(b, "level", v) })), row("dg-btns", onKey));
+  strip.append(el("div", "dg-master-name", label), row("dg-extra", where), row("dg-fader", fader(view, { label: "", sheetLabel: () => translate("ui.groupMasterSheet", "{bus} master", { bus: label }), format: lawFormat(LAWS.level), get: (s) => s[b].level, onInput: (v) => store.setBus(b, "level", v) })), row("dg-btns", onKey));
   return strip;
 }
 

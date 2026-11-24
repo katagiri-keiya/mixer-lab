@@ -70,10 +70,10 @@ export function renderCL(view, def) {
   const sof = sofKey(view, def, ui, rerender);
   const udk = el("div", "cl-udk");
   udk.setAttribute("role", "group");
-  udk.setAttribute("aria-label", "USER DEFINED keys: mute group masters");
+  view.bindings.push({ kind: "fn", run: () => udk.setAttribute("aria-label", translate("ui.clUdkGroups", "USER DEFINED keys: mute group masters")) });
   for (let k = 1; k <= def.muteGroups; k++) {
     const g = `g${k}`;
-    udk.appendChild(button(view, { label: `MUTE ${k}`, tone: "mute", get: (s) => s.mgrp[g], onPress: () => view.store.setBus("mgrp", g, !view.store.state.mgrp[g]), aria: (s) => `USER DEFINED key: mute group ${k} ${s.mgrp[g] ? "on, muting its channels" : "off"}` }));
+    udk.appendChild(button(view, { label: `MUTE ${k}`, tone: "mute", get: (s) => s.mgrp[g], onPress: () => view.store.setBus("mgrp", g, !view.store.state.mgrp[g]), aria: (s) => s.mgrp[g] ? translate("ui.clUdkMuteOn", "USER DEFINED key: mute group {number} on, muting its channels", { number: k }) : translate("ui.clUdkMuteOff", "USER DEFINED key: mute group {number} off", { number: k }) }));
   }
   const master = row("x32-section cl-master", el("h4", "x32-title", "MASTER"), mainStrip(view, def, ui, rerender), sof, el("p", "dg-note", "USER DEFINED KEYS"), udk);
 

@@ -342,7 +342,13 @@ export function buildSelPanel(view, def, ui, rerender) {
   );
   // CL: the SELECTED CHANNEL VIEW's DCA/MUTE field and the FADER field's ON button.
   if (def.surface?.selAssign && c.kind !== "stereo") {
-    const toggle = (key, label, what) => button(view, { label, tone: "assign", get: (s) => !!ch(s)[key.split(".")[0]]?.[key.split(".")[1]], onPress: () => store.setChannel(i, key, !ch(store.state)[key.split(".")[0]]?.[key.split(".")[1]]), aria: (s) => `Channel ${n} ${what}: ${ch(s)[key.split(".")[0]]?.[key.split(".")[1]] ? "assigned" : "not assigned"}` });
+    const toggle = (key, label, what) => button(view, { label, tone: "assign", get: (s) => !!ch(s)[key.split(".")[0]]?.[key.split(".")[1]], onPress: () => store.setChannel(i, key, !ch(store.state)[key.split(".")[0]]?.[key.split(".")[1]]), aria: (s) => {
+      const [type, id] = key.split(".");
+      const vars = { channel: n, group: type === "mgrp" ? translate("ui.muteGroupName", "mute group {number}", { number: label }) : what };
+      return ch(s)[type]?.[id]
+        ? translate("ui.groupMemberOn", "Channel {channel} {group}: assigned", vars)
+        : translate("ui.groupMemberOff", "Channel {channel} {group}: not assigned", vars);
+    } });
     panel.appendChild(section("DCA", ...Array.from({ length: def.dca }, (_, k) => toggle(`dca.d${k + 1}`, String(k + 1), `DCA ${k + 1}`))));
     panel.appendChild(section("MUTE GROUP", ...Array.from({ length: def.muteGroups }, (_, k) => toggle(`mgrp.g${k + 1}`, String(k + 1), `mute group ${k + 1}`))));
   }

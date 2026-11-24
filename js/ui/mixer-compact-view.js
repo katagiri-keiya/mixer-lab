@@ -224,7 +224,7 @@ function buildMaster(view, def) {
   const busKnob = (bus, key, label, law, extra = {}) =>
     knob(view, { label, sheetLabel: label, defaultValue: 0.5, tone: "level", format: lawFormat(law), onInput: (v) => store.setBus(bus, key, v), ...extra }, (s) => s[bus][key]);
   const busButton = (bus, key, label, aria, tone = "assign") =>
-    button(view, { label, tone, get: (s) => !!s[bus][key], onPress: () => store.setBus(bus, key, !store.state[bus][key]), aria: (s) => `${typeof aria === "function" ? aria() : aria}: ${s[bus][key] ? "on" : "off"}` });
+    button(view, { label, tone, get: (s) => !!s[bus][key], onPress: () => store.setBus(bus, key, !store.state[bus][key]), aria: (s) => bus === "alt" && key === "toMain" ? (s[bus][key] ? translate("ui.altMainOn", "ALT 3-4 assigned to the main mix: on") : translate("ui.altMainOff", "ALT 3-4 assigned to the main mix: off")) : `${typeof aria === "function" ? aria() : aria}: ${s[bus][key] ? "on" : "off"}` });
   const blocks = [];
 
   // Meters: two LED columns (none on the B207MP3: a SIGNAL and a LIMIT LED by MAIN LEVEL).
