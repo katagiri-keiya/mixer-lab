@@ -13,6 +13,7 @@
 
 import { DYN, LAWS, PEQ_BANDS, PEQ_Q, levelLaw } from "../compact.js";
 import { formatDb, formatPan } from "../levels.js";
+import { t as translate } from "../i18n/index.js";
 import { button, el, fader, knob, meterBar, procOn, row } from "./mixer-digital-view.js";
 import { compGraph, eqGraph } from "./viz.js";
 
@@ -213,6 +214,8 @@ function display(view, def, ui, rerender) {
       ),
     );
   } else if (page(ui, "setup")) {
+    const note = el("p", "dg-note");
+    view.bindings.push({ kind: "text", el: note, get: () => translate("ui.y96PrePointNote", "PRE ON: a channel switched OFF still feeds its pre-fader aux sends. POST ON: OFF cuts them too.") });
     body.append(
       el("p", "", "PRE POINT: where pre-fader aux sends are taken."),
       row(
@@ -220,7 +223,7 @@ function display(view, def, ui, rerender) {
         button(view, { label: "PRE ON", tone: "pfl", get: (s) => s.auxSetup.prePoint === "preOn", onPress: () => store.setBus("auxSetup", "prePoint", "preOn"), aria: (s) => `PRE POINT PRE ON (before the ON key): ${s.auxSetup.prePoint === "preOn" ? "selected" : "not selected"}` }),
         button(view, { label: "POST ON", tone: "pfl", get: (s) => s.auxSetup.prePoint === "postOn", onPress: () => store.setBus("auxSetup", "prePoint", "postOn"), aria: (s) => `PRE POINT POST ON (after the ON key): ${s.auxSetup.prePoint === "postOn" ? "selected" : "not selected"}` }),
       ),
-      el("p", "dg-note", "PRE ON: a channel switched OFF still feeds its pre-fader aux sends. POST ON: OFF cuts them too."),
+      note,
     );
   } else if (page(ui, "patch")) {
     body.appendChild(el("div", "x32-lines")).innerHTML = "<p>OMNI OUT 1–4 ← AUX 1–4</p><p>STEREO OUT L/R ← STEREO</p><p>AUX 7 → FX 1 (reverb) → ST IN 1</p><p>AUX 8 → FX 2 (delay) → ST IN 2</p><p>2TR IN → AD 15/16 (selector)</p>";

@@ -14,6 +14,7 @@
 
 import { LAWS, eqIsOn, hpfHz, levelLaw, peqBands } from "../compact.js";
 import { formatDb, formatPan } from "../levels.js";
+import { t as translate } from "../i18n/index.js";
 import { eqGraph } from "./viz.js";
 import { button, el, fader, knob, meterBar, row } from "./mixer-digital-view.js";
 
@@ -314,6 +315,8 @@ function buildSidePanel(view, def, ui, rerender) {
   });
   const phones = knob(view, { label: "PHONES", sheetLabel: "PHONES volume", defaultValue: 0.5, tone: "level", format: lawFormat(LAWS.master), onInput: (v) => store.setBus("cr", "level", v) }, (s) => s.cr.level);
   panel.appendChild(section("OUTPUT", ...outs, phones));
-  panel.appendChild(el("p", "dg-note", "MONITOR OUT: the A–F switch picks the jack's own mix; MASTER copies the MASTER mix. PHONES/SPEAKER only labels the jack here: the lab has no headphones to plug in."));
+  const note = el("p", "dg-note");
+  view.bindings.push({ kind: "text", el: note, get: () => translate("ui.l20MonitorOutNote", "MONITOR OUT: the A–F switch picks the jack's own mix; MASTER copies the MASTER mix. PHONES/SPEAKER only labels the jack here: the lab has no headphones to plug in.") });
+  panel.appendChild(note);
   return panel;
 }

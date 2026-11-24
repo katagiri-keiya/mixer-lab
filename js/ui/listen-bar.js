@@ -241,7 +241,14 @@ export class ListenBar {
     const about = (d) => {
       const eps = ends[d] || [];
       if (!eps.length) return null;
-      return eps.length > 1 && eps.every((e) => e.zone === "stage") ? "the wedges" : `the ${names(eps)}`;
+      return eps.length > 1 && eps.every((e) => e.zone === "stage")
+        ? translate("ui.earsNudgeWedges", "the wedges")
+        : translate("ui.earsNudgeNamedOutput", "the {names}", {
+          names: eps.map((e) => {
+            const name = short(e);
+            return translate(`ui.earsNudgeOutputNames.${name}`, name);
+          }).join(" + "),
+        });
     };
     const nudgeText = nudge ? earsNudgeText({ about: about(nudge.dest), target: this.label(nudge.dest), current: this.label(state.listen) }) : "";
     const nudgeKey = JSON.stringify([nudgeText, this.nudgeDest]);

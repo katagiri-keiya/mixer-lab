@@ -17,6 +17,7 @@
 import { LAWS, levelLaw, matrixSources } from "../compact.js";
 import { AES50_BLOCKS, BLOCK_SOURCES, AES_OUT_START, CARD_OUT_START, DEVICE_TYPES, aesOffset } from "../connection-model.js";
 import { formatDb, formatPan } from "../levels.js";
+import { t as translate } from "../i18n/index.js";
 import { button, buildSelPanel, el, fader, knob, meterBar, row } from "./mixer-digital-view.js";
 import { compGraph, eqGraph } from "./viz.js";
 
@@ -36,7 +37,7 @@ export function muteKey(view, def, name, muted, setMuted, note = "") {
 
 // SENDS ON FADERS: a lit key plus a line saying what the faders are right now.
 // The X32 has it in the group/bus section beside the layer keys; the CL3 in MASTER.
-export function sofKey(def, ui, rerender) {
+export function sofKey(view, def, ui, rerender) {
   const key = el("button", `lit-btn x32-sof${ui.sof ? " lit" : ""}`);
   key.type = "button";
   key.setAttribute("aria-pressed", String(ui.sof));
@@ -48,16 +49,17 @@ export function sofKey(def, ui, rerender) {
   const sel = ui.sel;
   const mix = sel.kind === "bus" && !def.buses[sel.b]?.fx ? def.buses[sel.b].label : null;
   const ch = sel.kind === "ch" ? def.channels[sel.i].label : null;
-  const what = !ui.sof
+  const describe = () => !ui.sof
     ? mix
-      ? `Press it: the input faders become each channel's send to ${mix}.`
-      : "SEL a MIX, then press it: the input faders become each channel's send to that MIX."
+      ? translate("ui.sofKeyOffMix", "Press it: the input faders become each channel's send to {mix}.", { mix })
+      : translate("ui.sofKeyOffSelect", "SEL a MIX, then press it: the input faders become each channel's send to that MIX.")
     : mix
-      ? `On: the input faders are each channel's send to ${mix}. Press again for channel levels.`
+      ? translate("ui.sofKeyOnMix", "On: the input faders are each channel's send to {mix}. Press again for channel levels.", { mix })
       : ch
-        ? `On: the MIX faders are channel ${ch}'s sends to each MIX. SEL a MIX to put its sends on the input faders.`
-        : "On: SEL a MIX to put its sends on the input faders.";
-  const note = el("p", `x32-sof-note${ui.sof ? " on" : ""}`, what);
+        ? translate("ui.sofKeyOnChannel", "On: the MIX faders are channel {ch}'s sends to each MIX. SEL a MIX to put its sends on the input faders.", { ch })
+        : translate("ui.sofKeyOnSelect", "On: SEL a MIX to put its sends on the input faders.");
+  const note = el("p", `x32-sof-note${ui.sof ? " on" : ""}`);
+  view.bindings.push({ kind: "text", el: note, get: describe });
   note.setAttribute("aria-live", "polite");
   return row("x32-sof-box", key, note);
 }
@@ -165,7 +167,7 @@ export function renderX32(view, def) {
       ui.glayer = id;
       rerender();
     }, "Group fader layer"),
-    sofKey(def, ui, rerender),
+    sofKey(view, def, ui, rerender),
     grBank,
     muteGroupBar(view, def, ui, rerender),
   );
@@ -847,9 +849,9 @@ function homeText(def, s, ui, view) {
   if (ui.assign) {
     const what = ui.assign.type === "dca" ? `DCA ${ui.assign.n}` : `mute group ${ui.assign.n}`;
     lines.push(`<p class="x32-warn">Assigning ${what}: press SEL on the input channels to add or remove them. ${ui.assign.type === "dca" ? `Press DCA ${ui.assign.n}'s SEL again` : "Switch MUTE GRP off"} to finish.</p>`);
-  } else if (ui.sof && ui.sel.kind === "bus") lines.push(`<p class="x32-warn">SENDS ON FADERS: the input faders are each channel's send to ${esc(def.buses[ui.sel.b].label)}.</p>`);
-  else if (ui.sof && ui.sel.kind === "ch") lines.push(`<p class="x32-warn">SENDS ON FADERS: on a BUS layer, the bus faders are channel ${esc(s.channels[ui.sel.i].label)}'s sends to each MIX.</p>`);
-  else if (ui.sof) lines.push(`<p class="x32-warn">SENDS ON FADERS: select a MIX (or a channel) to see its sends on the faders.</p>`);
+  } else if (ui.sof && ui.sel.kind === "bus") lines.push(`<p class="x32-warn">${esc(translate("ui.sofDisplayMix", "SENDS ON FADERS: the input faders are each channel's send to {mix}.", { mix: def.buses[ui.sel.b].label }))}</p>`);
+  else if (ui.sof && ui.sel.kind === "ch") lines.push(`<p class="x32-warn">${esc(translate("ui.sofDisplayChannel", "SENDS ON FADERS: on a BUS layer, the bus faders are channel {ch}'s sends to each MIX.", { ch: s.channels[ui.sel.i].label }))}</p>`);
+  else if (ui.sof) lines.push(`<p class="x32-warn">${esc(translate("ui.sofDisplaySelect", "SENDS ON FADERS: select a MIX (or a channel) to see its sends on the faders."))}</p>`);
   else lines.push(`<p>Input faders: channel levels into ${esc(termsOf(def).main)}.</p>`);
   const dcaUsed = Array.from({ length: def.dca || 0 }, (_, k) => k + 1).filter((k) => s.channels.some((c) => c.dca?.[`d${k}`]));
   if (dcaUsed.length) lines.push(`<p>${dcaUsed.map((k) => `DCA ${k}: ${s.channels.filter((c) => c.dca[`d${k}`]).map((c) => esc(c.label)).join(", ")}${s[`dca${k}`].mute ? " (muted)" : ""}`).join("<br>")}</p>`);

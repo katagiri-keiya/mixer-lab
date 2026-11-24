@@ -66,7 +66,7 @@ export function renderCL(view, def) {
   const centralogic = row("x32-section cl-centralogic", el("h4", "x32-title", "CENTRALOGIC"), layerBar(sf.groupLayers, gLayer.id, (id) => ((ui.glayer = id), rerender()), "Centralogic Bank Select"), cBank);
 
   // ---------- master section ----------
-  const sof = sofKey(def, ui, rerender);
+  const sof = sofKey(view, def, ui, rerender);
   const udk = el("div", "cl-udk");
   udk.setAttribute("role", "group");
   udk.setAttribute("aria-label", "USER DEFINED keys: mute group masters");
