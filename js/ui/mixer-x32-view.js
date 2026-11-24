@@ -283,12 +283,13 @@ export function channelStrip(view, def, i, ui, rerender) {
 export function fxReturnStrip(view, def, b) {
   const store = view.store;
   const bus = def.buses[b];
+  const T = termsOf(def);
   const strip = el("section", "strip dg-strip x32-strip x32-fxret");
   strip.setAttribute("aria-label", bus.master.label);
   strip.append(
     el("div", "dg-master-name", bus.master.label),
     el("p", "dg-note", bus.fx.name),
-    row("dg-fader", fader(view, { label: "", sheetLabel: `${bus.master.label} fader (how much ${bus.fx.name} in the MAIN)`, format: lawFormat(LAWS[bus.master.law]), get: (s) => s[b].level, onInput: (v) => store.setBus(b, "level", v) })),
+    row("dg-fader", fader(view, { label: "", sheetLabel: () => translate("ui.fxReturnSheet", "{returnName} fader (how much {effect} in the MAIN)", { returnName: bus.master.label, effect: bus.fx.name, mix: T.main }), format: lawFormat(LAWS[bus.master.law]), get: (s) => s[b].level, onInput: (v) => store.setBus(b, "level", v) })),
   );
   return strip;
 }
@@ -299,7 +300,12 @@ export function groupStrip(view, def, id, ui, rerender) {
   const store = view.store;
   if (def.buses[id]?.fx) {
     const strip = el("section", "strip dg-strip x32-strip x32-fxret");
-    strip.setAttribute("aria-label", `${def.buses[id].label}: feeds ${def.buses[id].fx.name}; its level is ${def.buses[id].master.label} on the FX RETURNS layer`);
+    const bus = def.buses[id];
+    view.bindings.push({ kind: "fn", run: () => {
+      strip.setAttribute("aria-label", translate("ui.fxSendRouting", "{bus}: feeds {effect}; its level is {returnName} on the FX RETURNS layer", {
+        bus: bus.label, effect: bus.fx.name, returnName: bus.master.label,
+      }));
+    } });
     strip.append(el("div", "dg-master-name", def.buses[id].label), el("p", "dg-note", `→ ${def.buses[id].master.label.replace(" RTN", "")}`));
     return strip;
   }

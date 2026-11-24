@@ -224,7 +224,7 @@ function buildMaster(view, def) {
   const busKnob = (bus, key, label, law, extra = {}) =>
     knob(view, { label, sheetLabel: label, defaultValue: 0.5, tone: "level", format: lawFormat(law), onInput: (v) => store.setBus(bus, key, v), ...extra }, (s) => s[bus][key]);
   const busButton = (bus, key, label, aria, tone = "assign") =>
-    button(view, { label, tone, get: (s) => !!s[bus][key], onPress: () => store.setBus(bus, key, !store.state[bus][key]), aria: (s) => `${aria}: ${s[bus][key] ? "on" : "off"}` });
+    button(view, { label, tone, get: (s) => !!s[bus][key], onPress: () => store.setBus(bus, key, !store.state[bus][key]), aria: (s) => `${typeof aria === "function" ? aria() : aria}: ${s[bus][key] ? "on" : "off"}` });
   const blocks = [];
 
   // Meters: two LED columns (none on the B207MP3: a SIGNAL and a LIMIT LED by MAIN LEVEL).
@@ -286,7 +286,7 @@ function buildMaster(view, def) {
       block(
         "EFFECTS",
         name,
-        knob(view, { label: "PROGRAM", sheetLabel: "Effects PROGRAM", min: 0, max: def.fx.presets.length - 1, step: 1, defaultValue: 0, tone: "eq", format: (v) => fxPreset(def, v).name, onInput: (v) => store.setBus("fx", "program", v) }, (s) => s.fx.program),
+        knob(view, { label: "PROGRAM", sheetLabel: () => translate("ui.effectsProgramSheet", "Effects PROGRAM"), min: 0, max: def.fx.presets.length - 1, step: 1, defaultValue: 0, tone: "eq", format: (v) => fxPreset(def, v).name, onInput: (v) => store.setBus("fx", "program", v) }, (s) => s.fx.program),
         row("c16-leds", sig, clip),
         Object.assign(document.createElement("p"), { className: "c16-note", textContent: "Fed by AUX SEND 2 (FX); back on RETURN 2" }),
       ),
@@ -299,8 +299,8 @@ function buildMaster(view, def) {
       block(
         def.returns.length > 1 ? "AUX RETURNS" : def.returns[0].label,
         ...def.returns.map((r) => (r.fixedDb !== undefined ? null : busKnob(r.id, "level", def.returns.length > 1 ? r.label.replace(/(STEREO )?AUX RETURN/, "RET").replace(" (FX)", "") : "LEVEL", LAWS[r.law], { sheetLabel: r.label }))),
-        ...def.returns.map((r) => (r.efxToMonitor ? busButton(r.id, "efx", "EFX TO MON", `${r.label} to ${def.buses[r.efxToMonitor].label} (effects to monitor)`) : null)),
-        ...def.returns.map((r) => (r.toMonitor ? busKnob(r.id, "mon", `${r.toMonitor.label}`, LAWS[r.toMonitor.law], { sheetLabel: `${r.label} into ${def.buses[r.toMonitor.bus].label} (monitor)`, defaultValue: 0 }) : null)),
+        ...def.returns.map((r) => (r.efxToMonitor ? busButton(r.id, "efx", "EFX TO MON", () => translate("ui.effectsToMonitor", "{returnName} to {aux} (effects to monitor)", { returnName: r.label, aux: def.buses[r.efxToMonitor].label })) : null)),
+        ...def.returns.map((r) => (r.toMonitor ? busKnob(r.id, "mon", `${r.toMonitor.label}`, LAWS[r.toMonitor.law], { sheetLabel: () => translate("ui.effectsToMonitor", "{returnName} into {aux} (monitor)", { returnName: r.label, aux: def.buses[r.toMonitor.bus].label }), defaultValue: 0 }) : null)),
         ...def.returns.map((r) => (r.toAlt ? busButton(r.id, "toAlt", "RET 2 → ALT 3-4", `${r.label} to ALT 3-4 instead of MAIN MIX`) : null)),
         def.returns.every((r) => r.fixedDb !== undefined) ? Object.assign(document.createElement("p"), { className: "c16-note", textContent: "Into the main mix at unity" }) : null,
       ),
@@ -337,7 +337,7 @@ function buildMaster(view, def) {
       block(
         "REVERB",
         busButton("reverb", "on", "REVERB", "REVERB switch", "lowcut"),
-        knob(view, { label: "TYPE/TIME", sheetLabel: "Reverb type and time", defaultValue: 0.15, tone: "eq", format: (v) => { const r = reverbSetting(def, v); return `${r.type} ${r.seconds.toFixed(1)} s`; }, onInput: (v) => store.setBus("reverb", "type", v) }, (s) => s.reverb.type),
+        knob(view, { label: "TYPE/TIME", sheetLabel: () => translate("ui.reverbTypeTimeSheet", "Reverb type and time"), defaultValue: 0.15, tone: "eq", format: (v) => { const r = reverbSetting(def, v); return `${r.type} ${r.seconds.toFixed(1)} s`; }, onInput: (v) => store.setBus("reverb", "type", v) }, (s) => s.reverb.type),
       ),
     );
   }

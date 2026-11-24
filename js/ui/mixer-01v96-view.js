@@ -51,7 +51,7 @@ export function render01v96(view, def) {
   const surface = el("div", "mixer-surface y96-surface");
 
   const top = row("y96-top", inputRow(view, def), rearPanel(view, def));
-  const mid = row("y96-mid", selectedChannel(view, def, ui, rerender), display(view, def, ui, rerender), controlKeys(ui, rerender));
+  const mid = row("y96-mid", selectedChannel(view, def, ui, rerender), display(view, def, ui, rerender), controlKeys(view, ui, rerender));
   const bottom = row("y96-bottom", faderBank(view, def, ui, rerender), stInSection(view, def), stereoSection(view, def));
   surface.append(top, mid, bottom);
   view.root.appendChild(surface);
@@ -168,7 +168,7 @@ function display(view, def, ui, rerender) {
     view.bindings.push({
       kind: "fn",
       run: (s) =>
-        (t.innerHTML = `<p>LAYER ${ui.layer} · FADER MODE ${ui.mode === "home" ? "HOME (channel levels)" : `${ui.mode.toUpperCase().replace("AUX", "AUX ")} (sends)`}</p>
+        (t.innerHTML = `<p>LAYER ${ui.layer} · FADER MODE ${ui.mode === "home" ? "HOME (channel levels)" : translate("ui.y96AuxSendMode", "{mode} (sends)", { mode: ui.mode.toUpperCase().replace("AUX", "AUX ") })}</p>
           <p>STEREO ${s.main.mute ? "OFF" : "ON"} · PRE POINT ${s.auxSetup.prePoint === "preOn" ? "PRE ON" : "POST ON"}</p>
           <p>${s.channels.filter((x) => !x.tape && x.enabled === false).map((x) => `CH${x.label}`).join(" ") || "All channels ON"}${s.channels.some((x) => !x.tape && x.enabled === false) ? " OFF" : ""}</p>`),
     });
@@ -240,13 +240,15 @@ function display(view, def, ui, rerender) {
 const page = (ui, p) => ui.page === p;
 
 // DISPLAY ACCESS, LAYER and FADER MODE keys.
-function controlKeys(ui, rerender) {
+function controlKeys(view, ui, rerender) {
   const box = el("section", "y96-box y96-keys");
   const key = (label, on, onPress, aria) => {
     const b = el("button", `x32-layer${on ? " on" : ""}`, label);
     b.type = "button";
     b.setAttribute("aria-pressed", String(on));
-    if (aria) b.setAttribute("aria-label", aria);
+    if (typeof aria === "function") {
+      view.bindings.push({ kind: "fn", run: () => { b.setAttribute("aria-label", aria()); } });
+    } else if (aria) b.setAttribute("aria-label", aria);
     b.addEventListener("click", () => {
       onPress();
       rerender();
@@ -259,7 +261,7 @@ function controlKeys(ui, rerender) {
     el("h4", "x32-title", "LAYER"),
     row("y96-row", key("1–16", ui.layer === "1-16", () => (ui.layer = "1-16")), key("MASTER", ui.layer === "master", () => (ui.layer = "master"))),
     el("h4", "x32-title", "FADER MODE"),
-    row("y96-row", key("HOME", ui.mode === "home", () => (ui.mode = "home")), ...AUXES.map((a, k) => key(`AUX ${k + 1}`, ui.mode === a, () => (ui.mode = a), `FADER MODE AUX ${k + 1}: the faders become AUX ${k + 1} sends`))),
+    row("y96-row", key("HOME", ui.mode === "home", () => (ui.mode = "home")), ...AUXES.map((a, k) => key(`AUX ${k + 1}`, ui.mode === a, () => (ui.mode = a), () => translate("ui.y96AuxFaders", "FADER MODE AUX {number}: the faders become AUX {number} sends", { number: k + 1 })))),
   );
   return box;
 }
@@ -323,7 +325,7 @@ function stInSection(view, def) {
   box.appendChild(el("h4", "x32-title", "ST IN"));
   for (const b of ["aux7", "aux8"]) {
     const bus = def.buses[b];
-    box.appendChild(row("y96-col", knob(view, { label: bus.master.label, sheetLabel: `${bus.master.label} level (${bus.fx.name} return)`, defaultValue: 0.75, tone: "eq", format: lawFormat(LAWS[bus.master.law]), onInput: (v) => store.setBus(b, "level", v) }, (s) => s[b].level), el("p", "dg-note", bus.fx.name)));
+    box.appendChild(row("y96-col", knob(view, { label: bus.master.label, sheetLabel: () => translate("ui.fxReturnSheet", "{returnName} level ({effect} return)", { returnName: bus.master.label, effect: bus.fx.name, mix: "STEREO" }), defaultValue: 0.75, tone: "eq", format: lawFormat(LAWS[bus.master.law]), onInput: (v) => store.setBus(b, "level", v) }, (s) => s[b].level), el("p", "dg-note", bus.fx.name)));
   }
   return box;
 }

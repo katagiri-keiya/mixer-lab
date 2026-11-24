@@ -210,7 +210,8 @@ function buildMasterStrip(view, def, ui) {
   const store = view.store;
   const strip = el("section", "strip dg-strip dg-master");
   const busId = ui.page === "mix" || ui.page === "gain" ? null : ui.page;
-  const name = busId ? def.buses[busId].label : def.main.label;
+  const bus = def.buses[busId];
+  const name = bus ? bus.label : def.main.label;
   strip.setAttribute("aria-label", `${name} master`);
   strip.appendChild(el("div", "dg-master-name", busId && def.buses[busId].fx ? `${name} RTN` : name));
   if (ui.page === "gain") {
@@ -221,7 +222,7 @@ function buildMasterStrip(view, def, ui) {
   const set = busId ? (v) => store.setBus(busId, "level", v) : (v) => store.setBus("main", "level", v);
   const law = LAWS[busId ? def.buses[busId].master.law : def.main.law];
   const meters = row("dg-master-meters", meterBar(view, "L"), meterBar(view, "R"));
-  strip.append(el("div", "dg-extra"), row("dg-fader", fader(view, { label: "", sheetLabel: `${name} master fader`, format: lawFormat(law), get, onInput: set }), meters));
+  strip.append(el("div", "dg-extra"), row("dg-fader", fader(view, { label: "", sheetLabel: bus?.fx ? () => translate("ui.fxReturnSheet", "{returnName} master fader", { returnName: name, effect: bus.fx.name, mix: def.main.label }) : `${name} master fader`, format: lawFormat(law), get, onInput: set }), meters));
   const phones = knob(view, { label: "PHONES", sheetLabel: "Headphone level", defaultValue: 0.5, tone: "level", format: lawFormat(LAWS.master), onInput: (v) => store.setBus("cr", "level", v) }, (s) => s.cr.level);
   strip.appendChild(row("dg-btns", phones));
   return strip;

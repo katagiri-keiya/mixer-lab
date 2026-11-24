@@ -432,7 +432,7 @@ export class PatchView {
     const reverbHtml = reverbs
       .map(
         (d) => this.card(d.id, `<li class="device-card" data-device-card="${esc(d.id)}">
-        <div class="device-top"><span class="dev-ico">${icon("role-source", { size: 40 })}</span><div class="source-names"><strong>${esc(d.label)}</strong><span>Fed from an aux send, back into an aux return</span></div></div>
+        <div class="device-top"><span class="dev-ico">${icon("role-source", { size: 40 })}</span><div class="source-names"><strong>${esc(d.label)}</strong><span>${esc(translate("ui.externalEffectsLoop", "Fed from an aux send, back into an aux return"))}</span></div></div>
         ${listPorts(rig, d).map((p) => this.portButton(p.ref, p.dir)).join("")}
         <div class="dev-settings"><label>DECAY <output data-readout="decay">${d.decay.toFixed(1)} s</output>
           <input type="range" min="${REVERB.decayMin}" max="${REVERB.decayMax}" step="0.1" value="${d.decay}" data-device="${esc(d.id)}" data-device-key="decay" /></label></div>
@@ -532,7 +532,7 @@ export class PatchView {
     this.outputsRoot.innerHTML = `
       <h3 class="group-title">${icon("role-source", { size: 22 })}${translate("ui.mixerOutputs", "Mixer outputs")} <small>${translate("ui.outputLineLevel", "line level")} · ${translate("ui.outputSection", "amps, speakers, recorders")}</small></h3>
       ${outList}
-      ${reverbs.length ? `<h3 class="group-title">Effects</h3><ul class="device-list">${reverbHtml}</ul>` : ""}
+      ${reverbs.length ? `<h3 class="group-title">${esc(translate("ui.externalEffects", "Effects"))}</h3><ul class="device-list">${reverbHtml}</ul>` : ""}
       ${recorders.length ? `<h3 class="group-title">${translate("ui.recorderHeading", "Recorder")}</h3><ul class="device-list">${recHtml}</ul>` : ""}
       ${amps.length ? `<h3 class="group-title">Amplifier</h3><ul class="device-list">${ampHtml}</ul>` : ""}
       ${gear.length ? `<h3 class="group-title">Rack gear</h3><ul class="device-list">${gearHtml}</ul>` : ""}

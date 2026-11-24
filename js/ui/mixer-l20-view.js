@@ -216,7 +216,7 @@ function buildEfxStrip(view, def, b, ui) {
   const key = ui.mode === "MASTER" ? "level" : `ret_mon${ui.mode}`;
   strip.append(
     el("div", "dg-extra"),
-    row("dg-fader", fader(view, { label: "", sheetLabel: `${bus.label} RTN fader, ${ui.mode === "MASTER" ? "MASTER" : `MONITOR ${ui.mode}`}`, defaultValue: key === "level" ? LAWS.level.toPos(0) : 0, tone: "eq", format: lawFormat(LAWS[bus.master.law]), get: (s) => s[b][key], onInput: (v) => store.setBus(b, key, v) })),
+    row("dg-fader", fader(view, { label: "", sheetLabel: () => translate("ui.fxReturnSheet", "{returnName} fader, {mix}", { returnName: `${bus.label} RTN`, effect: bus.fx.name, mix: ui.mode === "MASTER" ? "MASTER" : `MONITOR ${ui.mode}` }), defaultValue: key === "level" ? LAWS.level.toPos(0) : 0, tone: "eq", format: lawFormat(LAWS[bus.master.law]), get: (s) => s[b][key], onInput: (v) => store.setBus(b, key, v) })),
   );
   return strip;
 }

@@ -321,14 +321,16 @@ function faderBank(view, def, ui, rerender) {
     title = "MASTER LAYER · BUS 1–8 · AUX 1–8 · MATRIX 1–4";
     for (const b of [...BUSES, ...AUXES, "mtx1", "mtx2", "mtx3", "mtx4"]) bank.appendChild(masterStrip(view, def, b));
   } else if (ui.layer === "73-96") {
-    title = "CHANNELS 73–96 · effects returns and 2TR IN";
+    title = () => translate("ui.dmFxLayer", "CHANNELS 73–96 · effects returns and 2TR IN");
     for (const b of ["aux7", "aux8"]) bank.appendChild(fxReturnStrip(view, def, b));
     def.channels.forEach((c, i) => c.kind === "stereo" && bank.appendChild(channelStrip(view, def, i, ui, rerender)));
   } else {
     title = `CHANNELS 1–24 · FADER MODE ${ui.fmode === "aux" ? auxLabel : "FADER"} · ENCODER ${ui.emode === "aux" ? auxLabel : "PAN"}`;
     def.channels.forEach((c, i) => c.kind !== "stereo" && bank.appendChild(channelStrip(view, def, i, ui, rerender)));
   }
-  box.append(el("h4", "x32-title", title), bank);
+  const heading = el("h4", "x32-title", typeof title === "function" ? title() : title);
+  if (typeof title === "function") view.bindings.push({ kind: "fn", run: () => { heading.textContent = title(); } });
+  box.append(heading, bank);
   return box;
 }
 
@@ -392,7 +394,7 @@ function fxReturnStrip(view, def, b) {
   const bus = def.buses[b];
   const strip = el("section", "strip dg-strip x32-strip x32-fxret");
   strip.setAttribute("aria-label", bus.master.label);
-  strip.append(el("div", "dg-master-name", bus.master.label), el("p", "dg-note", bus.fx.name), row("dg-fader", fader(view, { label: "", sheetLabel: `${bus.master.label} fader (${bus.fx.name} in the STEREO mix)`, format: lawFormat(LAWS[bus.master.law]), get: (s) => s[b].level, onInput: (v) => view.store.setBus(b, "level", v) })));
+  strip.append(el("div", "dg-master-name", bus.master.label), el("p", "dg-note", bus.fx.name), row("dg-fader", fader(view, { label: "", sheetLabel: () => translate("ui.fxReturnSheet", "{returnName} fader ({effect} in the STEREO mix)", { returnName: bus.master.label, effect: bus.fx.name, mix: "STEREO" }), format: lawFormat(LAWS[bus.master.law]), get: (s) => s[b].level, onInput: (v) => view.store.setBus(b, "level", v) })));
   return strip;
 }
 

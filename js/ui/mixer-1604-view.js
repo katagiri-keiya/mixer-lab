@@ -289,7 +289,7 @@ function buildMaster(view) {
   // 2 → AUX SEND 2); ASSIGN OPTIONS (3: MAIN MIX TO SUBS + 1-2/3-4; 4: C-R/PHNS ONLY); RETURNS SOLO.
   const retKnob = (r) => busKnob(r, r.slice(3), L.tape);
   const toAux = (r, n) =>
-    knob(view, { label: `→ AUX ${n}`, sheetLabel: `EFFECTS TO MONITORS: return ${n} to AUX SEND ${n}`, defaultValue: 0, tone: `aux${n}`, format: lawFormat(L.send), onInput: (v) => store.setBus(r, "toAux", v) }, (s) => s[r].toAux);
+    knob(view, { label: `→ AUX ${n}`, sheetLabel: () => translate("ui.crEffectsToMonitor", "EFFECTS TO MONITORS: return {number} to AUX SEND {number}", { number: n }), defaultValue: 0, tone: `aux${n}`, format: lawFormat(L.send), onInput: (v) => store.setBus(r, "toAux", v) }, (s) => s[r].toAux);
   const returns = block(
     "STEREO AUX RETURNS",
     row("c16-pair c16-quad", retKnob("ret1"), retKnob("ret2"), retKnob("ret3"), retKnob("ret4")),
