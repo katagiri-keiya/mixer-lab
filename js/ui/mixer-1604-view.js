@@ -6,6 +6,7 @@
 import { RangeControl, LitButton } from "./controls.js";
 import * as CR from "../cr1604.js";
 import { formatDb, formatPan } from "../levels.js";
+import { t as translate } from "../i18n/index.js";
 
 const FADER_MARKS = [10, 5, 0, -5, -10, -20, -30, -50].map((db) => ({ value: CR.LAWS.fader.toPos(db), label: db === 0 ? "U" : db > 0 ? `+${db}` : `${db}` }));
 FADER_MARKS.push({ value: 0, label: "∞" });
@@ -145,7 +146,7 @@ function buildStrip(view, i) {
     tone: "lowcut",
     get: (s) => ch(s).lowCut,
     onPress: toggle("lowCut", (s) => ch(s).lowCut),
-    aria: (s) => `LOW CUT 75 Hz, channel ${n}: ${onOff(ch(s).lowCut)}`,
+    aria: (s) => translate("ui.cr1604FixedLowCut", "LOW CUT 75 Hz, channel {channel}: {state}", { channel: n, state: onOff(ch(s).lowCut) }),
   });
   const pan = knob(view, { label: "PAN", sheetLabel: `Ch ${n} PAN`, min: -1, max: 1, step: 0.02, defaultValue: 0, bipolar: true, tone: "pan", format: formatPan, onInput: set("pan") }, (s) => ch(s).pan);
   const mute = button(view, {

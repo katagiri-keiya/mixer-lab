@@ -287,7 +287,9 @@ function buildSidePanel(view, def, ui, rerender) {
       eqKnob("mid", "MID", "MID"),
       knob(view, { label: "MID FREQ", sheetLabel: `Ch ${n} EQ MID FREQ`, defaultValue: logPos(midBand.freq, midBand.min, midBand.max), tone: "eq", format: (v) => `${hz(logFreq(v, midBand.min, midBand.max))} Hz`, onInput: (v) => store.setChannel(i, "peq.mid.freq", logFreq(v, midBand.min, midBand.max)) }, (s) => logPos(ch(s).peq.mid.freq, midBand.min, midBand.max)),
       eqKnob("low", "LOW", "LOW (100 Hz shelf)"),
-      button(view, { label: "EQ OFF", tone: "assign", get: (s) => !eqIsOn(ch(s)), onPress: () => store.setChannel(i, "eqOn", !eqIsOn(ch(store.state))), aria: (s) => `Channel ${n} EQ OFF: ${eqIsOn(ch(s)) ? "off, the EQ and LOW CUT are working" : "lit, HIGH, MID, LOW and LOW CUT are bypassed"}` }),
+      button(view, { label: "EQ OFF", tone: "assign", get: (s) => !eqIsOn(ch(s)), onPress: () => store.setChannel(i, "eqOn", !eqIsOn(ch(store.state))), aria: (s) => eqIsOn(ch(s))
+        ? translate("ui.l20EqOffClear", "Channel {channel} EQ OFF: off, the EQ and LOW CUT are working", { channel: n })
+        : translate("ui.l20EqOffLit", "Channel {channel} EQ OFF: lit, HIGH, MID, LOW and LOW CUT are bypassed", { channel: n }) }),
     ),
   );
   panel.lastChild.insertBefore(eqGraph(view, def, i, { theme: "ui16" }), panel.lastChild.lastChild);
@@ -295,7 +297,7 @@ function buildSidePanel(view, def, ui, rerender) {
     section(
       "PAN · LOW CUT · Φ",
       knob(view, { label: c.kind === "stereo" ? "BAL" : "PAN", sheetLabel: `Ch ${n} ${c.kind === "stereo" ? "balance" : "pan"}`, min: -1, max: 1, step: 0.02, defaultValue: 0, bipolar: true, tone: "pan", format: formatPan, onInput: set("pan") }, (s) => ch(s).pan),
-      knob(view, { label: "LOW CUT", sheetLabel: `Ch ${n} low cut`, defaultValue: 0, tone: "eq", format: (v) => (v <= 0.02 ? "off" : `${hz(hpfHz(c, v))} Hz`), onInput: set("hpf") }, (s) => ch(s).hpf),
+      knob(view, { label: "LOW CUT", sheetLabel: () => translate("ui.channelLowCutSheet", "Ch {channel} low cut", { channel: n }), defaultValue: 0, tone: "eq", format: (v) => (v <= 0.02 ? "off" : `${hz(hpfHz(c, v))} Hz`), onInput: set("hpf") }, (s) => ch(s).hpf),
       button(view, { label: "Φ", get: (s) => !!ch(s).polarity, onPress: () => store.setChannel(i, "polarity", !ch(store.state).polarity), aria: (s) => `Channel ${n} polarity: ${ch(s).polarity ? "reversed" : "normal"}` }),
     ),
   );

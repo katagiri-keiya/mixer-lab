@@ -3,6 +3,8 @@
 // On touch screens a tap without dragging opens a large fine-adjust sheet, so
 // no control depends on precise finger work.
 
+import { language, onLanguageChange, setLanguage } from "../i18n/index.js";
+
 const coarse = () => window.matchMedia("(pointer: coarse)").matches;
 
 let sheet = null;
@@ -191,6 +193,7 @@ function createSheet() {
         <button type="button" class="btn-round" data-dir="1" aria-label="Up">+</button>
       </div>
       <div class="fine-actions">
+        <button type="button" class="chip fine-language" hidden></button>
         <button type="button" class="chip fine-reset">Reset</button>
         <button type="submit" class="btn btn-start">Done</button>
       </div>
@@ -200,7 +203,23 @@ function createSheet() {
   const value = dlg.querySelector(".fine-value");
   const range = dlg.querySelector("input");
   const resetBtn = dlg.querySelector(".fine-reset");
+  const languageBtn = dlg.querySelector(".fine-language");
   let ctl = null;
+  const syncLabel = () => {
+    const heading = ctl.o.sheetLabel;
+    const canSwitchLanguage = typeof heading === "function";
+    label.textContent = canSwitchLanguage ? heading() : heading || ctl.o.label;
+    languageBtn.hidden = !canSwitchLanguage;
+    if (canSwitchLanguage) {
+      const japanese = language() === "ja";
+      languageBtn.textContent = japanese ? "English" : "日本語";
+      languageBtn.setAttribute("aria-label", japanese ? "Switch to English" : "日本語に切り替え");
+    }
+  };
+  languageBtn.addEventListener("click", () => setLanguage(language() === "ja" ? "en" : "ja"));
+  onLanguageChange(() => {
+    if (dlg.open) syncLabel();
+  });
   const sync = () => {
     value.textContent = ctl.o.format(ctl.value);
     range.value = String(Math.round(ctl.frac() * 1000));
@@ -228,7 +247,7 @@ function createSheet() {
   return {
     open(control) {
       ctl = control;
-      label.textContent = control.o.sheetLabel || control.o.label;
+      syncLabel();
       resetBtn.hidden = control.o.defaultValue === undefined;
       sync();
       dlg.showModal();

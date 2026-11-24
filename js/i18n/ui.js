@@ -13,6 +13,16 @@ Object.assign(uiJa, {
   topicPhantomConcept: "コンデンサーマイクには+48 Vのファンタム電源が必要です。ミキサーのマイク入力からXLRケーブルを通じて供給します。スピーカーには不要で、電源は壁のコンセントかパワーアンプから取ります。スイッチの場所はミキサーによって異なります。",
 });
 Object.assign(uiJa, {
+  topicFiltersTitle: "ローカットとハイパスフィルター",
+  topicFiltersQuestion: "この低い振動音はどこから来ている？",
+  topicFiltersConcept: "ローカット（LOW CUT）とHPFは、どちらも低域を減衰させるハイパスフィルターです。声に不要な低い振動音を抑えるときに使います。キックやベースの音に必要な低域まで減らさないよう、この課題ではオフにしておきます。",
+  channelFixedLowCut: "{channel}chのLOW CUT（{hz} Hz）：{state}",
+  cr1604FixedLowCut: "{channel}chのLOW CUT（75 Hz）：{state}",
+  channelHpfSheet: "{channel}chのハイパスフィルター（HPF）",
+  trackHpfSheet: "トラック{track}のハイパスフィルター（HPF）",
+  channelLowCutSheet: "{channel}chのローカット（LOW CUT）",
+  l20EqOffClear: "{channel}chのEQ OFF：消灯中。EQとLOW CUTは有効です。",
+  l20EqOffLit: "{channel}chのEQ OFF：点灯中。HIGH、MID、LOW、LOW CUTはバイパスされています。",
   topicMonitorsTitle: "モニターミックス",
   topicMonitorsQuestion: "演奏者にはどんな音が聞こえている？",
   topicMonitorsConcept: "各ウェッジには、AUX（MIX）センドで作った独立したミックスが送られます。プリフェーダー（PRE）のセンドは客席用フェーダーの影響を受けず、ポストフェーダー（POST）のセンドはその動きに追従します。ウェッジのマスターで、ミックス全体の音量を一度に調整できます。",

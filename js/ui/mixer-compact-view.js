@@ -5,6 +5,7 @@
 import { RangeControl, LitButton, PushSwitch } from "./controls.js";
 import { EQ_FOR, LAWS, OL_DB, fxPreset, levelLaw, linkOf, reverbSetting, tapeIndex } from "../compact.js";
 import { formatDb, formatPan } from "../levels.js";
+import { t as translate } from "../i18n/index.js";
 
 const lawFormat = (law) => (v) => formatDb(law.toDb(v), { unity: true });
 const eqFormat = (v) => (Math.abs(v) < 0.25 ? "0 dB" : `${v > 0 ? "+" : "−"}${Math.abs(v)} dB`);
@@ -120,7 +121,7 @@ function buildStrip(view, def, i) {
         : null,
     hpf: () =>
       c.hpf
-        ? knob(view, { label: "HPF", sheetLabel: `Ch ${n} high-pass filter`, defaultValue: 0, tone: "eq", format: (v) => (v <= 0.02 ? "off" : `${Math.round(c.hpf.min + (c.hpf.max - c.hpf.min) * Math.max(0, (v - 0.05) / 0.95))} Hz`), onInput: set("hpf") }, (s) => ch(s).hpf)
+        ? knob(view, { label: "HPF", sheetLabel: () => translate("ui.channelHpfSheet", "Ch {channel} high-pass filter", { channel: n }), defaultValue: 0, tone: "eq", format: (v) => (v <= 0.02 ? "off" : `${Math.round(c.hpf.min + (c.hpf.max - c.hpf.min) * Math.max(0, (v - 0.05) / 0.95))} Hz`), onInput: set("hpf") }, (s) => ch(s).hpf)
         : null,
     polarity: () => (c.polarity ? button(view, { label: "Ø", get: (s) => ch(s).polarity, onPress: flip("polarity"), aria: (s) => `Channel ${n} polarity: ${ch(s).polarity ? "reversed" : "normal"}` }) : null),
     limitLed: () => {
@@ -140,7 +141,7 @@ function buildStrip(view, def, i) {
         ? button(view, { label: "−10 dBV", get: (s) => ch(s).minus10, onPress: flip("minus10"), aria: (s) => `Channel ${n} LEVEL switch: ${ch(s).minus10 ? "−10 dBV (consumer gear, 12 dB more sensitive)" : "+4 dBu (pro line level)"}` })
         : null,
     hiZ: () => (c.hiZ ? pushSwitch(view, { up: c.hiZ.label ? "MIC/LINE" : "OFF", down: c.hiZ.label || "Hi-Z", get: (s) => ch(s).hiZ, onPress: flip("hiZ"), aria: (s) => `Channel ${n} Hi-Z: ${onOff(ch(s).hiZ)}` }) : null),
-    lowCut: () => (c.lowCut ? button(view, { label: c.lowCut.label || "LOW CUT", tone: "lowcut", get: (s) => ch(s).lowCut, onPress: flip("lowCut"), aria: (s) => `Channel ${n} low cut ${c.lowCut.hz} Hz: ${onOff(ch(s).lowCut)}` }) : null),
+    lowCut: () => (c.lowCut ? button(view, { label: c.lowCut.label || "LOW CUT", tone: "lowcut", get: (s) => ch(s).lowCut, onPress: flip("lowCut"), aria: (s) => translate("ui.channelFixedLowCut", "Channel {channel} low cut {hz} Hz: {state}", { channel: n, hz: c.lowCut.hz, state: onOff(ch(s).lowCut) }) }) : null),
     eq: () =>
       row(
         "c16-eq cm-eq",

@@ -11,6 +11,7 @@
 import { RangeControl, LitButton } from "./controls.js";
 import { DYN, LAWS, OL_DB, PEQ_BANDS, PEQ_Q, compIsOn, eqIsOn, levelLaw } from "../compact.js";
 import { formatDb, formatPan } from "../levels.js";
+import { t as translate } from "../i18n/index.js";
 import { compGraph, eqGraph, updateViz } from "./viz.js";
 
 // How a desk draws its processing graphs.
@@ -272,7 +273,7 @@ export function buildSelPanel(view, def, ui, rerender) {
       def.phantom.channels.includes(i) ? button(view, { label: def.phantom.label, tone: "phantom", get: (s) => ch(s).phantom, onPress: flip("phantom"), aria: (s) => `Channel ${n} 48V: ${ch(s).phantom ? "on" : "off"}` }) : null,
       c.polarity ? button(view, { label: "Ø", get: (s) => ch(s).polarity, onPress: flip("polarity"), aria: (s) => `Channel ${n} polarity: ${ch(s).polarity ? "reversed" : "normal"}` }) : null,
       c.hiZ ? button(view, { label: "Hi-Z", get: (s) => ch(s).hiZ, onPress: flip("hiZ"), aria: (s) => `Channel ${n} Hi-Z: ${ch(s).hiZ ? "on" : "off"}` }) : null,
-      c.hpf ? knob(view, { label: "HPF", sheetLabel: `Ch ${n} high-pass`, defaultValue: 0, tone: "eq", format: (v) => (v <= 0.02 ? "off" : `${hz(c.hpf.min + (c.hpf.max - c.hpf.min) * Math.max(0, (v - 0.05) / 0.95))} Hz`), onInput: set("hpf") }, (s) => ch(s).hpf) : null,
+      c.hpf ? knob(view, { label: "HPF", sheetLabel: () => translate("ui.channelHpfSheet", "Ch {channel} high-pass", { channel: n }), defaultValue: 0, tone: "eq", format: (v) => (v <= 0.02 ? "off" : `${hz(c.hpf.min + (c.hpf.max - c.hpf.min) * Math.max(0, (v - 0.05) / 0.95))} Hz`), onInput: set("hpf") }, (s) => ch(s).hpf) : null,
     ),
   );
 
