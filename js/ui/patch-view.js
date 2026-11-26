@@ -201,6 +201,7 @@ export class PatchView {
   renderSources(mix) {
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
     const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
+    const cme = this.getGigId?.() === "cme";
     const state = this.store.state;
     const rig = state.rig;
     const { SOURCES_BY_ID } = this.manifest;
@@ -210,7 +211,7 @@ export class PatchView {
       const src = SOURCES_BY_ID[d.sourceId];
       const handheld = vocalJazz && /^Wireless handheld (\d+), ([\w/]+) \(receiver channel \1\)$/.exec(src.device);
       const recordingHandheld = recordingGig && /^Wireless handheld (\d+), ([\w/]+) → receiver (\d+) CH (\d+) \(CH \1\)$/.exec(src.device);
-      const device = handheld
+      const deviceText = handheld
         ? translate("ui.vocalJazzHandheld", src.device, { number: handheld[1], color: handheld[2] })
         : recordingHandheld
           ? translate("ui.vjrHandheld", src.device, { number: recordingHandheld[1], color: recordingHandheld[2], receiver: recordingHandheld[3], channel: recordingHandheld[4] })
@@ -240,12 +241,14 @@ export class PatchView {
       // On Mixer A/B a source's own strip, if it has one of the right kind (mics 9–11 of the Vocal Jazz Ensemble don't).
       const own = state.channels[src.order - 1];
       const listNo = model === "generic" ? (own && !!own.stereo === !!src.stereo ? own.label : chInfo ? state.channels[chInfo.index].label : "—") : model === "cr1604" && src.stereo ? "TAPE" : chInfo ? state.channels[chInfo.index].label : "—";
-      const note =
+      const sourceNote =
         model === "cr1604" && src.stereo
           ? sourceText(src, "noteCr1604", "A laptop's 3.5 mm headphone jack is a stereo line output. On the 1604 it goes into the TAPE INPUT RCA pair with a 3.5 mm ↔ RCA (Y) cable, then TAPE TO MAIN MIX puts it in the house.")
           : model !== "generic" && src.stereo
             ? sourceText(src, (model === "x32c" || model === "gdig") && src.id === "synths" ? "noteAux12" : "noteStereo", "A laptop's 3.5 mm headphone jack is a stereo line output: a stereo line channel or the tape input takes it, with a breakout, RCA (Y) or 3.5 mm cable to suit the jacks.")
             : sourceText(src, "note", d.sourceId === "preshow" ? gearText("preshowNote") : src.note);
+      const device = cme ? translate(`ui.cmeInputText.${src.id}.device`, deviceText) : deviceText;
+      const note = cme ? translate(`ui.cmeInputText.${src.id}.note`, sourceNote ?? "") : sourceNote;
       return this.card(d.id, `<li class="source-card status-${status}">
         <div class="source-top">
           <span class="source-order" aria-label="Input list number">${esc(listNo)}</span>
@@ -255,10 +258,14 @@ export class PatchView {
         </div>
         <div class="tags">${tags}</div>
         ${rf ? rfLine(rig, d) : this.portButton(ref, "out")}
-        ${sourceGearHtml(d, src, rig, !!handheld)}
+        ${sourceGearHtml(d, src, rig, !!handheld || (cme && rf))}
         ${isRecordingMac(d) ? this.logicHtml(mix) : ""}
         ${powerHtml(rig, d)}
-        ${msgs.map((m) => `<p class="port-msg">${esc(connectionMessage(m))}</p>`).join("")}
+        ${msgs.map((m) => {
+          const rack = cme && /^No power: (.+) is switched on, but (.+) is off\.$/.exec(m);
+          const text = rack ? translate("ui.cmeRackOff", m, { receiver: rack[1], power: rack[2] }) : connectionMessage(m);
+          return `<p class="port-msg">${esc(text)}</p>`;
+        }).join("")}
         ${note ? `<p class="source-note">${esc(note)}</p>` : ""}
       </li>`);
     });
@@ -354,8 +361,11 @@ export class PatchView {
     const rig = this.store.state.rig;
     const type = DEVICE_TYPES[d.type];
     const gig = this.getGigId?.();
-    const label = (gig === "vocal-jazz" || gig === "vocal-jazz-recording") && d.label === "S32 · stage-side rack"
-      ? translate("ui.vocalJazzStageBox", d.label) : d.label || type.name;
+    const cmeSnake = gig === "cme" && d.label === "Hosa sub snake · by the piano";
+    const label = cmeSnake ? translate("ui.cmeSnakeLabel", d.label)
+      : (gig === "vocal-jazz" || gig === "vocal-jazz-recording" || gig === "cme") && d.label === "S32 · stage-side rack"
+        ? translate("ui.vocalJazzStageBox", d.label) : d.label || type.name;
+    const blurb = gearTypeText(d.type, "blurb", type.blurb);
     const links = throughLinks(rig).filter((l) => l.via === d.id);
     const live = mix.channels.filter((c) => c.input.connected && links.some((l) => l.from === c.input.fromPort));
     const plugged = listPorts(rig, d).filter((p) => cableAt(rig, p.ref) && !p.network);
@@ -381,7 +391,7 @@ export class PatchView {
       <div class="source-top">
         <span class="source-order">BOX</span>
         <span class="dev-ico">${icon("stage-box", { size: 40 })}</span>
-        <div class="source-names"><strong>${esc(label)}</strong><span>${esc(gearTypeText(d.type, "blurb", type.blurb))}</span></div>
+        <div class="source-names"><strong>${esc(label)}</strong><span>${esc(cmeSnake ? translate("ui.cmeSnakeBlurb", blurb) : blurb)}</span></div>
         <span class="status-pill status-${status}">${esc(translate("ui.stageboxLanded", "{count} on the console", { count: live.length }))}</span>
       </div>
       <p class="source-note">${esc(note)}</p>
@@ -421,6 +431,7 @@ export class PatchView {
   renderOutputs(mix) {
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
     const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
+    const cme = this.getGigId?.() === "cme";
     const state = this.store.state;
     const rig = state.rig;
     const terms = this.getTerms();
@@ -524,8 +535,10 @@ export class PatchView {
     const gearHtml = gear
       .map((d) => {
         const type = DEVICE_TYPES[d.type];
+        const blurb = gearTypeText(d.type, "blurb", type.blurb || "");
+        const description = cme && d.label === "IEM transmitters · rack drawer" ? translate("ui.cmeIemNote", blurb) : blurb;
         return this.card(d.id, `<li class="device-card" data-device-card="${esc(d.id)}">
-        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span><div class="source-names"><strong>${esc(d.label ? displayDevice(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${esc(gearTypeText(d.type, "blurb", type.blurb || ""))}</span></div></div>
+        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span><div class="source-names"><strong>${esc(d.label ? displayDevice(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${esc(description)}</span></div></div>
         ${type.receiver ? receiverHtml(rig, d, this.manifest.SOURCES_BY_ID) : ""}
         ${type.console ? "" : knobsHtml(d)}
         ${powerHtml(rig, d)}
@@ -562,11 +575,15 @@ export class PatchView {
           ${powerHtml(rig, d)}
           ${ep.messages.map((m) => {
             const amp = vocalJazz && /^The amp's Input ([AB]) has nothing plugged in\.$/.exec(m);
-            const lowered = recordingGig && /^Turned down: (Mackie Mix5 · hall's mains rack): (4\/5 LEVEL) is all the way down, so this speaker plays nothing\. The chain to it works\.$/.exec(m);
+            const lowered = (recordingGig || cme) && /^Turned down: (.+): (4\/5 LEVEL|VOLUME) is all the way down, so this speaker plays nothing\. The chain to it works\.$/.exec(m);
             const off = recordingGig && /^No power: (NX3000 · monitor amp rack) is switched off\.$/.exec(m);
+            const quiet = cme && /^Very quiet: (.+): (CH [AB] level) is at (.+) \(([-+−\d.]+) dB\)\.$/.exec(m);
             const text = amp ? translate("ui.vocalJazzAmpInputEmpty", m, { channel: amp[1] })
               : lowered ? translate("ui.vjrHallTurnedDown", m, { device: lowered[1], control: lowered[2] })
-              : off ? translate("ui.vjrAmpOff", m, { device: off[1] }) : connectionMessage(m);
+              : off ? translate("ui.vjrAmpOff", m, { device: off[1] })
+              : quiet ? translate("ui.cmeOutputQuiet", m, { device: quiet[1], control: quiet[2], value: quiet[3], db: quiet[4] })
+              : cme && m === "Everything on the way is plugged into the right jack, but nothing gets through. What's left is a cable itself."
+                ? translate("ui.cmeCableFault", m) : connectionMessage(m);
             return `<p class="port-msg">${esc(text)}</p>`;
           }).join("")}
         </li>`);
