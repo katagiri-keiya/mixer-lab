@@ -3,6 +3,15 @@ export const uiEn = {
 };
 
 export const uiJa = {
+  mariachiHandheld: "ワイヤレスハンドマイク、ウインドスクリーン：{windscreen}、リング：{ring} → 受信機{receiver}のCH {channel}（CH {input}）",
+  mariachiInputNotes: {
+    "mar-gtrn": "Mariachiの低音を担う楽器です。スタンドに固定したハンドマイクを背面に向けます。",
+    "mar-vox1": "ステージ前方のボーカルソロ用です。この曲では歌い手がボーカルマイク2を使うため、1にはバンドの音が回り込みます。",
+    "mar-vox2": "ステージ前方にあり、ボーカルソロと曲間のトークに使います。",
+    "mar-spare": "ワイヤレスラックの引き出しにあった予備マイクで、いまはバイオリン1のスタンドに取り付けています。",
+    preshow: "FOHのMac miniからSSL 2+を経由してAUX IN 1/2へテスト音源を送ります。演奏前に、常設スピーカー、次に各ウェッジを試聴します。",
+  },
+  mariachiDeadMic: "新品の電池に交換しても電源が入りません。故障品は分けて印を付け、演奏者に予備マイクを渡します。",
   cmeInputText: {
     "cme-guest": {
       device: "ワイヤレスボディパックのヘッドセットマイク → PTU-7000 CH 1 → LOCAL 25",

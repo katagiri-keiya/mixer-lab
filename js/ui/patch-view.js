@@ -215,6 +215,7 @@ export class PatchView {
 
   renderSources(mix) {
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
+    const mariachi = this.getGigId?.() === "mariachi";
     const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
     const advanced = this.getGigId?.() === "cme-advanced";
     const cme = this.getGigId?.() === "cme" || advanced;
@@ -263,8 +264,13 @@ export class PatchView {
           : model !== "generic" && src.stereo
             ? sourceText(src, (model === "x32c" || model === "gdig") && src.id === "synths" ? "noteAux12" : "noteStereo", "A laptop's 3.5 mm headphone jack is a stereo line output: a stereo line channel or the tape input takes it, with a breakout, RCA (Y) or 3.5 mm cable to suit the jacks.")
             : sourceText(src, "note", d.sourceId === "preshow" ? gearText("preshowNote") : src.note);
-      const device = cme ? translate(`ui.cmeInputText.${src.id}.device`, deviceText) : deviceText;
-      const note = cme ? translate(`ui.cmeInputText.${src.id}.note`, sourceNote ?? "") : sourceNote;
+      const mariachiMic = mariachi && /^Wireless handheld, (\w+) windscreen, (\w+) ring → receiver (\d+) CH (\d+) \(CH (\d+)\)$/.exec(src.device);
+      const device = cme ? translate(`ui.cmeInputText.${src.id}.device`, deviceText)
+        : mariachiMic ? translate("ui.mariachiHandheld", deviceText, {
+          windscreen: mariachiMic[1], ring: mariachiMic[2], receiver: mariachiMic[3], channel: mariachiMic[4], input: mariachiMic[5],
+        }) : deviceText;
+      const note = cme ? translate(`ui.cmeInputText.${src.id}.note`, sourceNote ?? "")
+        : mariachi ? translate(`ui.mariachiInputNotes.${src.id}`, sourceNote ?? "") : sourceNote;
       return this.card(d.id, `<li class="source-card status-${status}">
         <div class="source-top">
           <span class="source-order" aria-label="Input list number">${esc(listNo)}</span>
@@ -274,7 +280,7 @@ export class PatchView {
         </div>
         <div class="tags">${tags}</div>
         ${rf ? rfLine(rig, d) : this.portButton(ref, "out")}
-        ${sourceGearHtml(d, src, rig, !!handheld || (cme && rf))}
+        ${sourceGearHtml(d, src, rig, !!handheld || ((cme || mariachi) && rf), mariachi)}
         ${isRecordingMac(d) ? this.logicHtml(mix) : ""}
         ${powerHtml(rig, d)}
         ${msgs.map((m) => {
@@ -381,7 +387,7 @@ export class PatchView {
     const cme = gig === "cme" || gig === "cme-advanced";
     const cmeSnake = cme && d.label === "Hosa sub snake · by the piano";
     const label = cmeSnake ? translate("ui.cmeSnakeLabel", d.label)
-      : (gig === "vocal-jazz" || gig === "vocal-jazz-recording" || cme) && d.label === "S32 · stage-side rack"
+      : (gig === "vocal-jazz" || gig === "vocal-jazz-recording" || gig === "mariachi" || cme) && d.label === "S32 · stage-side rack"
         ? translate("ui.vocalJazzStageBox", d.label) : d.label || type.name;
     const blurb = gearTypeText(d.type, "blurb", type.blurb);
     const links = throughLinks(rig).filter((l) => l.via === d.id);
@@ -448,6 +454,7 @@ export class PatchView {
 
   renderOutputs(mix) {
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
+    const mariachi = this.getGigId?.() === "mariachi";
     const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
     const advanced = this.getGigId?.() === "cme-advanced";
     const cme = this.getGigId?.() === "cme" || advanced;
@@ -555,7 +562,7 @@ export class PatchView {
       .map((d) => {
         const type = DEVICE_TYPES[d.type];
         const blurb = gearTypeText(d.type, "blurb", type.blurb || "");
-        const description = cme && d.label === "IEM transmitters · rack drawer" ? translate("ui.cmeIemNote", blurb) : blurb;
+        const description = (cme || mariachi) && d.label === "IEM transmitters · rack drawer" ? translate("ui.cmeIemNote", blurb) : blurb;
         return this.card(d.id, `<li class="device-card" data-device-card="${esc(d.id)}">
         <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span><div class="source-names"><strong>${esc(d.label ? displayDevice(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${esc(description)}</span></div></div>
         ${type.receiver ? receiverHtml(rig, d, this.manifest.SOURCES_BY_ID) : ""}
@@ -594,14 +601,15 @@ export class PatchView {
           ${powerHtml(rig, d)}
           ${ep.messages.map((m) => {
             const amp = vocalJazz && /^The amp's Input ([AB]) has nothing plugged in\.$/.exec(m);
-            const lowered = (recordingGig || cme) && /^Turned down: (.+): (4\/5 LEVEL|VOLUME) is all the way down, so this speaker plays nothing\. The chain to it works\.$/.exec(m);
+            const volumeDrop = (recordingGig || cme || mariachi) && /^Turned down: (.+): (4\/5 LEVEL|VOLUME|CH 2 level) is all the way down, so this speaker plays nothing\. The chain to it works\.$/.exec(m);
+            const lowered = volumeDrop && (mariachi || volumeDrop[2] !== "CH 2 level") ? volumeDrop : null;
             const off = recordingGig && /^No power: (NX3000 · monitor amp rack) is switched off\.$/.exec(m);
             const quiet = cme && /^Very quiet: (.+): (CH [AB] level) is at (.+) \(([-+−\d.]+) dB\)\.$/.exec(m);
             const text = amp ? translate("ui.vocalJazzAmpInputEmpty", m, { channel: amp[1] })
               : lowered ? translate("ui.vjrHallTurnedDown", m, { device: lowered[1], control: lowered[2] })
               : off ? translate("ui.vjrAmpOff", m, { device: off[1] })
               : quiet ? translate("ui.cmeOutputQuiet", m, { device: quiet[1], control: quiet[2], value: quiet[3], db: quiet[4] })
-              : cme && m === "Everything on the way is plugged into the right jack, but nothing gets through. What's left is a cable itself."
+              : (cme || mariachi) && m === "Everything on the way is plugged into the right jack, but nothing gets through. What's left is a cable itself."
                 ? translate("ui.cmeCableFault", m) : advanced ? cmeAdvancedWarning(m) : connectionMessage(m);
             return `<p class="port-msg">${esc(text)}</p>`;
           }).join("")}
@@ -682,13 +690,14 @@ function receiverHtml(rig, d, sources) {
 
 // What a source's own gear lets you do: a wireless handheld's one button, or
 // the volume knob on the amp or instrument in front of its mic or DI.
-function sourceGearHtml(d, src, rig, vocalJazzHandheld) {
+function sourceGearHtml(d, src, rig, localizeHandheld, mariachi) {
   if (d.type === "wireless-handheld" || d.type === "rf-handheld") {
     // A dead handheld (`dead`: it won't switch on, whatever its button does): set it aside.
     if (d.dead) {
+      const english = "It won't switch on, with a fresh battery or without. Set it aside, tag it, and give the player a spare.";
       return `<div class="dev-settings mic-button" data-device-card="${esc(d.id)}">
       <p class="mic-display"><strong>Mic: DEAD</strong> · Receiver: no signal</p>
-      <p class="source-note">It won't switch on, with a fresh battery or without. Set it aside, tag it, and give the player a spare.</p>
+      <p class="source-note">${esc(mariachi ? translate("ui.mariachiDeadMic", english) : english)}</p>
     </div>`;
     }
     const st = d.mic || 0;
@@ -697,7 +706,7 @@ function sourceGearHtml(d, src, rig, vocalJazzHandheld) {
     const port = rxDev && Object.keys(rxDev.pairs).find((k) => rxDev.pairs[k] === d.sourceId);
     const ch = port && receiverChannel(rig, rxDev, Number(port.slice(3)));
     const rx = ch && !ch.on ? "Receiver: off (no power)" : ch && !(ch.a || ch.b) ? "Receiver: no antenna signal" : ["Receiver: signal ✓ · audio ✓", "Receiver: signal ✓ · audio —", "Receiver: no signal"][st];
-    const instruction = (key, english) => vocalJazzHandheld ? translate(`ui.${key}`, english) : english;
+    const instruction = (key, english) => localizeHandheld ? translate(`ui.${key}`, english) : english;
     return `<div class="dev-settings mic-button" data-device-card="${esc(d.id)}">
       <p class="mic-display"><strong>Mic: ${MIC_STATES[st]}</strong> · ${rx}</p>
       <div class="mic-press"><button type="button" class="btn" data-device="${esc(d.id)}" data-mic-press="tap">${instruction("vocalJazzMicTap", "Tap the button")}</button><button type="button" class="btn" data-device="${esc(d.id)}" data-mic-press="hold">${instruction("vocalJazzMicHold", "Press and hold")}</button></div>
