@@ -86,7 +86,7 @@ export function renderCL(view, def) {
   access.appendChild(layerBar(PAGES.map(([id, label]) => ({ id, label })), ui.page, (id) => ((ui.page = id), rerender()), "Screen"));
   screen.appendChild(access);
   if (ui.page === "inpatch") screen.appendChild(inputPatchPage(view, def));
-  else if (ui.page === "routing") screen.appendChild(routingPage(view, def, "OUTPUT PATCH: what each Rio stage-box output carries over Dante."));
+  else if (ui.page === "routing") screen.appendChild(routingPage(view, def, () => translate("ui.clOutputPatchNote", "OUTPUT PATCH: what each Rio stage-box output carries over Dante.")));
   else if (ui.page === "scenes") screen.appendChild(scenesPage(view, def));
   else if (ui.page === "sel") screen.appendChild(selectedView(view, def, ui, rerender));
   else screen.appendChild(overview(view, def, ui, gLayer, rerender));

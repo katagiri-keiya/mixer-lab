@@ -428,13 +428,19 @@ export function muteGroupBar(view, def, ui, rerender) {
 
 // ---------- the channel-strip panel for buses, MAIN, matrices and M/C ----------
 
+function localizedText(view, tag, className, message) {
+  const node = el(tag, className, message());
+  view.bindings.push({ kind: "fn", run: () => { node.textContent = message(); } });
+  return node;
+}
+
 function panelShell(title, ...sections) {
   const panel = el("section", "dg-panel");
   panel.setAttribute("aria-label", `Selected ${title}`);
   panel.appendChild(row("dg-panel-head", el("h4", "dg-panel-title", title)));
   for (const [name, ...els] of sections) {
     const sec = el("div", "dg-sec");
-    sec.appendChild(el("h5", "", name));
+    sec.appendChild(typeof name === "string" ? el("h5", "", name) : name);
     sec.appendChild(row("dg-sec-body", ...els));
     panel.appendChild(sec);
   }
@@ -445,7 +451,7 @@ function panelShell(title, ...sections) {
 const matrixSends = (view, def, src, name) =>
   Array.from({ length: def.matrix || 0 }, (_, k) => {
     const m = `mtx${k + 1}`;
-    return knob(view, { label: `MTX ${k + 1}`, sheetLabel: `${name} to MATRIX ${k + 1}`, defaultValue: 0, tone: "aux1", format: lawFormat(LAWS.level), onInput: (v) => view.store.setBus(m, src, v) }, (s) => s[m][src]);
+    return knob(view, { label: `MTX ${k + 1}`, sheetLabel: () => translate("ui.matrixSendSheet", "{source} to MATRIX {number}", { source: name, number: k + 1 }), defaultValue: 0, tone: "aux1", format: lawFormat(LAWS.level), onInput: (v) => view.store.setBus(m, src, v) }, (s) => s[m][src]);
   });
 
 export function busPanel(view, def, b) {
@@ -473,7 +479,7 @@ export function busPanel(view, def, b) {
 
 export function mainPanel(view, def) {
   const T = termsOf(def);
-  return panelShell(T.main, ["MATRIX SENDS (the main mix into each matrix)", ...matrixSends(view, def, "main", T.main)]);
+  return panelShell(T.main, [localizedText(view, "h5", "", () => translate("ui.matrixMainSendsTitle", "MATRIX SENDS (the main mix into each matrix)")), ...matrixSends(view, def, "main", T.main)]);
 }
 
 export function mcPanel(view, def) {
@@ -482,11 +488,11 @@ export function mcPanel(view, def) {
     "M/C (MONO/CENTER)",
     [
       "M/C MASTER",
-      knob(view, { label: "LEVEL", sheetLabel: "M/C master", defaultValue: 0.75, tone: "level", size: undefined, format: lawFormat(LAWS.level), onInput: (v) => store.setBus("mc", "level", v) }, (s) => s.mc.level),
+      knob(view, { label: "LEVEL", sheetLabel: () => translate("ui.mcMasterSheet", "M/C master"), defaultValue: 0.75, tone: "level", size: undefined, format: lawFormat(LAWS.level), onInput: (v) => store.setBus("mc", "level", v) }, (s) => s.mc.level),
       button(view, { label: "MUTE", tone: "mute", get: (s) => s.mc.mute, onPress: () => store.setBus("mc", "mute", !store.state.mc.mute), aria: (s) => `M/C MUTE: ${s.mc.mute ? "on" : "off"}` }),
     ],
     ["MATRIX SENDS", ...matrixSends(view, def, "mc", "M/C")],
-    ["HOW TO FEED IT", el("p", "dg-note", "Each channel has an M/C send in its own strip (SEL the channel).")],
+    [localizedText(view, "h5", "", () => translate("ui.mcFeedTitle", "HOW TO FEED IT")), localizedText(view, "p", "dg-note", () => translate("ui.mcFeedNote", "Each channel has an M/C send in its own strip (SEL the channel)."))],
   );
 }
 
@@ -498,16 +504,26 @@ export function matrixPanel(view, def, m) {
     `MATRIX ${k}`,
     [
       "MATRIX MASTER",
-      knob(view, { label: "LEVEL", sheetLabel: `MATRIX ${k} master`, defaultValue: 0.75, tone: "level", size: undefined, format: lawFormat(LAWS.level), onInput: (v) => store.setBus(m, "level", v) }, (s) => s[m].level),
+      knob(view, { label: "LEVEL", sheetLabel: () => translate("ui.groupMasterSheet", "{bus} master", { bus: `MATRIX ${k}` }), defaultValue: 0.75, tone: "level", size: undefined, format: lawFormat(LAWS.level), onInput: (v) => store.setBus(m, "level", v) }, (s) => s[m].level),
       muteKey(view, def, `MATRIX ${k}`, (s) => s[m].mute, (v) => store.setBus(m, "mute", v)),
     ],
-    ["SOURCES (what feeds this matrix)", ...matrixSources(def).map((src) => knob(view, { label: label(src), sheetLabel: `${label(src)} into MATRIX ${k}`, defaultValue: 0, tone: "aux1", format: lawFormat(LAWS.level), onInput: (v) => store.setBus(m, src, v) }, (s) => s[m][src]))],
+    [localizedText(view, "h5", "", () => translate("ui.matrixInputTitle", "SOURCES (what feeds this matrix)")), ...matrixSources(def).map((src) => knob(view, { label: label(src), sheetLabel: () => translate("ui.matrixSendSheet", "{source} into MATRIX {number}", { source: label(src), number: k }), defaultValue: 0, tone: "aux1", format: lawFormat(LAWS.level), onInput: (v) => store.setBus(m, src, v) }, (s) => s[m][src]))],
   );
 }
 
 // ---------- display pages ----------
 
-const SOURCE_NAMES = (src, T) => (src === "off" ? "OFF" : src === "main-l" ? T.mainL : src === "main-r" ? T.mainR : src === "mc" ? "M/C" : src.startsWith("mtx") ? `MATRIX ${src.slice(3)}` : `MIX ${src.slice(3)}`);
+function sourceName(src, terms, def) {
+  if (src === "off") return "OFF";
+  if (src === "main-l") return terms.mainL;
+  if (src === "main-r") return terms.mainR;
+  if (src === "mc") return "M/C";
+  const number = src.slice(3);
+  if (src.startsWith("mtx")) return `MATRIX ${number}`;
+  if (def.id === "dm2000" && src.startsWith("aux")) return `AUX ${number}`;
+  if (def.id === "dm2000" && src.startsWith("bus")) return `BUS ${number}`;
+  return `MIX ${number}`;
+}
 
 // ---------- ROUTING, as the X32's own screen ----------
 // Firmware 4 (photos of Salmon's X32, 2026-10-20 and 2026-11): a BLOCK row
@@ -575,8 +591,15 @@ function blockColumns(view, ui, { key, title, heads, items, current, connect }) 
   const wrap = el("div", "x32-rpage");
   wrap.appendChild(el("h5", "x32-rtitle", title));
   const cols = el("div", "x32-rcols");
-  const note = el("p", "x32-rnote");
+  let unsupportedSignal;
+  const warning = () => unsupportedSignal ? translate("ui.x32OutPatchUnsupported", "{signal} isn't built in the lab yet: {output} stays on {current}.", {
+    signal: signalName(unsupportedSignal), output: outName(ui.rout.o), current: signalName(cur),
+  }) : "";
+  const note = localizedText(view, "p", "x32-rnote", warning);
   note.setAttribute("aria-live", "polite");
+  view.bindings.push({ kind: "fn", run: () => assign.setAttribute("aria-label", translate("ui.x32OutPatchAssign", "Assign {signal} to {output}", {
+    signal: signalName(sig), output: outName(ui.rout.o),
+  })) });
   heads.forEach((head, c) => {
     const col = el("div", "x32-rcol");
     col.appendChild(el("h6", "", head));
@@ -750,7 +773,7 @@ function outPatch(view, def, ui) {
       li.setAttribute("role", "option");
       li.setAttribute("aria-selected", String(!!it.on));
       li.tabIndex = 0;
-      if (it.ok === false) li.title = "Listed as on the X32: not built in the lab";
+      if (it.ok === false) view.bindings.push({ kind: "fn", run: () => { li.title = translate("ui.x32OutPatchUnavailable", "Listed as on the X32: not built in the lab"); } });
       const pick = () => onPick(it);
       li.addEventListener("click", pick);
       li.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), pick()));
@@ -762,15 +785,28 @@ function outPatch(view, def, ui) {
   const redraw = () => view.render();
   const outName = (o) => `Output ${o.slice(3)}`;
   const setting = el("div", "x32-rsetting");
-  setting.append(el("h6", "", "SETTING"), el("p", "", signalName(cur)), el("p", "", "Post Fader"));
+  setting.append(
+    el("h6", "", "SETTING"),
+    localizedText(view, "p", "", () => translate("ui.x32OutPatchCurrent", "{signal}", { signal: signalName(cur) })),
+    el("p", "", "Post Fader"),
+  );
+  if (sig !== cur) setting.appendChild(localizedText(view, "p", "", () => translate("ui.x32OutPatchCandidate", "Pending: {signal}", { signal: signalName(sig) })));
   const assign = el("button", "x32-rconnect", "ASSIGN");
   assign.type = "button";
-  const note = el("p", "x32-rnote");
+  let unsupportedSignal;
+  const warning = () => unsupportedSignal ? translate("ui.x32OutPatchUnsupported", "{signal} isn't built in the lab yet: {output} stays on {current}.", {
+    signal: signalName(unsupportedSignal), output: outName(ui.rout.o), current: signalName(cur),
+  }) : "";
+  const note = localizedText(view, "p", "x32-rnote", warning);
   note.setAttribute("aria-live", "polite");
+  view.bindings.push({ kind: "fn", run: () => assign.setAttribute("aria-label", translate("ui.x32OutPatchAssign", "Assign {signal} to {output}", {
+    signal: signalName(sig), output: outName(ui.rout.o),
+  })) });
   assign.addEventListener("click", () => {
     const src = ui.rout.sig ?? cur;
     if (!ok(src)) {
-      note.textContent = `${signalName(src)} isn't built in the lab yet: ${outName(ui.rout.o)} stays on ${signalName(cur)}.`;
+      unsupportedSignal = src;
+      note.textContent = warning();
       return;
     }
     store.setBus("routing", ui.rout.o, src);
@@ -799,7 +835,9 @@ function outPatch(view, def, ui) {
     ),
     assign,
     note,
-    el("p", "x32-rhelp", `Pick an output, then its CATEGORY and OUT SIGNAL, and press ASSIGN. ${outName(ui.rout.o)} is the rear panel's XLR OUT ${ui.rout.o.slice(3)}, and AES50 A output ${ui.rout.o.slice(3)} (a stage box's OUT ${ui.rout.o.slice(3)}) when AES A sends Output ${Number(ui.rout.o.slice(3)) <= 8 ? "1-8" : "9-16"} there. The lab taps every output Post Fader.`),
+    localizedText(view, "p", "x32-rhelp", () => translate("ui.x32OutPatchHelp",
+      "Pick an output, then its CATEGORY and OUT SIGNAL, and press ASSIGN. {output} is the rear panel's XLR OUT {number}, and AES50 A output {number} (a stage box's OUT {number}) when AES A sends Output {block} there. The lab taps every output Post Fader.",
+      { output: outName(ui.rout.o), number: ui.rout.o.slice(3), block: Number(ui.rout.o.slice(3)) <= 8 ? "1-8" : "9-16" })),
   );
   return page;
 }
@@ -808,14 +846,14 @@ export function routingPage(view, def, note = "Analog out: what each rear-panel 
   const store = view.store;
   const T = termsOf(def);
   const box = el("div", "x32-routing");
-  box.appendChild(el("p", "dg-note", note));
+  box.appendChild(typeof note === "function" ? localizedText(view, "p", "dg-note", note) : el("p", "dg-note", note));
   for (const o of def.routing.outputs) {
     const lab = el("label", "x32-route");
     lab.append(el("span", "", outName(def, o)));
     const sel = el("select");
-    sel.setAttribute("aria-label", `${outName(def, o)} source`);
+    view.bindings.push({ kind: "fn", run: () => sel.setAttribute("aria-label", translate("ui.outputPatchSource", "{output} source", { output: outName(def, o) })) });
     for (const src of def.routing.sources) {
-      const opt = el("option", "", SOURCE_NAMES(src, T));
+      const opt = el("option", "", sourceName(src, T, def));
       opt.value = src;
       sel.appendChild(opt);
     }

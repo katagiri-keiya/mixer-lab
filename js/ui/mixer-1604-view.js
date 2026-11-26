@@ -214,7 +214,7 @@ function buildMaster(view) {
     return b;
   };
   const busKnob = (bus, label, law, key = "level") =>
-    knob(view, { label, sheetLabel: label, defaultValue: 0.5, tone: "level", format: lawFormat(law), onInput: (v) => store.setBus(bus, key, v) }, (s) => s[bus][key]);
+    knob(view, { label, sheetLabel: bus === "mono" ? () => translate("ui.monoOutputSheet", label) : label, defaultValue: 0.5, tone: "level", format: lawFormat(law), onInput: (v) => store.setBus(bus, key, v) }, (s) => s[bus][key]);
   const busButton = (bus, key, label, aria, tone = "assign") =>
     button(view, { label, tone, get: (s) => s[bus][key], onPress: () => store.setBus(bus, key, !store.state[bus][key]), aria: (s) => `${aria}: ${s[bus][key] ? "on" : "off"}` });
 

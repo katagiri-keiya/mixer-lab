@@ -249,7 +249,7 @@ function display(view, def, ui, rerender) {
     });
     body.append(row("y96-row", ...keys), matrixPanel(view, def, ui.mtx));
   } else if (ui.page === "patch") {
-    body.appendChild(routingPage(view, def, "OUTPUT PATCH: STEREO OUT has its own jacks; OMNI OUT 1–8 carry whatever is patched here."));
+    body.appendChild(routingPage(view, def, () => translate("ui.dmOutputPatchNote", "OUTPUT PATCH: STEREO OUT has its own jacks; OMNI OUT 1–8 carry whatever is patched here.")));
   } else if (ui.page === "group") {
     body.appendChild(groupPage(view, def, ui, rerender));
   } else {

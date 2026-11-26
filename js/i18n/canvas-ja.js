@@ -3495,6 +3495,190 @@ const canvasJaBase = {
     complete: "CLではUSER DEFINEDに割り当てたキーでグループをまとめてミュートでき、各チャンネルのONキーの設定は保たれます。",
     stageNote: "リードボーカル用のマイクからアナウンスが流れています（Adam Borecki）。"
   },
+  "cr1604-mono": {
+    title: "ロビースピーカー",
+    shortTitle: "ロビー用MONO",
+    who: "客席担当",
+    prompt: "「ロビーに並んでいる人にも演奏を聞いてもらいたいです。ロビーにはパワードスピーカーがあります。」",
+    goal: "客席のモノミックスをMONO OUTからロビースピーカーへ送り、適度なレベルに調整します。",
+    conditions: {
+      "chain": "ロビースピーカーにMONO OUTが接続されている",
+      "level": "MONOの出力レベルが十分に上がっている",
+      "house": "客席スピーカーの経路が維持されている"
+    },
+    hints: [
+      "スピーカー1台で左右を聞くには、LとRをモノにまとめます。1604にはモノ出力があります。",
+      "背面にMONO OUT端子があり、MONOつまみでその出力レベルを調整できます。",
+      "MONO OUTとロビースピーカーを接続し、MONOつまみを上げます。"
+    ],
+    complete: "MONO OUTはメインのLとRを合成して、ロビーや舞台裏のスピーカー1台に送れます。専用のMONOつまみでロビーの音量を変えても、客席のレベルは変わりません。"
+  },
+  "dm2000-output-patch": {
+    title: "OMNI OUT 7のウェッジ",
+    shortTitle: "OMNI OUT 7",
+    who: "ステージスタッフ",
+    prompt: "「OMNI OUT 1に不具合があったので、歌い手のウェッジをOMNI OUT 7につなぎ替えたところ、音が出なくなりました。」",
+    goal: "OMNI OUT 7から歌い手のウェッジにAUX 1を送り、試聴して確認します。",
+    conditions: {
+      "chain": "歌い手のウェッジにAUX 1が届いている",
+      "listen": "ウェッジを試聴した",
+      "house": "客席ミックスが維持されている"
+    },
+    hints: [
+      "ウェッジ用のミックスはAUX 1です。移設先のOMNI OUT 7に何が割り当てられているか確認します。",
+      "DISPLAY ACCESSのOUTPUT PATCHを開きます。",
+      "OMNI OUT 7にAUX 1を設定します。試聴先でAUX 1を選びます。"
+    ],
+    complete: "ケーブルの移設先であるOMNI OUT 7にも、元のAUX 1を割り当てます。ミックスの内容はそのままです。"
+  },
+  "dm2000-matrix": {
+    title: "ロビースピーカー",
+    shortTitle: "ロビー用MATRIX",
+    who: "客席担当",
+    prompt: "「ロビースピーカーはOMNI OUT 8につないであります。客席のミックスを送り、ロビーの音量だけ独立して調整できるようにしてください。」",
+    goal: "STEREOをMATRIX 1に送り、OMNI OUT 8からロビーへ届けます。客席のミックスは維持します。",
+    conditions: {
+      "chain": "ロビースピーカーにMATRIX 1が届いている",
+      "on": "ロビーでバンドの音が聞こえる",
+      "main": "MATRIX 1にSTEREOが送られている",
+      "house": "客席ミックスが維持されている"
+    },
+    hints: [
+      "MATRIXは既存のミックスをまとめるバスです。STEREOなどの送りを個別に調整でき、MATRIX専用のマスターがあります。",
+      "DISPLAY ACCESSのMATRIXでMATRIX 1を開き、STEREOからの送りを上げます。",
+      "OUTPUT PATCHでOMNI OUT 8をMATRIX 1に設定します。"
+    ],
+    complete: "MATRIXを使うと、ロビー、補助スピーカー、録音などに既存のミックスを分けて送れます。ロビーの音量はMATRIX 1のマスターで調整できます。DM2000のMASTERレイヤーには4系統のMATRIXがあります。"
+  },
+  "x32-routing-house": {
+    title: "無音の会場",
+    shortTitle: "客席の出力復帰",
+    who: "会場の音響担当",
+    prompt: "「前のバンドのショーファイルを読み込んだ後、客席スピーカーから音が出ません。メーターは動き、ウェッジは鳴っています。」",
+    goal: "MAIN L/RをXLR OUT 15・16から客席に送り、ウェッジを維持します。",
+    conditions: {
+      "heard": "客席の左右から音が出ている",
+      "chain": "客席スピーカーにMAINが届いている",
+      "wedge": "歌い手のウェッジが維持されている"
+    },
+    hints: [
+      "メーターは動いています。客席スピーカーがつながるXLR OUT 15・16に何が割り当てられているか確認します。",
+      "メイン画面でROUTING → PATCH POINTS → OUTを開きます。",
+      "Output 15でCATEGORYのMain (LRC)、OUT SIGNALのMain Lを選び、ASSIGNを押します。Output 16もMain Rを選び、ASSIGNで確定します。"
+    ],
+    complete: "ミックスのメーターが動いていても、出力端子に信号が割り当てられていなければスピーカーには届きません。無音のときはROUTINGを確認します。"
+  },
+  "x32-routing-wedge": {
+    title: "XLR OUT 9のウェッジ",
+    shortTitle: "XLR OUT 9",
+    who: "ステージスタッフ",
+    prompt: "「XLR OUT 1に不具合があったので、歌い手のウェッジをXLR OUT 9につなぎ替えたところ、音が出なくなりました。」",
+    goal: "XLR OUT 9から歌い手のウェッジにMIX 1を送り、試聴して確認します。",
+    conditions: {
+      "chain": "歌い手のウェッジにMIX 1が届いている",
+      "listen": "ウェッジを試聴した",
+      "house": "客席ミックスが維持されている"
+    },
+    hints: [
+      "ウェッジ用のミックスはMIX 1です。移設先のXLR OUT 9に何が割り当てられているか確認します。",
+      "メイン画面でROUTING → PATCH POINTS → OUTを開き、Output 9を選びます。",
+      "CATEGORYでMix Bus、OUT SIGNALでMixBus 1を選び、ASSIGNを押します。試聴先でMIX 1を選びます。"
+    ],
+    complete: "ケーブルの移設先であるXLR OUT 9にも、元のMIX 1を割り当てます。ミックスの内容はそのままです。"
+  },
+  "x32-mc": {
+    title: "ボーカル用のフロントフィル",
+    shortTitle: "フロントフィル",
+    who: "会場の音響担当",
+    prompt: "「前列では歌詞が聞き取りにくいです。XLR OUT 11につないだフロントフィルに、歌声だけを送ってください。」",
+    goal: "MONO/CENTERからフロントフィルに両方のボーカルを送り、ドラムとベースは入れないようにします。",
+    conditions: {
+      "chain": "フロントフィルにM/Cが届いている",
+      "vox": "両方のボーカルがフロントフィルで聞こえる",
+      "no": "ドラムとベースはフロントフィルで聞こえない",
+      "house": "客席ミックスが維持されている"
+    },
+    hints: [
+      "MONO/CENTERは独立したモノミックスです。チャンネルごとに専用の送りがあります。",
+      "06・07を順にSELし、各チャンネルのM/Cを確認します。M/CのマスターフェーダーはMATRIXレイヤーにあります。",
+      "両ボーカルのM/Cの送りを上げ、XLR OUT 11にM/Cを割り当てます。"
+    ],
+    complete: "M/Cは各チャンネルから別に作るモノミックスです。ここでは前列で歌声を聞き取りやすくするため、フロントフィルに両ボーカルを送ります。"
+  },
+  "x32-matrix": {
+    title: "ロビースピーカー",
+    shortTitle: "ロビー用MATRIX",
+    who: "客席担当",
+    prompt: "「ロビースピーカーはXLR OUT 12につないであります。客席のミックスを送り、ロビーの音量だけ独立して調整できるようにしてください。」",
+    goal: "MAINをMATRIX 1に送り、XLR OUT 12からロビーへ届けます。客席のミックスは維持します。",
+    conditions: {
+      "chain": "ロビースピーカーにMATRIX 1が届いている",
+      "on": "ロビーでバンドの音が聞こえる",
+      "main": "MATRIX 1にMAINが送られている",
+      "house": "客席ミックスが維持されている"
+    },
+    hints: [
+      "MATRIXは既存のミックスをまとめるバスです。MAINなどの送りを個別に調整でき、MATRIX専用のマスターがあります。",
+      "MAIN LRをSELしてMATRIXへの送りを確認します。MATRIXレイヤーでMATRIX 1をSELして入力元を確認する方法もあります。",
+      "MAINからMATRIX 1への送りを上げ、XLR OUT 12にMATRIX 1を割り当てます。"
+    ],
+    complete: "MATRIXを使うと、ロビー、補助スピーカー、録音などに既存のミックスを分けて送れます。ロビーの音量はMATRIX 1のマスターで調整できます。"
+  },
+  "cl3-routing-house": {
+    title: "無音の会場",
+    shortTitle: "客席の出力復帰",
+    who: "会場の音響担当",
+    prompt: "「前のバンドのショーファイルを読み込んだ後、客席スピーカーから音が出ません。メーターは動き、ウェッジは鳴っています。」",
+    goal: "STEREOをRio OUT 15・16から客席に送り、ウェッジを維持します。",
+    conditions: {
+      "heard": "客席の左右から音が出ている",
+      "chain": "客席スピーカーにSTEREOが届いている",
+      "wedge": "歌い手のウェッジが維持されている"
+    },
+    hints: [
+      "メーターは動いています。客席スピーカーがつながるRio OUT 15・16に何が割り当てられているか確認します。",
+      "タッチ画面のOUTPUT PATCHを開きます。",
+      "Rio OUT 15にST L、16にST Rを設定します。"
+    ],
+    complete: "ミックスのメーターが動いていても、出力端子に信号が割り当てられていなければスピーカーには届きません。無音のときはOUTPUT PATCHを確認します。"
+  },
+  "cl3-routing-wedge": {
+    title: "Rio OUT 9のウェッジ",
+    shortTitle: "Rio OUT 9",
+    who: "ステージスタッフ",
+    prompt: "「Rio OUT 1に不具合があったので、歌い手のウェッジをRio OUT 9につなぎ替えたところ、音が出なくなりました。」",
+    goal: "Rio OUT 9から歌い手のウェッジにMIX 1を送り、試聴して確認します。",
+    conditions: {
+      "chain": "歌い手のウェッジにMIX 1が届いている",
+      "listen": "ウェッジを試聴した",
+      "house": "客席ミックスが維持されている"
+    },
+    hints: [
+      "ウェッジ用のミックスはMIX 1です。移設先のRio OUT 9に何が割り当てられているか確認します。",
+      "タッチ画面のOUTPUT PATCHを開きます。",
+      "Rio OUT 9にMIX 1を設定します。試聴先でMIX 1を選びます。"
+    ],
+    complete: "ケーブルの移設先であるRio OUT 9にも、元のMIX 1を割り当てます。ミックスの内容はそのままです。"
+  },
+  "cl3-matrix": {
+    title: "ロビースピーカー",
+    shortTitle: "ロビー用MATRIX",
+    who: "客席担当",
+    prompt: "「ロビースピーカーはRio OUT 12につないであります。客席のミックスを送り、ロビーの音量だけ独立して調整できるようにしてください。」",
+    goal: "STEREOをMATRIX 1に送り、Rio OUT 12からロビーへ届けます。客席のミックスは維持します。",
+    conditions: {
+      "chain": "ロビースピーカーにMATRIX 1が届いている",
+      "on": "ロビーでバンドの音が聞こえる",
+      "main": "MATRIX 1にSTEREOが送られている",
+      "house": "客席ミックスが維持されている"
+    },
+    hints: [
+      "MATRIXは既存のミックスをまとめるバスです。STEREOなどの送りを個別に調整でき、MATRIX専用のマスターがあります。",
+      "マスター部のSTEREOをSELすると、SELECTED CHANNELでMATRIXへの送りを確認できます。CentralogicにMATRIXを表示してMATRIX 1をSELする方法もあります。",
+      "STEREOからMATRIX 1への送りを上げ、Rio OUT 12にMATRIX 1を割り当てます。"
+    ],
+    complete: "MATRIXを使うと、ロビー、補助スピーカー、録音などに既存のミックスを分けて送れます。ロビーの音量はMATRIX 1のマスターで調整できます。CLには8系統のMATRIXがあります。"
+  },
 };
 
 export const canvasJa = Object.fromEntries(

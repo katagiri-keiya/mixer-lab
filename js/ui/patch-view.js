@@ -400,7 +400,14 @@ export class PatchView {
     // A routed output (full X32) is named by its jack and what ROUTING sends it: "XLR OUT 11 · MIX 11".
     const routedName = (portId) => {
       const src = state.routing?.[portId];
-      return src && `XLR OUT ${portId.slice(3)} · ${({ "main-l": "MAIN L", "main-r": "MAIN R" })[src] || terms[src] || src.toUpperCase().replace(/(\d+)$/, " $1")}`;
+      if (!src) return null;
+      const number = portId.slice(3);
+      const model = modelOf(state);
+      const type = model === "dm2000" ? "OMNI OUT" : model === "cl3" ? "RIO OUT" : "XLR OUT";
+      const left = model === "dm2000" || model === "cl3" ? "ST L" : "MAIN L";
+      const right = model === "dm2000" || model === "cl3" ? "ST R" : "MAIN R";
+      const signal = ({ "main-l": left, "main-r": right })[src] || terms[src] || src.toUpperCase().replace(/(\d+)$/, " $1");
+      return `${type} ${number} · ${signal}`;
     };
     const busName = (portId) => ({ "main-l": "Main L", "main-r": "Main R", "cr-l": "C-R L", "cr-r": "C-R R" })[portId] || terms[portId] || routedName(portId) || portId;
     const boardNames = modelOf(state) !== "generic"; // real mixers' jacks are named as printed on them
@@ -419,7 +426,7 @@ export class PatchView {
             ? `<p class="port-msg ok">${translate("ui.feeds", "→ Feeds {port}", { port: portLabel(rig, cable.to) })}</p>`
             : `<p class="port-msg">${translate("ui.emptyOutput", "No working speaker on this output yet.")}</p>`;
         const label = !boardNames && terms[p.id] ? `${terms[p.id]} out` : p.name;
-        return { p, html: `<li class="out-row">${this.portButton(p.ref, "out").replace(esc(p.name), esc(label))}${note}</li>` };
+        return { p, html: `<li class="out-row">${this.portButton(p.ref, "out").replace(esc(p.name), esc(label))}${note}${p.id === "mono" && modelOf(state) === "cr1604" ? `<p class="port-msg">${esc(translate("ui.monoOutputNote", "A mono sum of MAIN L/R. Set its output level with the rear-panel MONO knob."))}</p>` : ""}</li>` };
       });
     // The 1604 has many outputs: the per-channel ones are folded away.
     const perChannel = (r) => /^ch\d+-(direct|insert)$/.test(r.p.id);
