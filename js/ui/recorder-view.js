@@ -8,7 +8,8 @@ import { MeterView } from "../meters.js";
 import { F8, cardStats, trackInputs } from "../devices.js";
 import { encodeWav } from "../wav.js";
 import { formatDb } from "../levels.js";
-import { t as translate } from "../i18n/index.js";
+import { LANGUAGES, language, setLanguage, t as translate } from "../i18n/index.js";
+import { connectionMessage } from "./patch-view.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const MARKS = [
@@ -19,7 +20,14 @@ const MARKS = [
   { db: 0, label: "0" },
 ];
 const clock = (sec) => `${String(Math.floor(sec / 3600)).padStart(2, "0")}:${String(Math.floor((sec % 3600) / 60)).padStart(2, "0")}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
-const hours = (sec) => (Number.isFinite(sec) ? `${Math.floor(sec / 3600)} h ${String(Math.floor((sec % 3600) / 60)).padStart(2, "0")} min` : "—");
+const hours = (sec) => {
+  if (!Number.isFinite(sec)) return "—";
+  const hours = Math.floor(sec / 3600);
+  const minutes = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
+  return translate("ui.recorderHours", `${hours} h ${minutes} min`, { hours, minutes });
+};
+const recorderMessage = (message) => LANGUAGES[language()].ui.recorderErrors?.[message] ?? connectionMessage(message);
+const trackText = (key, fallback, n, extra = {}) => translate(`ui.recorder${key}`, fallback, { n, ...extra });
 
 export class RecorderView {
   constructor({ store, getRuntime, getMix, toast }) {
@@ -38,6 +46,7 @@ export class RecorderView {
       if (!b) return;
       const act = b.dataset.rec;
       if (act === "close") this.el.close();
+      else if (act === "language") setLanguage(language() === "ja" ? "en" : "ja");
       else if (act === "rec") this.record();
       else if (act === "stop") this.rt()?.stop();
       else if (act === "play") this.rt()?.play(b.dataset.take);
@@ -67,7 +76,7 @@ export class RecorderView {
     const rt = this.rt();
     if (!rt) return this.toast(translate("ui.recorderStartBeforeRecording", "Press Start Audio first: the recorder needs the audio engine."), "bad");
     const r = await rt.record();
-    if (!r.ok) this.toast(r.reason, "bad");
+    if (!r.ok) this.toast(recorderMessage(r.reason), "bad");
     else this.recStart = performance.now();
   }
 
@@ -92,29 +101,33 @@ export class RecorderView {
     this.meters = [];
     this.el.innerHTML = `<div class="patch-inner rec-inner">
       <header class="patch-head">
-        <p class="patch-kicker">Field recorder</p>
+        <p class="patch-kicker"></p>
         <h2 id="rec-title">${esc(dev.label)}</h2>
         <p class="patch-sub rec-status" aria-live="polite"></p>
-        <button type="button" class="patch-x" data-rec="close" aria-label="Close">✕</button>
+        <button type="button" class="chip" data-rec="language"></button>
+        <button type="button" class="patch-x" data-rec="close">✕</button>
       </header>
       <p class="rec-card"></p>
       <div class="rec-links"></div>
-      <div class="rec-tracks" role="group" aria-label="Tracks"></div>
+      <div class="rec-tracks" role="group"></div>
       <div class="rec-transport">
         <button type="button" class="btn rec-btn" data-rec="rec">● REC</button>
         <button type="button" class="btn" data-rec="stop">■ STOP</button>
         <span class="rec-hp"></span>
       </div>
-      <h3 class="group-title">Takes on the card</h3>
+      <h3 class="group-title"></h3>
       <ol class="rec-takes"></ol>
-      <p class="rec-note">Listen with RECORDER on the Listen bar. Downloads are 16-bit poly WAVs (one file, one channel per armed track); the real F8 writes ${F8.bitDepth}-bit / ${F8.sampleRate / 1000} kHz.</p>
+      <p class="rec-note"></p>
     </div>`;
 
     // LINK: one switch per pair.
     const links = this.el.querySelector(".rec-links");
     for (let p = 0; p < 4; p++) {
       const b = new LitButton({ label: `LINK ${p * 2 + 1}/${p * 2 + 2}`, tone: "assign", small: true, onPress: () => store.setDevice(this.id, `link.${p}`, !this.dev.link[p]) });
-      this.bindings.push(() => b.setLit(this.dev.link[p], `Link tracks ${p * 2 + 1} and ${p * 2 + 2} as a stereo pair: ${this.dev.link[p] ? "on" : "off"}`));
+      this.bindings.push(() => {
+        const a = p * 2 + 1, bTrack = a + 1, lit = this.dev.link[p], state = lit ? "on" : "off";
+        b.setLit(lit, translate("ui.recorderPairLink", `Link tracks ${a} and ${bTrack} as a stereo pair: ${state}`, { a, b: bTrack, state }));
+      });
       links.appendChild(b.el);
     }
 
@@ -122,7 +135,7 @@ export class RecorderView {
     for (let t = 0; t < F8.tracks; t++) {
       const col = document.createElement("section");
       col.className = "rec-track";
-      col.setAttribute("aria-label", `Track ${t + 1}`);
+      const n = t + 1;
       col.innerHTML = `<p class="rec-num">${t + 1}</p><p class="rec-src"></p>`;
       const meter = new MeterView({ marks: MARKS, orientation: "vertical", label: `Track ${t + 1}`, showText: false });
       meter.el.classList.add("rec-meter");
@@ -130,7 +143,7 @@ export class RecorderView {
       const trim = new RangeControl({
         kind: "knob",
         label: "TRIM",
-        sheetLabel: `Track ${t + 1} TRIM`,
+        sheetLabel: () => trackText("TrackTrim", `Track ${n} TRIM`, n),
         min: F8.gainMin,
         max: F8.gainMax,
         step: 0.5,
@@ -145,13 +158,22 @@ export class RecorderView {
       this.trims = this.trims || [];
       this.trims[t] = trim;
       const p48 = new LitButton({ label: "48V", tone: "phantom", small: true, onPress: () => store.setDevice(this.id, `tracks.${t}.phantom`, !this.dev.tracks[t].phantom) });
-      this.bindings.push(() => p48.setLit(this.dev.tracks[t].phantom, `Track ${t + 1} phantom power: ${this.dev.tracks[t].phantom ? "on" : "off"}`));
+      this.bindings.push(() => {
+        const lit = this.dev.tracks[t].phantom, state = lit ? "on" : "off";
+        p48.setLit(lit, trackText("Phantom", `Track ${n} phantom power: ${state}`, n, { state }));
+      });
       const arm = new LitButton({ label: "REC", tone: "mute", small: true, onPress: () => store.setDevice(this.id, `tracks.${t}.arm`, !this.dev.tracks[t].arm) });
-      this.bindings.push(() => arm.setLit(this.dev.tracks[t].arm, `Track ${t + 1} armed: ${this.dev.tracks[t].arm ? "yes" : "no"}`));
+      this.bindings.push(() => {
+        const lit = this.dev.tracks[t].arm;
+        arm.setLit(lit, trackText("Arm", `Track ${n} armed: ${lit ? "yes" : "no"}`, n, { state: lit ? "on" : "off" }));
+      });
       col.append(meter.el, trim.el, p48.el, arm.el);
       if (t < 4) {
         const dual = new LitButton({ label: `DUAL→${t + 5}`, tone: "assign", small: true, onPress: () => store.setDevice(this.id, `dual.${t}`, !this.dev.dual[t]) });
-        this.bindings.push(() => dual.setLit(this.dev.dual[t], `Dual channel recording: input ${t + 1} also on track ${t + 5}: ${this.dev.dual[t] ? "on" : "off"}`));
+        this.bindings.push(() => {
+          const track = t + 5, lit = this.dev.dual[t], state = lit ? "on" : "off";
+          dual.setLit(lit, translate("ui.recorderDual", `Dual channel recording: input ${n} also on track ${track}: ${state}`, { input: n, track, state }));
+        });
         col.appendChild(dual.el);
       }
       grid.appendChild(col);
@@ -160,7 +182,7 @@ export class RecorderView {
     const hp = new RangeControl({
       kind: "knob",
       label: "HP VOL",
-      sheetLabel: "Recorder headphone volume",
+      sheetLabel: () => translate("ui.recorderHpVolume", "Recorder headphone volume"),
       min: 0,
       max: 1,
       step: 0.01,
@@ -172,8 +194,25 @@ export class RecorderView {
     });
     this.bindings.push(() => hp.setValue(this.dev.hpLevel, true));
     this.el.querySelector(".rec-hp").appendChild(hp.el);
-    this.takesKey = "";
+    this.takesKey = null;
+    this.syncLanguage();
+  }
+
+  syncLanguage() {
+    if (!this.bindings) return;
+    const find = (selector) => this.el.querySelector(selector);
+    find(".patch-kicker").textContent = translate("ui.recorderField", "Field recorder");
+    find('[data-rec="close"]').setAttribute("aria-label", translate("ui.recorderClose", "Close"));
+    const languageButton = find('[data-rec="language"]');
+    languageButton.textContent = language() === "ja" ? "English" : "日本語";
+    languageButton.setAttribute("aria-label", language() === "ja" ? "Switch to English" : "日本語に切り替え");
+    find(".rec-tracks").setAttribute("aria-label", translate("ui.recorderTracks", "Tracks"));
+    find(".group-title").textContent = translate("ui.recorderTakes", "Takes on the card");
+    find(".rec-note").textContent = translate("ui.recorderWavHelp", "Listen with RECORDER on the Listen bar. Downloads are 16-bit poly WAVs (one file, one channel per armed track); the real F8 writes {bits}-bit / {rate} kHz.", { bits: F8.bitDepth, rate: F8.sampleRate / 1000 });
+    find('[data-rec="rec"]').setAttribute("aria-label", translate("ui.recorderRecAction", "● REC"));
+    find('[data-rec="stop"]').setAttribute("aria-label", translate("ui.recorderStopAction", "■ STOP"));
     this.sync();
+    this.syncTakeLabels(this.rt()?.takes ?? [], this.rt()?.playing?.takeId);
   }
 
   // After any state change, and on recorder events.
@@ -195,16 +234,21 @@ export class RecorderView {
       const src = map[t];
       const inp = inputs[src];
       let text;
-      if (src !== t) text = `← input ${src + 1} (dual)`;
+      if (src !== t) text = trackText("DualInput", `← input ${src + 1} (dual)`, src + 1);
       else if (!inp || !inp.connected) text = "—";
       else {
         const cable = rig.cables.find((c) => c.to === `${this.id}/in${t + 1}`);
         const from = cable ? cable.from.split("/") : [];
         const fromDev = rig.devices.find((d) => d.id === from[0]);
-        text = `${inp.path === "mic" ? "XLR" : "TRS"} · ${fromDev ? (fromDev.type === "cr1604" ? from[1].toUpperCase() : inp.sourceId ? inp.sourceId.replace("room-", "room ") : fromDev.label) : "?"}`;
+        const room = inp.sourceId === "room-l" ? translate("ui.recorderRoomLeft", "room l")
+          : inp.sourceId === "room-r" ? translate("ui.recorderRoomRight", "room r") : inp.sourceId;
+        const source = !fromDev ? "?" : fromDev.type === "cr1604" ? from[1].toUpperCase() : room || fromDev.label;
+        text = `${inp.path === "mic" ? "XLR" : "TRS"} · ${source}`;
       }
-      const warn = inp && inp.connected && inp.status !== "ok" && src === t ? inp.messages[0] : "";
+      const warn = inp && inp.connected && inp.status !== "ok" && src === t ? recorderMessage(inp.messages[0]) : "";
       const el = col.querySelector(".rec-src");
+      col.setAttribute("aria-label", trackText("Track", `Track ${t + 1}`, t + 1));
+      this.meters[t].el.setAttribute("aria-label", trackText("TrackMeter", `Track ${t + 1} meter`, t + 1));
       el.textContent = text;
       el.title = warn || text;
       col.classList.toggle("warn", !!warn);
@@ -219,10 +263,14 @@ export class RecorderView {
     const rt = this.rt();
     if (!dev) return;
     const card = cardStats(dev, rt ? rt.usedBytes : 0);
-    this.el.querySelector(".rec-card").textContent = `SD card ${F8.cardGB} GB · ${(card.free / 1e9).toFixed(1)} GB free · ${card.armed ? `${hours(card.secondsLeft)} left for ${card.armed} track${card.armed > 1 ? "s" : ""} at ${F8.sampleRate / 1000} kHz / ${F8.bitDepth}-bit` : "arm a track to see the time left"}`;
+    const rate = F8.sampleRate / 1000, bits = F8.bitDepth, free = (card.free / 1e9).toFixed(1);
+    const time = hours(card.secondsLeft);
+    const detail = card.armed ? translate("ui.recorderCardDuration", `${time} left for ${card.armed} track${card.armed > 1 ? "s" : ""} at ${rate} kHz / ${bits}-bit`, { time, tracks: card.armed, rate, bits })
+      : translate("ui.recorderCardArm", "arm a track to see the time left");
+    this.el.querySelector(".rec-card").textContent = translate("ui.recorderCardSpace", `SD card ${F8.cardGB} GB · ${free} GB free · ${detail}`, { size: F8.cardGB, free, detail });
     const status = this.el.querySelector(".rec-status");
     const recording = rt && rt.recording;
-    status.textContent = !rt ? translate("ui.recorderStartAudio", "Press Start Audio to use the recorder.") : recording ? `● REC ${clock((performance.now() - (this.recStart || performance.now())) / 1000)}` : rt.playing ? "▶ PLAY" : rt.error || "■ STOP";
+    status.textContent = !rt ? translate("ui.recorderStartAudio", "Press Start Audio to use the recorder.") : recording ? `● REC ${clock((performance.now() - (this.recStart || performance.now())) / 1000)}` : rt.playing ? "▶ PLAY" : rt.error ? recorderMessage(rt.error) : "■ STOP";
     status.classList.toggle("is-rec", !!recording);
     this.el.querySelector('[data-rec="rec"]').classList.toggle("lit", !!recording);
     const takes = rt ? rt.takes : [];
@@ -232,11 +280,30 @@ export class RecorderView {
     this.el.querySelector(".rec-takes").innerHTML = takes.length
       ? takes
           .map(
-            (t) => `<li><strong>${esc(t.name)}</strong> <span>${clock(t.seconds)} · tracks ${t.tracks.map((x) => x + 1).join(", ")}</span>
-              ${t.data ? `<button type="button" class="chip" data-rec="play" data-take="${t.id}">${rt.playing?.takeId === t.id ? "▶ playing" : "▶ Play"}</button><button type="button" class="chip" data-rec="download" data-take="${t.id}">Download WAV</button>` : `<small>(audio not kept: only the three newest takes stay in the lab's memory)</small>`}</li>`,
+            (t) => `<li><strong>${esc(t.name)}</strong> <span></span>
+              ${t.data ? `<button type="button" class="chip" data-rec="play" data-take="${esc(t.id)}"></button><button type="button" class="chip" data-rec="download" data-take="${esc(t.id)}"></button>` : "<small></small>"}</li>`,
           )
           .join("")
-      : `<li class="rec-empty">${esc(translate("ui.recorderNoTakes", "No takes yet. Arm tracks, then press REC."))}</li>`;
+      : '<li class="rec-empty"></li>';
+    this.syncTakeLabels(takes, rt?.playing?.takeId);
+  }
+
+  syncTakeLabels(takes, playingId) {
+    const rows = this.el.querySelector(".rec-takes").children;
+    if (!takes.length) {
+      rows[0].textContent = translate("ui.recorderNoTakes", "No takes yet. Arm tracks, then press REC.");
+      return;
+    }
+    takes.forEach((take, i) => {
+      const row = rows[i], time = clock(take.seconds), tracks = take.tracks.map((x) => x + 1).join(", ");
+      row.querySelector("span").textContent = translate("ui.recorderTakeTracks", `${time} · tracks ${tracks}`, { time, tracks });
+      if (take.data) {
+        row.querySelector('[data-rec="play"]').textContent = take.id === playingId ? translate("ui.recorderTakePlaying", "▶ playing") : translate("ui.recorderTakePlay", "▶ Play");
+        row.querySelector('[data-rec="download"]').textContent = translate("ui.recorderTakeDownload", "Download WAV");
+      } else {
+        row.querySelector("small").textContent = translate("ui.recorderTakeExpired", "(audio not kept: only the three newest takes stay in the lab's memory)");
+      }
+    });
   }
 
   updateMeters(readings, now) {

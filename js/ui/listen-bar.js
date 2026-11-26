@@ -10,7 +10,8 @@
 import { MeterView } from "../meters.js";
 import { listenDestinations, listenGroupOf, modelOf } from "../mixer-state.js";
 import { earsNudge, earsNudgeText } from "../ears.js";
-import { t as translate } from "../i18n/index.js";
+import { language, t as translate } from "../i18n/index.js";
+import { connectionMessage } from "./patch-view.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const GENERIC = ["main", "aux1", "aux2", "pfl"];
@@ -281,7 +282,10 @@ export class ListenBar {
     else if (ends[dest]?.length) {
       msg = translate("ui.hearing", `Hearing ${busName} through the ${names(ends[dest])}.`, { bus: busName, speakers: names(ends[dest]) });
       // A camera input whose MIC/LINE switch doesn't match what it's fed.
-      for (const e of ends[dest].filter((e) => e.camera && e.status !== "ok")) msg += ` ${short(e)}: ${e.status === "hot" ? "distorting, its MIC input is fed line level" : "too quiet, its LINE input is fed mic level"}.`;
+      for (const e of ends[dest].filter((e) => e.camera && e.status !== "ok")) {
+        const warning = e.status === "hot" ? "distorting, its MIC input is fed line level" : "too quiet, its LINE input is fed mic level";
+        msg += ` ${short(e)}: ${language() === "ja" && e.messages?.[0] ? connectionMessage(e.messages[0]) : warning + "."}`;
+      }
       // A speaker behind a line mixer set to MIC (BH 109).
       for (const e of ends[dest].filter((e) => !e.camera && e.hotWhy)) msg += ` ${short(e)}: distorting, ${e.hotWhy}.`;
     }

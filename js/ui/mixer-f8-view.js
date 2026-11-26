@@ -170,9 +170,9 @@ function outputScreen(view, def) {
         };
         line.append(
           el("span", "f8-outname", name),
-          choice("L", src === "main-l", () => setRoute(src === "main-l" ? "off" : "main-l"), `${name}: the L side of the mix`),
-          choice("R", src === "main-r", () => setRoute(src === "main-r" ? "off" : "main-r"), `${name}: the R side of the mix`),
-          el("span", "f8-sep", "or tracks"),
+          choice("L", src === "main-l", () => setRoute(src === "main-l" ? "off" : "main-l"), translate("ui.f8OutputMixSide", `${name}: the L side of the mix`, { name, side: "L" })),
+          choice("R", src === "main-r", () => setRoute(src === "main-r" ? "off" : "main-r"), translate("ui.f8OutputMixSide", `${name}: the R side of the mix`, { name, side: "R" })),
+          el("span", "f8-sep", translate("ui.f8OutputOrTracks", "or tracks")),
           ...def.channels.map((c, k) => {
             const ch = s.channels[k];
             const st = ch.sends[bus] >= 0.5 ? (ch.pres[bus] ? "PRE" : "POST") : "OFF";
@@ -187,7 +187,7 @@ function outputScreen(view, def) {
                 store.setChannel(k, `sends.${bus}`, 0);
                 if (!store.state.channels.some((x) => x.sends[bus] >= 0.5)) store.setBus("routing", o, "off");
               }
-            }, `${name}: track ${c.label} ${st === "OFF" ? "off" : st === "PRE" ? "prefader" : "postfader"} (press to change)`);
+            }, translate("ui.f8OutputTrackRoute", `${name}: track ${c.label} ${st === "OFF" ? "off" : st === "PRE" ? "prefader" : "postfader"} (press to change)`, { name, track: c.label, state: st }));
           }),
         );
       },
@@ -196,11 +196,17 @@ function outputScreen(view, def) {
   }
   for (const w of def.outSwitches) {
     const label = w.key === "mainLevel" ? "MAIN OUT 1/2 Output Level" : "SUB OUT (L/R mix) Output Level";
+    const outputLabel = () => translate(w.key === "mainLevel" ? "ui.f8MainOutputLevel" : "ui.f8SubOutputLevel", label);
+    const heading = el("span", "f8-outname");
+    view.bindings.push({ kind: "text", el: heading, get: outputLabel });
     wrap.appendChild(
       row(
         "f8-row",
-        el("span", "f8-outname", label),
-        ...w.labels.map((l, k) => button(view, { label: l, tone: "assign", get: (s) => (mixerDev(s)?.[w.key] ?? 0) === k, onPress: () => store.setDevice("mixer", w.key, k), aria: (s) => `${label}: ${l}${(mixerDev(s)?.[w.key] ?? 0) === k ? " (selected)" : ""}` })),
+        heading,
+        ...w.labels.map((l, k) => button(view, { label: l, tone: "assign", get: (s) => (mixerDev(s)?.[w.key] ?? 0) === k, onPress: () => store.setDevice("mixer", w.key, k), aria: (s) => {
+          const selected = (mixerDev(s)?.[w.key] ?? 0) === k ? translate("ui.recorderSelected", " (selected)") : "";
+          return translate("ui.f8OutputLevelState", `${label}: ${l}${selected}`, { label: outputLabel(), level: l, selected });
+        } })),
       ),
     );
   }
@@ -226,7 +232,9 @@ function trackSection(view, def, ui, rerender) {
     head.addEventListener("click", () => view.onPatchChannel(i));
     view.bindings.push({ kind: "head", el: head, index: i });
     view.dgHeads[i] = head;
-    const trackKey = button(view, { label: c.label, tone: "mute", small: false, get: (s) => ch(s).enabled, onPress: () => store.setChannel(i, "enabled", !ch(store.state).enabled), aria: (s) => `Track ${c.label} key: ${ch(s).enabled ? "lit, the input is on and records" : "dark, the input is off"}` });
+    const trackKey = button(view, { label: c.label, tone: "mute", small: false, get: (s) => ch(s).enabled, onPress: () => store.setChannel(i, "enabled", !ch(store.state).enabled), aria: (s) => ch(s).enabled
+      ? translate("ui.f8TrackKeyOn", "Track {n} key: lit, the input is on and records", { n: c.label })
+      : translate("ui.f8TrackKeyOff", "Track {n} key: dark, the input is off", { n: c.label }) });
     const pfl = button(view, { label: "PFL", tone: "pfl", get: (s) => !!ch(s).solo, onPress: () => store.setChannel(i, "solo", !ch(store.state).solo), aria: (s) => `Track ${c.label} PFL: ${ch(s).solo ? "on" : "off"}` });
     const trackKnob = knob(view, { label: "LEVEL", sheetLabel: `Track ${c.label} knob (fader)`, defaultValue: fader.toPos(0), tone: "level", format: lawFormat(fader), onInput: (v) => store.setChannel(i, "level", v) }, (s) => ch(s).level);
     view.bindings.push({ kind: "fn", run: (s) => col.classList.toggle("is-muted", !ch(s).enabled) });

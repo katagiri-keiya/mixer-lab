@@ -237,6 +237,7 @@ function refreshLocalizedViews() {
     renderFlow($("#flow"), skin);
   }
   danteView.sync();
+  if (recorderView.isOpen) recorderView.syncLanguage();
   listenBar.render();
   if (lastMix) listenBar.update(lastMix, { playing: engine.playing, ready, loadingText, buffering });
   for (const [el, top] of scroll) if (el) el.scrollTop = top;

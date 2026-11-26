@@ -123,7 +123,10 @@ function buildStrip(view, def, i) {
       c.hpf
         ? knob(view, { label: "HPF", sheetLabel: () => translate("ui.channelHpfSheet", "Ch {channel} high-pass filter", { channel: n }), defaultValue: 0, tone: "eq", format: (v) => (v <= 0.02 ? "off" : `${Math.round(c.hpf.min + (c.hpf.max - c.hpf.min) * Math.max(0, (v - 0.05) / 0.95))} Hz`), onInput: set("hpf") }, (s) => ch(s).hpf)
         : null,
-    polarity: () => (c.polarity ? button(view, { label: "Ø", get: (s) => ch(s).polarity, onPress: flip("polarity"), aria: (s) => `Channel ${n} polarity: ${ch(s).polarity ? "reversed" : "normal"}` }) : null),
+    polarity: () => (c.polarity ? button(view, { label: "Ø", get: (s) => ch(s).polarity, onPress: flip("polarity"), aria: (s) => {
+      const reversed = ch(s).polarity, english = `Channel ${n} polarity: ${reversed ? "reversed" : "normal"}`;
+      return def.tone ? translate("ui.sd442Polarity", english, { n, state: reversed ? translate("ui.sd442PolarityReverse", "reversed") : translate("ui.sd442PolarityNormal", "normal") }) : english;
+    } }) : null),
     limitLed: () => {
       if (!c.limiter) return null;
       const l = led("led-comp", "LIM");
@@ -376,7 +379,9 @@ function buildMaster(view, def) {
   if (def.xlrPad) blocks.push(block("XLR OUT", busButton("xlrPad", "on", "−30 dB PAD", "Main XLR output pad")));
 
   // The 442's switches: 1+2 LINK, LIM, TONE, OUTPUT LEVEL, HEADPHONE source.
-  if (def.link) blocks.push(block("1+2 LINK", button(view, { label: "LINK", tone: "assign", get: (s) => s.link.mode === "on", onPress: () => store.setBus("link", "mode", store.state.link.mode === "on" ? "off" : "on"), aria: (s) => `Channels 1 and 2 ${s.link.mode === "on" ? "linked as a stereo pair on channel 1's fader" : "independent"}` })));
+  if (def.link) blocks.push(block("1+2 LINK", button(view, { label: "LINK", tone: "assign", get: (s) => s.link.mode === "on", onPress: () => store.setBus("link", "mode", store.state.link.mode === "on" ? "off" : "on"), aria: (s) => s.link.mode === "on"
+    ? translate("ui.sd442LinkOn", "Channels 1 and 2 linked as a stereo pair on channel 1's fader")
+    : translate("ui.sd442LinkOff", "Channels 1 and 2 independent") })));
   if (def.outputLimiter) {
     const lim = led("led-comp", "LIM");
     view.outLimLed = lim.querySelector("i");
@@ -384,7 +389,11 @@ function buildMaster(view, def) {
     blocks.push(
       block(
         "LIMITERS",
-        button(view, { label: "LIM", tone: "lowcut", get: (s) => s.lim.mode !== "off", onPress: () => store.setBus("lim", "mode", next[store.state.lim.mode]), aria: (s) => `Limiters: ${s.lim.mode.toUpperCase()}${s.lim.mode === "link" ? " (one stereo limiter)" : s.lim.mode === "on" ? " (left and right separately)" : ""}` }),
+        button(view, { label: "LIM", tone: "lowcut", get: (s) => s.lim.mode !== "off", onPress: () => store.setBus("lim", "mode", next[store.state.lim.mode]), aria: (s) => {
+          const mode = s.lim.mode.toUpperCase();
+          const detail = mode === "LINK" ? translate("ui.sd442LimiterLink", " (one stereo limiter)") : mode === "ON" ? translate("ui.sd442LimiterIndependent", " (left and right separately)") : "";
+          return translate("ui.sd442Limiter", `Limiters: ${mode}${detail}`, { mode, detail });
+        } }),
         Object.assign(document.createElement("p"), { className: "c16-note cm-lim-mode" }),
         lim,
       ),
@@ -392,7 +401,9 @@ function buildMaster(view, def) {
     const note = blocks[blocks.length - 1].querySelector(".cm-lim-mode");
     view.bindings.push({ kind: "text", el: note, get: (s) => ({ off: "OFF", on: "ON (L, R apart)", link: "LINK (stereo)" })[s.lim.mode] });
   }
-  if (def.tone) blocks.push(block("TONE / SLATE", button(view, { label: "TONE", tone: "pfl", get: (s) => s.tone.on, onPress: () => store.setBus("tone", "on", !store.state.tone.on), aria: (s) => `Tone oscillator: ${s.tone.on ? `on, ${def.tone.hz} Hz at 0 dBu on the outputs (the headphones ${def.tone.earSaverDb} dB)` : "off"}` })));
+  if (def.tone) blocks.push(block("TONE / SLATE", button(view, { label: "TONE", tone: "pfl", get: (s) => s.tone.on, onPress: () => store.setBus("tone", "on", !store.state.tone.on), aria: (s) => s.tone.on
+    ? translate("ui.sd442ToneOn", "Tone oscillator: on, {hz} Hz at 0 dBu on the outputs (the headphones {db} dB)", { hz: def.tone.hz, db: def.tone.earSaverDb })
+    : translate("ui.sd442ToneOff", "Tone oscillator: off") })));
   if (def.outLevel) {
     const mixerDev = (s) => s.rig.devices.find((d) => d.id === "mixer");
     blocks.push(
@@ -401,7 +412,10 @@ function buildMaster(view, def) {
         row(
           "c16-matrix",
           ...def.outLevel.labels.map((label, k) =>
-            button(view, { label, tone: "assign", get: (s) => (mixerDev(s)?.outLevel ?? 2) === k, onPress: () => store.setDevice("mixer", "outLevel", k), aria: (s) => `XLR outputs at ${label}${(mixerDev(s)?.outLevel ?? 2) === k ? " (selected)" : ""}` }),
+            button(view, { label, tone: "assign", get: (s) => (mixerDev(s)?.outLevel ?? 2) === k, onPress: () => store.setDevice("mixer", "outLevel", k), aria: (s) => {
+              const selected = (mixerDev(s)?.outLevel ?? 2) === k ? translate("ui.recorderSelected", " (selected)") : "";
+              return translate("ui.sd442Output", `XLR outputs at ${label}${selected}`, { level: label, selected });
+            } }),
           ),
         ),
       ),
@@ -411,7 +425,10 @@ function buildMaster(view, def) {
     blocks.push(
       block(
         def.phones.label,
-        row("c16-matrix cm-hp-src", ...def.phones.selector.map((src) => button(view, { label: src, tone: "assign", get: (s) => s.cr.src === src, onPress: () => store.setBus("cr", "src", src), aria: (s) => `Headphone source ${src}${s.cr.src === src ? " (selected)" : ""}` }))),
+        row("c16-matrix cm-hp-src", ...def.phones.selector.map((src) => button(view, { label: src, tone: "assign", get: (s) => s.cr.src === src, onPress: () => store.setBus("cr", "src", src), aria: (s) => {
+          const selected = s.cr.src === src ? translate("ui.recorderSelected", " (selected)") : "";
+          return translate("ui.sd442Phones", `Headphone source ${src}${selected}`, { source: src, selected });
+        } }))),
         busKnob("cr", "level", "LEVEL", LAWS.master),
       ),
     );
