@@ -446,8 +446,8 @@ export class StageView {
   // Network ports drawn on boxes that aren't patchable jacks (Dante on the console and the Rio).
   netPortSvg(n) {
     const what = n.kind === "dante" ? "Dante (primary)" : "AES50";
-    return `<g class="netport net-${n.kind}" ${n.kind === "dante" ? 'data-open-dante="controller"' : ""} tabindex="0" role="button" aria-label="${what} network port${n.kind === "dante" ? ": open Dante Controller" : ""}">
-      <title>${what}: a network port. One cable carries many channels.${n.kind === "dante" ? " Routes are set in Dante Controller." : ""}</title>
+    return `<g class="netport net-${n.kind}" ${n.kind === "dante" ? 'data-open-dante="controller"' : ""} tabindex="0" role="button" aria-label="${esc(n.kind === "dante" ? translate("ui.stageDantePort", "{port} network port: open Dante Controller", { port: what }) : translate("ui.stageNetworkPort", "{port} network port", { port: what }))}">
+      <title>${esc(translate("ui.stageNetworkTip", "{port}: a network port. One cable carries many channels.", { port: what }))}${n.kind === "dante" ? esc(translate("ui.stageDanteTip", " Routes are set in Dante Controller.")) : ""}</title>
       <rect class="jack-ethercon" x="${n.x - 11}" y="${n.y - 10}" width="22" height="20" rx="4"/><rect x="${n.x - 6}" y="${n.y - 5}" width="12" height="8" class="jack-rj"/>
       <text class="jack-word" x="${n.x - 16}" y="${n.y + 4}" text-anchor="end">${n.kind === "dante" ? "DANTE" : "AES50"}</text></g>`;
   }

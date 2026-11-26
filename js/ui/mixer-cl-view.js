@@ -100,7 +100,9 @@ export function renderCL(view, def) {
 function inputPatchPage(view, def) {
   const store = view.store;
   const box = el("div", "cl-inpatch");
-  box.appendChild(el("p", "dg-note", "INPUT PATCH: RIO = the stage box input with its preamp; DANTE = Dante RX n, whatever Dante Controller subscribes to it."));
+  const note = el("p", "dg-note");
+  view.bindings.push({ kind: "text", el: note, get: () => translate("ui.clInputPatchNote", "INPUT PATCH: RIO = the stage box input with its preamp; DANTE = Dante RX n, whatever Dante Controller subscribes to it.") });
+  box.appendChild(note);
   const all = (v) => {
     const b = el("button", "x32-layer", v ? "ALL 1–32 → DANTE" : "ALL 1–32 → RIO");
     b.type = "button";
@@ -121,7 +123,13 @@ function inputPatchPage(view, def) {
         tone: "assign",
         get: (s) => (s.rig.devices.find((d) => d.id === "mixer").inPatch?.[m] ?? 0) === v,
         onPress: () => store.setDevice("mixer", `inPatch.${m}`, v),
-        aria: (s) => `Channel ${m + 1} input: ${label}${(s.rig.devices.find((d) => d.id === "mixer").inPatch?.[m] ?? 0) === v ? " (selected)" : ""}`,
+        aria: (s) => {
+          const selected = (s.rig.devices.find((d) => d.id === "mixer").inPatch?.[m] ?? 0) === v;
+          const captions = { channel: m + 1, source: label };
+          return selected
+            ? translate("ui.clInputSelected", "Channel {channel} input: {source} (selected)", captions)
+            : translate("ui.clInputChoice", "Channel {channel} input: {source}", captions);
+        },
       });
     cell.append(name, pick(0, "RIO"), pick(1, "DANTE"));
     grid.appendChild(cell);

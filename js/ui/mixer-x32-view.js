@@ -579,7 +579,12 @@ function connectedBar(view, def) {
   view.bindings.push({ kind: "fn", run: (s) => {
     const mixer = mixerOfState(s);
     const onA = s.rig.devices.find((d) => DEVICE_TYPES[d.type]?.network === "aes50" && aesOffset(s.rig, d, mixer) === 0);
-    const text = `CONNECTED DEVICES · A: ${onA ? DEVICE_TYPES[onA.type].name.replace(/^Behringer /, "") : "NO DEVICE"} · B: NO DEVICE · C: ${def.card === "x-dante" ? "Dante (X-DANTE)" : "USB card"}`;
+    const empty = translate("ui.x32NoDevice", "NO DEVICE");
+    const text = translate("ui.x32ConnectedDevices", "CONNECTED DEVICES · A: {a} · B: {b} · C: {c}", {
+      a: onA ? DEVICE_TYPES[onA.type].name.replace(/^Behringer /, "") : empty,
+      b: empty,
+      c: def.card === "x-dante" ? "Dante (X-DANTE)" : translate("ui.x32UsbCard", "USB card"),
+    });
     if (line.textContent !== text) line.textContent = text;
   } });
   return line;
@@ -591,21 +596,18 @@ function blockColumns(view, ui, { key, title, heads, items, current, connect }) 
   const wrap = el("div", "x32-rpage");
   wrap.appendChild(el("h5", "x32-rtitle", title));
   const cols = el("div", "x32-rcols");
-  let unsupportedSignal;
-  const warning = () => unsupportedSignal ? translate("ui.x32OutPatchUnsupported", "{signal} isn't built in the lab yet: {output} stays on {current}.", {
-    signal: signalName(unsupportedSignal), output: outName(ui.rout.o), current: signalName(cur),
-  }) : "";
-  const note = localizedText(view, "p", "x32-rnote", warning);
+  let message;
+  const feedback = () => message ? (message.ok
+    ? translate("ui.x32InputConnected", "{block} ← {source}", message)
+    : translate("ui.x32InputUnchanged", "{source} isn't built in the lab yet: {block} stays as it was.", message)) : "";
+  const note = localizedText(view, "p", "x32-rnote", feedback);
   note.setAttribute("aria-live", "polite");
-  view.bindings.push({ kind: "fn", run: () => assign.setAttribute("aria-label", translate("ui.x32OutPatchAssign", "Assign {signal} to {output}", {
-    signal: signalName(sig), output: outName(ui.rout.o),
-  })) });
   heads.forEach((head, c) => {
     const col = el("div", "x32-rcol");
     col.appendChild(el("h6", "", head));
     const list = el("ul", "x32-rlist");
     list.setAttribute("role", "listbox");
-    list.setAttribute("aria-label", `${title}: ${head}`);
+    view.bindings.push({ kind: "fn", run: () => list.setAttribute("aria-label", translate("ui.x32BlockAria", "{title}: {block}", { title, block: head })) });
     const opts = items(c);
     const cursorKey = `${key}${c}`;
     const lis = opts.map((o) => {
@@ -613,7 +615,7 @@ function blockColumns(view, ui, { key, title, heads, items, current, connect }) 
       li.setAttribute("role", "option");
       li.tabIndex = 0;
       li.dataset.id = o.id;
-      if (!o.ok) li.title = "Listed as on the X32: not built in the lab";
+      if (!o.ok) view.bindings.push({ kind: "fn", run: () => { li.title = translate("ui.x32OutPatchUnavailable", "Listed as on the X32: not built in the lab"); } });
       const pick = () => {
         ui.rcur[cursorKey] = o.id;
         mark(view.store.state);
@@ -635,16 +637,14 @@ function blockColumns(view, ui, { key, title, heads, items, current, connect }) 
     list.append(...lis);
     const go = el("button", "x32-rconnect", "CONNECT");
     go.type = "button";
-    go.setAttribute("aria-label", `Connect the selected source to ${head}`);
+    view.bindings.push({ kind: "fn", run: () => go.setAttribute("aria-label", translate("ui.x32InputConnect", "Connect the selected source to {block}", { block: head })) });
     go.addEventListener("click", () => {
       const id = ui.rcur[cursorKey] ?? current(view.store.state, c);
       const o = opts.find((x) => x.id === id);
       delete ui.rcur[cursorKey];
-      if (!o?.ok) note.textContent = `${o?.label || "That"} isn't built in the lab yet: ${head} stays as it was.`;
-      else {
-        connect(c, id);
-        note.textContent = `${head} ← ${o.label}`;
-      }
+      message = { ok: !!o?.ok, block: head, source: o?.label || id };
+      if (o?.ok) connect(c, id);
+      note.textContent = feedback();
       mark(view.store.state);
     });
     col.append(list, go);
@@ -675,7 +675,7 @@ function inputBlocks(view, def, ui) {
     current: (s, c) => (c < blocks ? String(mixerOfState(s).inSource?.[c] ?? 0) : "auxins"),
     connect: (c, id) => c < blocks && store.setDevice("mixer", `inSource.${c}`, Number(id)),
   });
-  page.appendChild(el("p", "x32-rhelp", "Each block of 8 channels listens to one block of 8 inputs: the rear panel's LOCAL jacks, a stage box on AES50 A (its input n arrives as AES50 A n; a box chained off the first box's AES50 B comes after it, so an SD8 behind an S32 is AES50 A33-40), AES50 B, or the card. Nothing is connected to AES50 B here, and nothing plays back into the lab's card: those blocks go silent."));
+  page.appendChild(localizedText(view, "p", "x32-rhelp", () => translate("ui.x32InputHelp", "Each block of 8 channels listens to one block of 8 inputs: the rear panel's LOCAL jacks, a stage box on AES50 A (its input n arrives as AES50 A n; a box chained off the first box's AES50 B comes after it, so an SD8 behind an S32 is AES50 A33-40), AES50 B, or the card. Nothing is connected to AES50 B here, and nothing plays back into the lab's card: those blocks go silent.")));
   return page;
 }
 

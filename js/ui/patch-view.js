@@ -264,7 +264,7 @@ export class PatchView {
       const src = SOURCES_BY_ID[p.sourceId];
       const name = sourceName(src);
       const displayName = name === src?.name ? sourceText(src, "name") : name;
-      return `<li><span>${esc(p.name)} · ${esc(displayName || p.sourceId)}</span><b>${c ? `→ CH ${esc(state.channels[c.index].label)}` : "not reaching the console"}</b></li>`;
+      return `<li><span>${esc(p.name)} · ${esc(displayName || p.sourceId)}</span><b>${c ? `→ CH ${esc(state.channels[c.index].label)}` : esc(translate("ui.dawMissing", "not reaching the console"))}</b></li>`;
     });
     const n = lands.filter((l) => l.includes("→ CH")).length;
     const status = n === lands.length ? "ok" : n ? "warn" : "idle";
@@ -272,14 +272,14 @@ export class PatchView {
       <div class="source-top">
         <span class="source-order">DVS</span>
         <span class="dev-ico">${icon("laptop", { size: 40 })}</span>
-        <div class="source-names"><strong>${esc(d.label)}</strong><span>${dvsRunning(d) ? "Multitrack stems over Dante (no cables)" : "Dante Virtual Soundcard is stopped"}</span></div>
-        <span class="status-pill status-${status}">${n}/${lands.length} on the console</span>
+        <div class="source-names"><strong>${esc(d.label)}</strong><span>${dvsRunning(d) ? esc(translate("ui.dawMultitrack", "Multitrack stems over Dante (no cables)")) : esc(translate("ui.danteStopped", "Dante Virtual Soundcard is stopped"))}</span></div>
+        <span class="status-pill status-${status}">${esc(translate("ui.dawLanded", "{count}/{total} on the console", { count: n, total: lands.length }))}</span>
       </div>
       <ul class="daw-lands">${lands.join("")}</ul>
       <div class="dante-buttons">
-        <button type="button" class="btn btn-start" data-open-dante="daw">Open the DAW</button>
+        <button type="button" class="btn btn-start" data-open-dante="daw">${esc(translate("ui.dawOpen", "Open the DAW"))}</button>
         <button type="button" class="btn btn-start" data-open-dante="dvs">Dante Virtual Soundcard</button>
-        <button type="button" class="btn btn-start" data-open-dante="controller">Open Dante Controller</button>
+        <button type="button" class="btn btn-start" data-open-dante="controller">${esc(translate("ui.danteOpenController", "Open Dante Controller"))}</button>
       </div>
     </li>`);
   }
@@ -294,7 +294,7 @@ export class PatchView {
       <div class="dante-buttons">
         <button type="button" class="btn btn-start" data-open-dante="logic">Open Logic</button>
         <button type="button" class="btn btn-start" data-open-dante="dvs">Dante Virtual Soundcard</button>
-        <button type="button" class="btn btn-start" data-open-dante="controller">Open Dante Controller</button>
+        <button type="button" class="btn btn-start" data-open-dante="controller">${esc(translate("ui.danteOpenController", "Open Dante Controller"))}</button>
       </div>`;
   }
 
@@ -336,16 +336,16 @@ export class PatchView {
     const offset = type.passthrough || !mixer ? null : aesOffset(rig, d, mixer);
     const blocks = mixer.inSource ? mixer.inSource.map((v, b) => `CH ${b * 8 + 1}–${b * 8 + 8}: ${inSourceName(mixer.inSource, b)}`).join(" · ") : "";
     const span = offset === null ? "" : `AES50 A${offset + 1}–${offset + type.ins}`;
-    const link = offset === 0 ? `✓ AES50 link to the console: its inputs are ${span}.`
-      : offset !== null ? `✓ AES50 link through the box before it (its AES50 B): this box's inputs come after that box's, as ${span}.`
-      : "No AES50 link: a Cat5 cable from AES50 A into the console's AES50 A, or into the AES50 B of a box that is linked.";
+    const link = offset === 0 ? translate("ui.aesLinkDirect", "✓ AES50 link to the console: its inputs are {span}.", { span })
+      : offset !== null ? translate("ui.aesLinkChained", "✓ AES50 link through the box before it (its AES50 B): this box's inputs come after that box's, as {span}.", { span })
+      : translate("ui.aesNoLink", "No AES50 link: a Cat5 cable from AES50 A into the console's AES50 A, or into the AES50 B of a box that is linked.");
     const shift = (d.outBank || 0) * 8;
-    const outs = type.bank ? `OUTPUT switch on ${SD8_BANKS[d.outBank || 0]}: OUT n carries AES50 output ${shift ? `n + ${shift}` : "n"}. In Salmon, AES50 outputs 1–16 carry the console's XLR OUT 1–16, and 17–24 repeat OUT 1–8.` : "OUT n carries the console's XLR OUT n.";
+    const outs = type.bank ? translate("ui.aesBank", "OUTPUT switch on {bank}: OUT n carries AES50 output {channel}. In Salmon, AES50 outputs 1–16 carry the console's XLR OUT 1–16, and 17–24 repeat OUT 1–8.", { bank: SD8_BANKS[d.outBank || 0], channel: shift ? `n + ${shift}` : "n" }) : translate("ui.aesOutput", "OUT n carries the console's XLR OUT n.");
     const ins = plugged.filter((p) => p.dir === "in" && (p.role === "sb-in" || p.end === "stage")).length;
     const status = !plugged.length ? "idle" : live.length >= ins ? "ok" : "warn";
     const note = type.passthrough
-      ? "Passive: IN n on stage comes out as tail n at FOH, phantom power included. RETURN sends at FOH come out on stage."
-      : `${link} The console's GAIN and 48V drive these preamps. ROUTING: ${blocks}. ${outs}`;
+      ? translate("ui.snakePath", "Passive: IN n on stage comes out as tail n at FOH, phantom power included. RETURN sends at FOH come out on stage.")
+      : translate("ui.aesPath", "{link} The console's GAIN and 48V drive these preamps. ROUTING: {blocks}. {outputs}", { link, blocks, outputs: outs });
     const bank = type.bank
       ? `<div class="dev-settings"><label>OUTPUT switch <select data-device="${esc(d.id)}" data-device-key="outBank" aria-label="${esc(d.label || type.name)} OUTPUT switch">${SD8_BANKS.map((t, i) => `<option value="${i}"${(d.outBank || 0) === i ? " selected" : ""}>${t}</option>`).join("")}</select></label></div>`
       : "";
@@ -353,8 +353,8 @@ export class PatchView {
       <div class="source-top">
         <span class="source-order">BOX</span>
         <span class="dev-ico">${icon("stage-box", { size: 40 })}</span>
-        <div class="source-names"><strong>${esc(d.label || type.name)}</strong><span>${esc(type.blurb)}</span></div>
-        <span class="status-pill status-${status}">${live.length} on the console</span>
+        <div class="source-names"><strong>${esc(d.label || type.name)}</strong><span>${esc(gearTypeText(d.type, "blurb", type.blurb))}</span></div>
+        <span class="status-pill status-${status}">${esc(translate("ui.stageboxLanded", "{count} on the console", { count: live.length }))}</span>
       </div>
       <p class="source-note">${esc(note)}</p>
       ${bank}
