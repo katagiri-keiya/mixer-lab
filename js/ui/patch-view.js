@@ -200,6 +200,7 @@ export class PatchView {
 
   renderSources(mix) {
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
+    const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
     const state = this.store.state;
     const rig = state.rig;
     const { SOURCES_BY_ID } = this.manifest;
@@ -208,9 +209,12 @@ export class PatchView {
     const cards = sources.map((d) => {
       const src = SOURCES_BY_ID[d.sourceId];
       const handheld = vocalJazz && /^Wireless handheld (\d+), ([\w/]+) \(receiver channel \1\)$/.exec(src.device);
+      const recordingHandheld = recordingGig && /^Wireless handheld (\d+), ([\w/]+) → receiver (\d+) CH (\d+) \(CH \1\)$/.exec(src.device);
       const device = handheld
         ? translate("ui.vocalJazzHandheld", src.device, { number: handheld[1], color: handheld[2] })
-        : sourceText(src, "device", gearText(src.device));
+        : recordingHandheld
+          ? translate("ui.vjrHandheld", src.device, { number: recordingHandheld[1], color: recordingHandheld[2], receiver: recordingHandheld[3], channel: recordingHandheld[4] })
+          : sourceText(src, "device", gearText(src.device));
       const ref = `${d.id}/out`;
       // A radio handheld has no cable: its channel is the one its receiver feeds.
       const rf = DEVICE_TYPES[d.type].rf;
@@ -302,7 +306,10 @@ export class PatchView {
     const tracks = logicTracks(this.store.state, this.manifest.SOURCES_BY_ID, this.manifest.STEMS);
     const live = tracks.filter((t) => t.ok).length;
     const armed = tracks.filter((t) => t.arm).length;
-    return `<p class="source-note">Logic: ${live} of ${tracks.length} tracks have signal, ${armed} record-enabled. The multitrack arrives over Dante from the X32's X-DANTE card.</p>
+    const english = `Logic: ${live} of ${tracks.length} tracks have signal, ${armed} record-enabled. The multitrack arrives over Dante from the X32's X-DANTE card.`;
+    const summary = this.getGigId?.() === "vocal-jazz-recording"
+      ? translate("ui.vjrLogicSummary", english, { live, total: tracks.length, armed }) : english;
+    return `<p class="source-note">${esc(summary)}</p>
       <div class="dante-buttons">
         <button type="button" class="btn btn-start" data-open-dante="logic">Open Logic</button>
         <button type="button" class="btn btn-start" data-open-dante="dvs">Dante Virtual Soundcard</button>
@@ -313,6 +320,12 @@ export class PatchView {
   // The stereo room pair: two condenser outs, spacing and angle, and which
   // named technique the setting matches.
   pairCard(d, mix) {
+    const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
+    const piano = d.type === "piano-mic-pair";
+    const title = piano ? (recordingGig ? translate("ui.vjrPianoMics", "Piano mics") : "Piano mics") : inputText("roomPair", "Room pair");
+    const label = recordingGig && piano ? translate("ui.vjrPianoSetup", d.label)
+      : recordingGig && d.label === "ORTF room pair · stereo bar" ? translate("ui.vjrRoomBar", d.label) : gearText(d.label);
+    const pianoNote = "Stand-ins: the ensemble's recording has no piano track, so these two mics hear the singers from the piano's side of the stage.";
     const inputs = [...mix.channels.map((c) => c.input), ...Object.values(mix.rig.recorders || {}).flat()].filter((i) => i && i.sourceDeviceId === d.id);
     const bad = inputs.find((i) => i.status !== "ok");
     const status = !inputs.length ? "idle" : bad ? "warn" : "ok";
@@ -320,13 +333,13 @@ export class PatchView {
       <div class="source-top">
         <span class="source-order">ST</span>
         <span class="dev-ico">${icon(deviceIconName({ type: "condenser-mic" }), { size: 40 })}</span>
-        <div class="source-names"><strong>${d.type === "piano-mic-pair" ? "Piano mics" : inputText("roomPair", "Room pair")}</strong><span>${esc(gearText(d.label))}</span></div>
+        <div class="source-names"><strong>${esc(title)}</strong><span>${esc(label)}</span></div>
         <span class="status-pill status-${status}">${status === "ok" ? inputText("signalPresent", "✓ Signal") : status === "idle" ? inputText("unpatched", "Unpatched") : inputText("checkStatus", "! Check")}</span>
       </div>
       <div class="tags"><span class="tag">${inputText("pairCondenser", "2× condenser (cardioid)")}</span><span class="tag">${inputText("pairXlrOut", "XLR outs")}</span><span class="tag tag-phantom">${inputText("needs48", "Needs +48 V")}</span></div>
       ${listPorts(this.store.state.rig, d).map((p) => this.portButton(p.ref, "out")).join("")}
       ${(bad ? bad.messages : []).map((m) => `<p class="port-msg">${esc(connectionMessage(m))}</p>`).join("")}
-      ${d.type === "piano-mic-pair" ? `<p class="source-note">Stand-ins: the ensemble's recording has no piano track, so these two mics hear the singers from the piano's side of the stage.</p>` : `<div class="dev-settings">
+      ${piano ? `<p class="source-note">${esc(recordingGig ? translate("ui.vjrPianoStandIn", pianoNote) : pianoNote)}</p>` : `<div class="dev-settings">
         <label>${inputText("pairSpacing", "Spacing")} <output data-readout="spacingCm">${d.spacingCm} cm</output>
           <input type="range" min="0" max="${PAIR.spacingMax}" step="1" value="${d.spacingCm}" data-device="${esc(d.id)}" data-device-key="spacingCm" /></label>
         <label>${inputText("pairAngle", "Angle between the mics")} <output data-readout="angleDeg">${d.angleDeg}°</output>
@@ -340,7 +353,8 @@ export class PatchView {
   stageBoxCard(d, mix) {
     const rig = this.store.state.rig;
     const type = DEVICE_TYPES[d.type];
-    const label = this.getGigId?.() === "vocal-jazz" && d.label === "S32 · stage-side rack"
+    const gig = this.getGigId?.();
+    const label = (gig === "vocal-jazz" || gig === "vocal-jazz-recording") && d.label === "S32 · stage-side rack"
       ? translate("ui.vocalJazzStageBox", d.label) : d.label || type.name;
     const links = throughLinks(rig).filter((l) => l.via === d.id);
     const live = mix.channels.filter((c) => c.input.connected && links.some((l) => l.from === c.input.fromPort));
@@ -406,6 +420,7 @@ export class PatchView {
 
   renderOutputs(mix) {
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
+    const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
     const state = this.store.state;
     const rig = state.rig;
     const terms = this.getTerms();
@@ -547,7 +562,11 @@ export class PatchView {
           ${powerHtml(rig, d)}
           ${ep.messages.map((m) => {
             const amp = vocalJazz && /^The amp's Input ([AB]) has nothing plugged in\.$/.exec(m);
-            const text = amp ? translate("ui.vocalJazzAmpInputEmpty", m, { channel: amp[1] }) : connectionMessage(m);
+            const lowered = recordingGig && /^Turned down: (Mackie Mix5 · hall's mains rack): (4\/5 LEVEL) is all the way down, so this speaker plays nothing\. The chain to it works\.$/.exec(m);
+            const off = recordingGig && /^No power: (NX3000 · monitor amp rack) is switched off\.$/.exec(m);
+            const text = amp ? translate("ui.vocalJazzAmpInputEmpty", m, { channel: amp[1] })
+              : lowered ? translate("ui.vjrHallTurnedDown", m, { device: lowered[1], control: lowered[2] })
+              : off ? translate("ui.vjrAmpOff", m, { device: off[1] }) : connectionMessage(m);
             return `<p class="port-msg">${esc(text)}</p>`;
           }).join("")}
         </li>`);
