@@ -622,7 +622,8 @@ export class MissionView {
     const resting = out.length ? translate("ui.musicSittingOut", ` Sitting out here: ${listOf(restingSources)}.`, { sources: restingSources.join("、") }) : "";
     const songName = translate("ui.musicSongArtist", `“${song.title}” by ${song.artist}`, {
       song: song.id === "karaoke" ? translate("ui.karaokeMusicTitle", song.title) : song.title,
-      artist: song.id === "karaoke" ? translate("ui.karaokeMusicArtist", song.artist) : song.artist,
+      artist: song.id === "karaoke" ? translate("ui.karaokeMusicArtist", song.artist)
+        : song.id === "film" ? translate("ui.filmMusicArtist", song.artist) : song.artist,
     });
     if (!this.def || this.def.id !== "free-play") {
       box.classList.add("music-now");

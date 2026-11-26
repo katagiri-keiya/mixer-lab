@@ -396,6 +396,9 @@ export const uiJa = {
   missionMixerPickerTitle: "このミキサーの全シナリオ",
   missionTopicPickerTitle: "すべてのテーマとシナリオ",
   missionMixerSteps: "{mixer}のシナリオ",
+  filmMusicArtist: "FTWのオーケストラを使った代用音源とクリック",
+  filmHeadphonesShort: "演奏者用ヘッドホン",
+  filmHeadphoneAmp: "ヘッドホンアンプ",
   karaokeMusicTitle: "BH 109のカラオケ",
   karaokeMusicArtist: "カラオケ音源（NOSTRADAMUS）",
   karaokeRackName: "BH 109のラック · Ashly Ch.1 → Crownアンプ",
@@ -415,6 +418,7 @@ export const uiJa = {
     "Hall main R": "ホールのメインスピーカー（R）",
   },
   outputDeviceNames: {
+    "AKG HP12U · the players' headphones": "AKG HP12U · 演奏者用ヘッドホン",
     "Wall speaker · left": "壁のスピーカー（左）",
     "Wall speaker · right": "壁のスピーカー（右）",
     "Power amp (2-channel)": "パワーアンプ（2チャンネル）",

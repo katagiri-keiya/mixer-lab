@@ -17,6 +17,11 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const GENERIC = ["main", "aux1", "aux2", "pfl"];
 const SOURCE_NAMES = { main: "MAIN MIX", subs12: "SUBS 1-2", subs34: "SUBS 3-4", tape: "TAPE", alt: "ALT 3-4" };
 const ALWAYS = ["main", "aux1", "aux2", "alt", "monitor", "phones"];
+const endpointName = (devices, id) => {
+  const device = devices.get(id);
+  const name = device?.short || device?.label || id;
+  return id === "hp12u" ? translate("ui.filmHeadphonesShort", name) : name;
+};
 
 // Where your ears are: a small map of the venue (stage and wedges, the house,
 // the desk) with a figure at the spot you're listening from. Tap a spot to move.
@@ -114,7 +119,7 @@ export class ListenBar {
 
   // Each destination's place in the venue, from the speakers it reaches.
   placesFor(dests, ends, patchedEnds, devices, sub, dead) {
-    const name = (id) => devices.get(id)?.short || devices.get(id)?.label || id;
+    const name = (id) => endpointName(devices, id);
     const where = (d) => {
       if (d === "pfl" || d === "phones") return { kind: "desk", place: translate("ui.engineerHeadphones", "Engineer's headphones") };
       if (d === "rec") return { kind: "desk", place: translate("ui.recorderHeadphones", "Recorder headphones") };
@@ -188,7 +193,7 @@ export class ListenBar {
     const t = this.getSkin().terms;
     const real = modelOf(state) !== "generic"; // the 1604 or a compact mixer
     const devices = new Map(state.rig.devices.map((d) => [d.id, d]));
-    const short = (e) => devices.get(e.deviceId)?.short || devices.get(e.deviceId)?.label || e.deviceId;
+    const short = (e) => endpointName(devices, e.deviceId);
     const names = (eps) => eps.map(short).join(" + ");
     // Speakers by listening group: the working ones, and every one patched at all.
     const ends = {};

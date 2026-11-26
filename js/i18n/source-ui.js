@@ -1,5 +1,12 @@
 export const sourceEn = {};
+const filmCondenser = "スタンドに取り付けた小口径コンデンサーマイク";
 export const sourceJa = {
+  "film-cello": { name: "チェロ（入力4）", device: filmCondenser, note: "チェロ用のスポットマイクです。ラボではFTWの弦楽器が代わりに鳴ります。" },
+  "film-horn": { name: "トランペット／ホルン（入力7）", device: filmCondenser, note: "トランペット／ホルン用のスポットマイクです。ラボで代用するFTWの金管楽器は16〜17小節のみ鳴ります。" },
+  "film-vibes": { name: "ビブラフォン（入力10）", device: filmCondenser, note: "ビブラフォン用マイク2本のうちの1本（Vibes Hi）です。ラボではFTWのパーカッションが代わりに鳴ります。" },
+  "film-clarinet": { name: "クラリネット（入力13）", device: filmCondenser, note: "クラリネット用のスポットマイクです。音量の小さい楽器なので、GAINをしっかり取ります。ラボではFTWの木管楽器が代わりに鳴ります。" },
+  "film-vocal": { name: "ボーカル1（入力14）", device: filmCondenser, note: "歌い手用のマイクです。ラボではFTWのボーカルが代わりに鳴ります。" },
+  "film-click": { name: "クリック（Logic、USB 1-2）", device: "MacBook Pro · LogicのStereo Outからメトロノームを出力", noteStereo: "LogicのメトロノームをStereo Outから送ります。実機のL-20ではUSBケーブルを経由し、17/18のUSBボタンで端子入力からUSB 1-2に切り替えます。ラボでは17/18へのケーブル接続として表示します。" },
   "ky-mic1": { name: "SM58 1 · リードボーカル", device: "Shure SM58（ダイナミックマイク）" },
   "ky-mic2": { name: "SM58 2 · ハーモニー", device: "Shure SM58（ダイナミックマイク）" },
   "ky-v3": { name: "Zoom V3 · 3人目の歌い手", device: "SM58 → Zoom V3ボーカルプロセッサー、OUTPUT L", note: "SM58をV3のMIC INにつなぎます。OUTPUT L（民生レベル、約−10）から1/4インチTSケーブルで7/8 L (MONO)へ送ります。ラボではV3固有のエフェクトを再現していないため、歌い手の声がそのまま出ます。" },

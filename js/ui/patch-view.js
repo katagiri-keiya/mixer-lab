@@ -600,6 +600,7 @@ export class PatchView {
         const status = ep.status === "off" ? "idle" : ep.valid ? (ep.status === "ok" && !ep.cableWarn ? "ok" : "warn") : ep.status === "unpatched" ? "idle" : ep.status === "danger" ? "bad" : "warn";
         const statusText = ep.status === "off" ? `○ ${gearText("turnedDown")}: ${busName(ep.output)}` : ep.valid ? `${ep.cableWarn ? translate("ui.wrongCable", "⚠ Wrong cable") : ep.status === "hot" ? translate("ui.distorting", "⚠ Distorting") : ep.status === "weak" ? translate("ui.tooQuiet", "⚠ Too quiet") : `✓ ${gearText("sound")}`}: ${busName(ep.output)}${ep.viaAmp ? ` ${translate("ui.viaAmp", "via amp")}` : ""}` : ep.status === "unpatched" ? translate("ui.silent", "Silent") : ep.status === "danger" ? translate("ui.danger", "✕ Danger") : `✕ ${gearText("noSound")}`;
         const amp = type.camera ? translate("ui.recordsFed", "Records what it's fed") : type.amp === "internal" ? gearText("ampBuiltIn") : translate("ui.ampNonePassive", "Amp: none inside (passive)");
+        const deviceDescription = d.id === "hp12u" ? translate("ui.filmHeadphoneAmp", amp) : amp;
         const settings = type.camera && d.type === "camera-input"
           ? `<div class="dev-settings"><label>INPUT <output data-readout="inputLevel">${d.inputLevel === 1 ? "LINE" : "MIC"}</output>
               <input type="range" min="0" max="1" step="1" value="${d.inputLevel ?? 0}" data-device="${esc(d.id)}" data-device-key="inputLevel" aria-label="${esc(d.label)} MIC/LINE switch" /></label></div>`
@@ -607,7 +608,7 @@ export class PatchView {
         return this.card(d.id, `<li class="device-card status-${status}" data-device-card="${esc(d.id)}">
           <div class="device-top">
             <span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span>
-            <div class="source-names"><strong>${esc(d.label ? outputLabel(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${amp}${zoneName[d.zone] ? ` · ${zoneName[d.zone]}` : ""}</span></div>
+            <div class="source-names"><strong>${esc(d.label ? outputLabel(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${deviceDescription}${zoneName[d.zone] ? ` · ${zoneName[d.zone]}` : ""}</span></div>
             <span class="status-pill status-${status}">${statusText}</span>
           </div>
           ${listPorts(rig, d)
