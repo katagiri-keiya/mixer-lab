@@ -27,7 +27,11 @@ import {
 } from "../i18n/index.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const consoleName = (s) => SKINS[skinOf(consoleOf(s))]?.name || "";
+const skinName = (id, fallback = "") => {
+  const name = SKINS[id]?.name || fallback;
+  return id === "analog" ? translate("ui.genericAnalogMixer", name) : name;
+};
+const consoleName = (s) => skinName(skinOf(consoleOf(s)));
 // The console a scenario id runs on (null for Free play or an unknown id).
 const SCENARIO_CONSOLE = (id) => {
   const s = [...CANVAS_SCENARIOS, ...MIXERS.flatMap((m) => mixerScenarios(m.model))].find((x) => x.id === id);
@@ -52,11 +56,12 @@ const displayShortTitle = (s) => {
 const textOf = (s, field) => scenarioText(s, field, s[field]);
 const progressText = (done, total) => done ? translate("ui.progressSolved", `${done} of ${total} solved`, { done, total }) : translate("ui.scenarioCount", count(total, "scenario"), { count: total });
 const solvedProgress = (done, total) => translate("ui.progressSolved", "{done} of {total} solved", { done, total });
+const compactProgress = (done, total) => translate("ui.compactProgress", "{done}/{total}", { done, total });
 const solvedStatus = () => translate("ui.solvedStatus", "solved");
-const topicText = (theme, field) => translate(
+const topicText = (theme, field) => theme ? translate(
   `ui.topic${theme.id[0].toUpperCase()}${theme.id.slice(1)}${field[0].toUpperCase()}${field.slice(1)}`,
   theme[field],
-);
+) : "";
 
 // The consoles Free play offers, in learning order (the generic one first).
 export const FREE_CONSOLES = ["analog", "b207mp3", "mix8", "stagepas400bt", "mg102", "vlz1202", "x1204usb", "mackie1604", "gdig", "ui16", "l20", "x32c", "yam01v96", "dm2000", "x32", "cl3", "sd442", "f8n"].filter((id) => SKINS[id]);
@@ -71,7 +76,7 @@ function mixerProgress(m, progress) {
   return { done: list.filter((s) => progress.has(s.id)).length, total: list.length };
 }
 
-const mixerName = (m) => SKINS[m.skin]?.name || m.model;
+const mixerName = (m) => skinName(m.skin, m.model);
 
 // A mixer card: its name, what makes it different (to get curious about), progress.
 function mixerCard(m, p, attrs) {
@@ -126,7 +131,7 @@ export class StartScreen {
         <strong>${esc(topicText(t, "question"))}</strong>
         <span class="theme-q">${esc(topicText(t, "title"))}</span>
         <span class="theme-meter" aria-label="${esc(solvedProgress(done, total))}"><i style="width:${(100 * done) / total}%"></i></span>
-        <small>${done ? esc(solvedProgress(done, total)) : count(total, "scenario")}</small>
+        <small>${esc(progressText(done, total))}</small>
       </button>`;
     };
     this.root.innerHTML = `<div class="start-inner">
@@ -195,14 +200,14 @@ export class ThemeDrawer {
     const row = (s, n, { console = true } = {}) => `<li><button type="button" class="drawer-row ${s.id === currentId ? "current" : ""} ${p.has(s.id) ? "done" : ""}" data-scenario="${esc(s.id)}" data-by="${by}" ${s.id === currentId ? 'aria-current="true"' : ""}>
       <span class="dr-tick" aria-hidden="true">${p.has(s.id) ? "✓" : n}</span>
       <span class="dr-title">${esc(displayShortTitle(s))}</span>
-      <span class="dr-console">${console ? esc(consoleName(s)) : esc(themeOf(s.id)?.title || "")}</span>
+      <span class="dr-console">${esc(console ? consoleName(s) : topicText(themeOf(s.id), "title"))}</span>
       ${p.has(s.id) ? `<span class="visually-hidden">${esc(solvedStatus())}</span>` : ""}
     </button></li>`;
     const current = themeOf(currentId)?.id;
     const theme = (t, i) => {
       const { done, total } = themeProgress(t, p);
       return `<details class="drawer-theme" ${t.id === current ? "open" : ""}>
-        <summary><span class="theme-num">${i + 1}</span><span class="dt-name"><strong>${esc(topicText(t, "question"))}</strong><small>${esc(topicText(t, "title"))}</small></span><span class="dt-prog">${done}/${total}</span></summary>
+        <summary><span class="theme-num">${i + 1}</span><span class="dt-name"><strong>${esc(topicText(t, "question"))}</strong><small>${esc(topicText(t, "title"))}</small></span><span class="dt-prog">${esc(compactProgress(done, total))}</span></summary>
         <p class="dt-concept">${esc(topicText(t, "concept"))}</p>
         <ol class="drawer-list">${themeScenarios(t).map((s, k) => row(s, k + 1)).join("")}</ol>
       </details>`;
@@ -211,7 +216,7 @@ export class ThemeDrawer {
     const mixer = (m) => {
       const { done, total } = mixerProgress(m, p);
       return `<details class="drawer-theme" ${m.model === currentConsole ? "open" : ""}>
-        <summary><span class="dt-name"><strong>${esc(mixerName(m))}</strong><small>${esc(m.why)}</small></span><span class="dt-prog">${done}/${total}</span></summary>
+        <summary><span class="dt-name"><strong>${esc(mixerName(m))}</strong><small>${esc(m.why)}</small></span><span class="dt-prog">${esc(compactProgress(done, total))}</span></summary>
         <ol class="drawer-list">${mixerScenarios(m.model).map((s, k) => row(s, k + 1, { console: false })).join("")}</ol>
         <p class="dt-concept"><button type="button" class="linkish" data-free="${esc(m.skin)}">Free play on the ${esc(mixerName(m))}</button></p>
       </details>`;
@@ -220,7 +225,7 @@ export class ThemeDrawer {
       if (g.soon) return `<div class="drawer-theme gig-soon"><p class="dt-concept"><strong>${esc(g.title)}</strong>: coming later.</p></div>`;
       const { done, total } = themeProgress(g, p);
       return `<details class="drawer-theme" ${g.id === current ? "open" : ""}>
-        <summary><span class="dt-name"><strong>${esc(g.title)}</strong><small>${esc(g.venue)} · ${esc(consoleName(themeScenarios(g)[0]))}</small></span><span class="dt-prog">${done}/${total}</span></summary>
+        <summary><span class="dt-name"><strong>${esc(g.title)}</strong><small>${esc(g.venue)} · ${esc(consoleName(themeScenarios(g)[0]))}</small></span><span class="dt-prog">${esc(compactProgress(done, total))}</span></summary>
         <p class="dt-concept">${esc(g.concept)}${g.checklist ? ` <a href="${esc(g.checklist)}" target="_blank" rel="noopener">The gig checklist ↗</a>` : ""}</p>
         <ol class="drawer-list">${themeScenarios(g).map((s, k) => row(s, k + 1)).join("")}</ol>
       </details>`;
@@ -356,12 +361,13 @@ export class MissionView {
     // Who's on stage, when it isn't simply the whole band (doors, speeches, someone sitting out).
     const stageLine = scenarioText(def, "stageNote", this.getMusic().stageNote ?? "");
     // By mixer, the console is yours to choose; by topic, the scenario chooses it.
+    const mixerPrefix = esc(translate("ui.missionMixerPrefix", "on the "));
     const on = seq.mixer
-      ? `<label class="mixer-pick">on the <select class="mixer-console" aria-label="Mixer">${MIXERS.map((m) => `<option value="${esc(m.model)}" ${m.model === consoleOf(def) ? "selected" : ""}>${esc(mixerName(m))}</option>`).join("")}</select></label>`
-      : `on the <strong>${esc(consoleName(def))}</strong>`;
+      ? `<label class="mixer-pick">${mixerPrefix}<select class="mixer-console" aria-label="${esc(translate("ui.missionMixerLabel", "Mixer"))}">${MIXERS.map((m) => `<option value="${esc(m.model)}" ${m.model === consoleOf(def) ? "selected" : ""}>${esc(mixerName(m))}</option>`).join("")}</select></label>`
+      : `${mixerPrefix}<strong>${esc(consoleName(def))}</strong>`;
     this.root.innerHTML = `<div class="mission-inner">
       <div class="mission-head">
-        <button type="button" class="mission-theme" data-act="drawer" title="${seq.mixer ? "Every scenario on this mixer" : "Every topic and scenario"}">
+        <button type="button" class="mission-theme" data-act="drawer" title="${esc(seq.mixer ? translate("ui.missionMixerPickerTitle", "Every scenario on this mixer") : translate("ui.missionTopicPickerTitle", "Every topic and scenario"))}">
           <span class="mt-label">${esc(seq.mixer ? translate("ui.byMixer", "By mixer") : seq.label)}</span><span class="mt-step">${translate("ui.scenarioStep", "{current} of {total}", { current: i + 1, total: seq.list.length })}</span>
         </button>
         <div class="mission-title">
@@ -369,7 +375,7 @@ export class MissionView {
           <p class="mission-on">${on}${def.who ? ` · ${esc(textOf(def, "who"))}` : ""}</p>
         </div>
       </div>
-      <ol class="mission-steps" aria-label="${esc(seq.mixer ? `Scenarios on the ${consoleName(def)}` : seq.label)}">${steps}</ol>
+      <ol class="mission-steps" aria-label="${esc(seq.mixer ? translate("ui.missionMixerSteps", "Scenarios on the {mixer}", { mixer: consoleName(def) }) : seq.label)}">${steps}</ol>
       <p class="mission-prompt">${esc(fillTerms(textOf(def, "prompt"), t))}${stageLine ? `<span class="mission-stage">${esc(stageLine)}</span>` : ""}</p>
       <div class="mission-goalrow">
         <p class="mission-goal"><strong>${translate("ui.goal", "Goal:")}</strong> ${esc(fillTerms(textOf(def, "goal"), t))}</p>

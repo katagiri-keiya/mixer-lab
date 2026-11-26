@@ -60,6 +60,9 @@ const gearText = (value) => Object.hasOwn(roomDisplayKeys, value)
   : localized("gear", value, "", value);
 const gearTypeText = (id, field, fallback) => localized("gearById", id, field, fallback);
 export const connectionMessage = (message) => {
+  if (message === "Nothing connected.") return translate("ui.outputDisconnected", message);
+  if (message === "Nothing connected. A passive speaker needs a power amp.") return translate("ui.passiveOutputDisconnected", message);
+  if (message === "Speaker cable carrying line level: unshielded, may hum.") return translate("ui.speakerCableOnLine", message);
   if (message === "Line level can't drive a passive speaker — there's no amplifier. Put a power amp in between, or use a powered speaker.") return translate("ui.passiveNeedsAmp", message);
   if (message === "Condenser mic, no +48 V: it's plugged in but silent. Turn on phantom power.") return translate("ui.condenserNoPhantom", message);
   if (message === "Speaker level into a camera input can damage it. Cameras take mic or line level.") return translate("ui.cameraSpeakerLevel", message);
@@ -75,6 +78,7 @@ export const connectionMessage = (message) => {
 };
 const displayDevice = (value) => value === "Laptop · Preshow Music" ? gearText("preshowLaptop") : value === "Powered speaker · house left" ? `${gearText("poweredSpeaker")} · ${gearText("houseLeft")}` : value === "Powered speaker · house right" ? `${gearText("poweredSpeaker")} · ${gearText("houseRight")}` : gearText(value);
 const inputText = (key, fallback, vars = {}) => translate(`ui.${key}`, fallback, vars);
+const outputDeviceName = (label) => translate(`ui.outputDeviceNames.${label}`, displayDevice(label));
 const connectionReason = (reason) => {
   if (!reason) return reason;
   if (reason === "That would loop a device back into itself.") return translate("ui.selfLoop", reason);
@@ -415,13 +419,13 @@ export class PatchView {
     const outRows = outs
       .map((p) => {
         // B207MP3: the speaker is inside the mixer, so there is nothing to patch.
-        if (p.internal) return { p, html: `<li class="out-row out-internal"><p class="port-internal"><strong>${esc(p.name)}</strong>${esc(translate("ui.internalSpeakerDescription", " inside the box: its own amp drives it, no cable."))}</p><p class="port-msg ok">${esc(translate("ui.internalSpeakerStatus", "✓ The mix plays from this box. MAIN LEVEL and the EQ set how loud and how it sounds."))}</p></li>` };
+        if (p.internal) return { p, html: `<li class="out-row out-internal"><p class="port-internal"><strong>${esc(translate("ui.builtInSpeakerName", p.name))}</strong>${esc(translate("ui.internalSpeakerDescription", " inside the box: its own amp drives it, no cable."))}</p><p class="port-msg ok">${esc(translate("ui.internalSpeakerStatus", "✓ The mix plays from this box. MAIN LEVEL and the EQ set how loud and how it sounds."))}</p></li>` };
         const reached = mix.rig.buses[p.id] || [];
         const cable = cableAt(rig, p.ref);
         const target = cable ? getPort(rig, cable.to) : null;
         const feeds = target && !DEVICE_TYPES[target.device.type].endpoint && !DEVICE_TYPES[target.device.type].poweramp;
         const note = reached.length
-          ? `<p class="port-msg ok">${translate("ui.soundFrom", "✓ Sound from: {devices}", { devices: reached.map((id) => displayDevice(rig.devices.find((d) => d.id === id).label)).join(", ") })}</p>`
+          ? `<p class="port-msg ok">${esc(translate("ui.soundFrom", "✓ Sound from: {devices}", { devices: reached.map((id) => outputDeviceName(rig.devices.find((d) => d.id === id).label)).join(", ") }))}</p>`
           : feeds
             ? `<p class="port-msg ok">${translate("ui.feeds", "→ Feeds {port}", { port: portLabel(rig, cable.to) })}</p>`
             : `<p class="port-msg">${translate("ui.emptyOutput", "No working speaker on this output yet.")}</p>`;
@@ -470,13 +474,13 @@ export class PatchView {
     const ampHtml = amps
       .map(
         (d) => this.card(d.id, `<li class="device-card">
-        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 48 })}</span><div class="source-names"><strong>${esc(d.label)}</strong><span class="amp-where">Line level in → speaker level out</span></div></div>
+        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 48 })}</span><div class="source-names"><strong>${esc(translate(`ui.outputDeviceNames.${d.label}`, d.label))}</strong><span class="amp-where">${esc(translate("ui.powerAmpSignalLevels", "Line level in → speaker level out"))}</span></div></div>
         <div class="amp-sides">
-          <div class="amp-side amp-in"><p class="amp-side-title">${icon("level-line", { size: 26 })}<span>Line level IN <small>from the mixer</small></span></p>${listPorts(rig, d)
+          <div class="amp-side amp-in"><p class="amp-side-title">${icon("level-line", { size: 26 })}<span>${esc(translate("ui.powerAmpLineIn", "Line level IN"))} <small>${esc(translate("ui.powerAmpFromMixer", "from the mixer"))}</small></span></p>${listPorts(rig, d)
             .filter((p) => p.dir === "in")
             .map((p) => this.portButton(p.ref, p.dir))
             .join("")}</div>
-          <div class="amp-side amp-out"><p class="amp-side-title">${icon("level-speaker", { size: 26 })}<span>Speaker level OUT <small>to passive speakers only</small></span></p>${listPorts(rig, d)
+          <div class="amp-side amp-out"><p class="amp-side-title">${icon("level-speaker", { size: 26 })}<span>${esc(translate("ui.powerAmpSpeakerOut", "Speaker level OUT"))} <small>${esc(translate("ui.powerAmpToPassive", "to passive speakers only"))}</small></span></p>${listPorts(rig, d)
             .filter((p) => p.dir === "out")
             .map((p) => this.portButton(p.ref, p.dir))
             .join("")}</div>
@@ -521,7 +525,7 @@ export class PatchView {
         return this.card(d.id, `<li class="device-card status-${status}" data-device-card="${esc(d.id)}">
           <div class="device-top">
             <span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span>
-            <div class="source-names"><strong>${esc(d.label ? displayDevice(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${amp}${zoneName[d.zone] ? ` · ${zoneName[d.zone]}` : ""}</span></div>
+            <div class="source-names"><strong>${esc(d.label ? outputDeviceName(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${amp}${zoneName[d.zone] ? ` · ${zoneName[d.zone]}` : ""}</span></div>
             <span class="status-pill status-${status}">${statusText}</span>
           </div>
           ${listPorts(rig, d)
