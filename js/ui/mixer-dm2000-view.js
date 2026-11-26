@@ -57,7 +57,7 @@ export function renderDM2000(view, def) {
   surface.append(
     inputSection(view, def),
     row("y96-mid dm-mid", selectedChannel(view, def, ui, rerender), display(view, def, ui, rerender)),
-    controlKeys(ui, rerender),
+    controlKeys(view, ui, rerender),
     row("y96-bottom", bank, stereoSection(view, def)),
   );
   view.root.appendChild(surface);
@@ -308,13 +308,15 @@ function groupPage(view, def, ui, rerender) {
 
 // ---------- keys: LAYER, ENCODER MODE, FADER MODE, AUX SELECT, DISPLAY ACCESS ----------
 
-function controlKeys(ui, rerender) {
+function controlKeys(view, ui, rerender) {
   const box = el("section", "y96-box y96-keys dm-keys");
   const key = (label, on, onPress, aria) => {
     const b = el("button", `x32-layer${on ? " on" : ""}`, label);
     b.type = "button";
     b.setAttribute("aria-pressed", String(on));
-    if (aria) b.setAttribute("aria-label", aria);
+    if (typeof aria === "function") {
+      view.bindings.push({ kind: "fn", run: () => b.setAttribute("aria-label", aria()) });
+    } else if (aria) b.setAttribute("aria-label", aria);
     b.addEventListener("click", () => {
       onPress();
       rerender();
@@ -325,9 +327,9 @@ function controlKeys(ui, rerender) {
   box.append(
     group("DISPLAY ACCESS", ...PAGES.map(([id, label]) => key(label, ui.page === id, () => (ui.page = id), `Display page ${label}`))),
     group("LAYER", ...[["1-24", "1–24"], ["73-96", "73–96"], ["master", "MASTER"]].map(([id, label]) => key(label, ui.layer === id, () => (ui.layer = id), `Fader layer ${label}`))),
-    group("ENCODER MODE", key("PAN", ui.emode === "pan", () => (ui.emode = "pan"), "Encoders: PAN"), key("AUX", ui.emode === "aux", () => (ui.emode = "aux"), "Encoders: the selected AUX send")),
-    group("FADER MODE", key("FADER", ui.fmode === "fader", () => (ui.fmode = "fader"), "Faders: channel levels"), key("AUX", ui.fmode === "aux", () => (ui.fmode = "aux"), "Faders: the selected AUX send")),
-    group("AUX SELECT", ...AUXES.map((a, k) => key(String(k + 1), ui.aux === a, () => (ui.aux = a), `AUX SELECT ${k + 1}`))),
+    group("ENCODER MODE", key("PAN", ui.emode === "pan", () => (ui.emode = "pan"), () => translate("ui.dmEncoderModePan", "Encoders: PAN")), key("AUX", ui.emode === "aux", () => (ui.emode = "aux"), () => translate("ui.dmEncoderModeAux", "Encoders: the selected AUX send"))),
+    group("FADER MODE", key("FADER", ui.fmode === "fader", () => (ui.fmode = "fader"), () => translate("ui.dmFaderModeFader", "Faders: channel levels")), key("AUX", ui.fmode === "aux", () => (ui.fmode = "aux"), () => translate("ui.dmFaderModeAux", "Faders: the selected AUX send"))),
+    group("AUX SELECT", ...AUXES.map((a, k) => key(String(k + 1), ui.aux === a, () => (ui.aux = a), () => translate("ui.dmAuxSelect", "AUX SELECT {number}", { number: k + 1 })))),
   );
   return box;
 }
@@ -394,11 +396,11 @@ function channelStrip(view, def, i, ui, rerender) {
   // The encoder: PAN or the selected AUX send.
   const enc =
     ui.emode === "aux"
-      ? knob(view, { label: def.sends[ui.aux].label, sheetLabel: `Ch ${c.label} ${def.sends[ui.aux].label} send (encoder)`, defaultValue: 0, tone: "aux1", format: lawFormat(LAWS.level), onInput: (v) => store.setChannel(i, `sends.${ui.aux}`, v) }, (s) => ch(s).sends[ui.aux])
-      : knob(view, { label: c.kind === "stereo" ? "BAL" : "PAN", sheetLabel: `Ch ${c.label} pan (encoder)`, min: -1, max: 1, step: 0.02, defaultValue: 0, bipolar: true, tone: "pan", format: formatPan, onInput: (v) => store.setChannel(i, "pan", v) }, (s) => ch(s).pan);
+      ? knob(view, { label: def.sends[ui.aux].label, sheetLabel: () => translate("ui.encoderSendSheet", "Ch {channel} {bus} send (encoder)", { channel: c.label, bus: def.sends[ui.aux].label }), defaultValue: 0, tone: "aux1", format: lawFormat(LAWS.level), onInput: (v) => store.setChannel(i, `sends.${ui.aux}`, v) }, (s) => ch(s).sends[ui.aux])
+      : knob(view, { label: c.kind === "stereo" ? "BAL" : "PAN", sheetLabel: () => translate("ui.encoderPanSheet", "Ch {channel} pan (encoder)", { channel: c.label }), min: -1, max: 1, step: 0.02, defaultValue: 0, bipolar: true, tone: "pan", format: formatPan, onInput: (v) => store.setChannel(i, "pan", v) }, (s) => ch(s).pan);
   const control =
     ui.fmode === "aux"
-      ? fader(view, { label: "", sheetLabel: `Ch ${c.label} ${def.sends[ui.aux].label} send`, defaultValue: 0, tone: "aux1", format: lawFormat(LAWS.level), get: (s) => ch(s).sends[ui.aux], onInput: (v) => store.setChannel(i, `sends.${ui.aux}`, v) })
+      ? fader(view, { label: "", sheetLabel: () => translate("ui.channelSendSheet", "Ch {channel} {bus} send", { channel: c.label, bus: def.sends[ui.aux].label }), defaultValue: 0, tone: "aux1", format: lawFormat(LAWS.level), get: (s) => ch(s).sends[ui.aux], onInput: (v) => store.setChannel(i, `sends.${ui.aux}`, v) })
       : fader(view, { label: "", sheetLabel: `Ch ${c.label} fader`, format: lawFormat(levelLaw(def)), get: (s) => ch(s).level, onInput: (v) => setLevel(view, i, v) });
   const solo = button(view, { label: "SOLO", tone: "pfl", get: (s) => ch(s).solo, onPress: () => store.setChannel(i, "solo", !ch(store.state).solo), aria: (s) => `Channel ${c.label} SOLO: ${ch(s).solo ? "on" : "off"}` });
   // ON is lit while the channel is on. Its mute group's ON keys follow it.

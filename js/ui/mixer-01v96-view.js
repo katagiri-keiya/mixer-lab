@@ -212,7 +212,7 @@ function display(view, def, ui, rerender) {
         ...AUXES.map((sid) =>
           row(
             "dg-send",
-            knob(view, { label: def.sends[sid].label, sheetLabel: `Ch ${c.label} ${def.sends[sid].label} send`, defaultValue: 0, tone: def.buses[sid].fx ? "eq" : "aux1", format: lawFormat(LAWS[def.sends[sid].law]), onInput: (v) => store.setChannel(i, `sends.${sid}`, v) }, (s) => ch(s).sends[sid]),
+            knob(view, { label: def.sends[sid].label, sheetLabel: () => translate("ui.channelSendSheet", "Ch {channel} {bus} send", { channel: c.label, bus: def.sends[sid].label }), defaultValue: 0, tone: def.buses[sid].fx ? "eq" : "aux1", format: lawFormat(LAWS[def.sends[sid].law]), onInput: (v) => store.setChannel(i, `sends.${sid}`, v) }, (s) => ch(s).sends[sid]),
             button(view, { label: "PRE", tone: "pfl", get: (s) => ch(s).pres[sid], onPress: () => store.setChannel(i, `pres.${sid}`, !ch(store.state).pres[sid]), aria: (s) => `Ch ${c.label} ${def.sends[sid].label}: ${ch(s).pres[sid] ? "PRE (pre-fader)" : "POST (post-fader)"}` }),
           ),
         ),
@@ -299,7 +299,7 @@ function channelStrip(view, def, i, ui, rerender) {
   });
   const sid = ui.mode !== "home" ? ui.mode : null;
   const control = sid
-    ? fader(view, { label: "", sheetLabel: `Ch ${c.label} ${def.sends[sid].label} send`, defaultValue: 0, tone: def.buses[sid].fx ? "eq" : "aux1", format: lawFormat(LAWS[def.sends[sid].law]), get: (s) => ch(s).sends[sid], onInput: (v) => store.setChannel(i, `sends.${sid}`, v) })
+    ? fader(view, { label: "", sheetLabel: () => translate("ui.channelSendSheet", "Ch {channel} {bus} send", { channel: c.label, bus: def.sends[sid].label }), defaultValue: 0, tone: def.buses[sid].fx ? "eq" : "aux1", format: lawFormat(LAWS[def.sends[sid].law]), get: (s) => ch(s).sends[sid], onInput: (v) => store.setChannel(i, `sends.${sid}`, v) })
     : fader(view, { label: "", sheetLabel: `Ch ${c.label} fader`, format: lawFormat(levelLaw(def)), get: (s) => ch(s).level, onInput: (v) => store.setChannel(i, "level", v) });
   const solo = button(view, { label: "SOLO", tone: "pfl", get: (s) => ch(s).solo, onPress: () => store.setChannel(i, "solo", !ch(store.state).solo), aria: (s) => `Channel ${c.label} SOLO: ${ch(s).solo ? "on" : "off"}` });
   // ON is lit while the channel is on: the opposite of a MUTE key.

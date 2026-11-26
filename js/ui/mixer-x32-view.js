@@ -270,7 +270,7 @@ export function channelStrip(view, def, i, ui, rerender) {
   // The fader: the channel level, or (SENDS ON FADERS with a MIX selected) its send to that MIX.
   const sofBus = ui.sof && ui.sel.kind === "bus" && c.sends?.includes(ui.sel.b) ? ui.sel.b : null;
   const control = sofBus
-    ? fader(view, { label: "", sheetLabel: `Ch ${n} send to ${def.buses[sofBus].label}`, defaultValue: 0, tone: "aux1", format: lawFormat(LAWS[def.sends[sofBus].law]), get: (s) => ch(s).sends[sofBus], onInput: (v) => store.setChannel(i, `sends.${sofBus}`, v) })
+    ? fader(view, { label: "", sheetLabel: () => translate("ui.channelSendSheet", "Ch {channel} send to {bus}", { channel: n, bus: def.buses[sofBus].label }), defaultValue: 0, tone: "aux1", format: lawFormat(LAWS[def.sends[sofBus].law]), get: (s) => ch(s).sends[sofBus], onInput: (v) => store.setChannel(i, `sends.${sofBus}`, v) })
     : fader(view, { label: "", sheetLabel: `Ch ${n} fader`, format: lawFormat(levelLaw(def)), get: (s) => ch(s).level, onInput: (v) => store.setChannel(i, "level", v) });
   const mute = muteKey(view, def, `Channel ${n}`, (s) => !ch(s).enabled, (m) => store.setChannel(i, "enabled", !m));
   const solo = button(view, { label: T.solo, tone: "pfl", get: (s) => ch(s).solo, onPress: () => store.setChannel(i, "solo", !ch(store.state).solo), aria: (s) => `Channel ${n} ${T.solo}: ${ch(s).solo ? "on" : "off"}` });
@@ -335,7 +335,7 @@ export function groupStrip(view, def, id, ui, rerender) {
   const sofCh = kind === "bus" && ui.sof && ui.sel.kind === "ch" && def.channels[ui.sel.i].sends?.includes(id) ? ui.sel.i : null;
   const control =
     sofCh !== null
-      ? fader(view, { label: "", sheetLabel: `Ch ${def.channels[sofCh].label} send to ${label}`, defaultValue: 0, tone: "aux1", format: lawFormat(LAWS[def.sends[id].law]), get: (s) => s.channels[sofCh].sends[id], onInput: (v) => store.setChannel(sofCh, `sends.${id}`, v) })
+      ? fader(view, { label: "", sheetLabel: () => translate("ui.channelSendSheet", "Ch {channel} send to {bus}", { channel: def.channels[sofCh].label, bus: label }), defaultValue: 0, tone: "aux1", format: lawFormat(LAWS[def.sends[id].law]), get: (s) => s.channels[sofCh].sends[id], onInput: (v) => store.setChannel(sofCh, `sends.${id}`, v) })
       : fader(view, { label: "", sheetLabel: () => translate("ui.groupFaderSheet", "{group} fader", { group: label }), format: lawFormat(LAWS.level), get: (s) => s[id].level, onInput: (v) => store.setBus(id, "level", v) });
   const mute = muteKey(view, def, label, (s) => !!s[id].mute, (m) => store.setBus(id, "mute", m));
   const out = el("p", "dg-note");
@@ -868,22 +868,22 @@ export function routingPage(view, def, note = "Analog out: what each rear-panel 
 export function scenesPage(view, def) {
   const store = view.store;
   const box = el("div", "x32-scenes");
-  box.appendChild(el("p", "dg-note", "RECALL loads a scene's settings (not the cables). STORE saves the current mix into the slot."));
+  box.appendChild(localizedText(view, "p", "dg-note", () => translate("ui.scenePageNote", "RECALL loads a scene's settings (not the cables). STORE saves the current mix into the slot.")));
   for (let n = 0; n < def.scenes; n++) {
     const line = el("div", "x32-scene");
     const name = el("span", "x32-scene-name");
     view.bindings.push({ kind: "fn", run: (s) => (name.textContent = `${String(n + 1).padStart(2, "0")} ${s.scenes[n]?.name || "—"}`) });
     const recall = el("button", "x32-layer", "RECALL");
     recall.type = "button";
-    recall.setAttribute("aria-label", `Recall scene ${n + 1}`);
+    view.bindings.push({ kind: "fn", run: () => recall.setAttribute("aria-label", translate("ui.sceneRecallAria", "Recall scene {number}", { number: n + 1 })) });
     recall.addEventListener("click", () => store.recallScene(n));
     view.bindings.push({ kind: "fn", run: (s) => (recall.disabled = !s.scenes[n]) });
     const save = el("button", "x32-layer", "STORE");
     save.type = "button";
-    save.setAttribute("aria-label", `Store the current mix as scene ${n + 1}`);
+    view.bindings.push({ kind: "fn", run: () => save.setAttribute("aria-label", translate("ui.sceneStoreAria", "Store the current mix as scene {number}", { number: n + 1 })) });
     save.addEventListener("click", () => {
       const current = store.state.scenes[n]?.name;
-      const typed = globalThis.prompt ? globalThis.prompt(`Name for scene ${n + 1}`, current || `Scene ${n + 1}`) : null;
+      const typed = globalThis.prompt ? globalThis.prompt(translate("ui.sceneNamePrompt", "Name for scene {number}", { number: n + 1 }), current || `Scene ${n + 1}`) : null;
       store.storeScene(n, typed || current || `Scene ${n + 1}`);
     });
     line.append(name, recall, save);
