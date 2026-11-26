@@ -294,7 +294,9 @@ export class PatchView {
         ${msgs.map((m) => {
           const rack = cme && /^No power: (.+) is switched on, but (.+) is off\.$/.exec(m);
           const text = rack ? translate("ui.cmeRackOff", m, { receiver: rack[1], power: rack[2] })
-            : advanced ? cmeAdvancedWarning(m) : connectionMessage(m);
+            : src.id === "ky-mic2" && m === 'Mic level on the 1/4" line input skips the mic preamp\'s range — very quiet. Use XLR into the mic input.'
+              ? translate("ui.karaokeMicInLine", m)
+              : advanced ? cmeAdvancedWarning(m) : connectionMessage(m);
           return `<p class="port-msg">${esc(text)}</p>`;
         }).join("")}
         ${note ? `<p class="source-note">${esc(note)}</p>` : ""}
@@ -463,6 +465,7 @@ export class PatchView {
   }
 
   renderOutputs(mix) {
+    const karaoke = this.getGigId?.() === "karaoke";
     const electroacoustic = this.getGigId?.() === "electroacoustic";
     const outputLabel = (label, fallback = outputDeviceName(label)) =>
       electroacoustic ? translate(`ui.electroacousticOutputNames.${label}`, fallback) : fallback;
@@ -551,7 +554,7 @@ export class PatchView {
     const ampHtml = amps
       .map(
         (d) => this.card(d.id, `<li class="device-card">
-        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 48 })}</span><div class="source-names"><strong>${esc(outputLabel(d.label, translate(`ui.outputDeviceNames.${d.label}`, d.label)))}</strong><span class="amp-where">${esc(translate("ui.powerAmpSignalLevels", "Line level in → speaker level out"))}</span></div></div>
+        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 48 })}</span><div class="source-names"><strong>${esc(d.type === "bh109-rack" ? translate("ui.karaokeRackName", d.label) : outputLabel(d.label, translate(`ui.outputDeviceNames.${d.label}`, d.label)))}</strong><span class="amp-where">${esc(translate("ui.powerAmpSignalLevels", "Line level in → speaker level out"))}</span></div></div>
         <div class="amp-sides">
           <div class="amp-side amp-in"><p class="amp-side-title">${icon("level-line", { size: 26 })}<span>${esc(translate("ui.powerAmpLineIn", "Line level IN"))} <small>${esc(translate("ui.powerAmpFromMixer", "from the mixer"))}</small></span></p>${listPorts(rig, d)
             .filter((p) => p.dir === "in")
@@ -614,12 +617,14 @@ export class PatchView {
           ${knobsHtml(d)}
           ${powerHtml(rig, d)}
           ${ep.messages.map((m) => {
-            const amp = (vocalJazz || cob) && /^The amp's Input ([AB]) has nothing plugged in\.$/.exec(m);
+            const amp = (vocalJazz || cob || karaoke) && /^The amp's Input ([AB]) has nothing plugged in\.$/.exec(m);
+            const rackHot = karaoke && /^Line level into the rack's line mixer set to MIC: (\d+) dB too hot, so it distorts \(in a room, it feeds back\)\. Set it to LINE\.$/.exec(m);
             const volumeDrop = (recordingGig || cme || mariachi) && /^Turned down: (.+): (4\/5 LEVEL|VOLUME|CH 2 level) is all the way down, so this speaker plays nothing\. The chain to it works\.$/.exec(m);
             const lowered = volumeDrop && (mariachi || volumeDrop[2] !== "CH 2 level") ? volumeDrop : null;
             const off = recordingGig && /^No power: (NX3000 · monitor amp rack) is switched off\.$/.exec(m);
             const quiet = cme && /^Very quiet: (.+): (CH [AB] level) is at (.+) \(([-+−\d.]+) dB\)\.$/.exec(m);
             const text = amp ? translate("ui.vocalJazzAmpInputEmpty", m, { channel: amp[1] })
+              : rackHot ? translate("ui.karaokeRackHot", m, { db: rackHot[1] })
               : lowered ? translate("ui.vjrHallTurnedDown", m, { device: lowered[1], control: lowered[2] })
               : off ? translate("ui.vjrAmpOff", m, { device: off[1] })
               : quiet ? translate("ui.cmeOutputQuiet", m, { device: quiet[1], control: quiet[2], value: quiet[3], db: quiet[4] })
@@ -637,7 +642,7 @@ export class PatchView {
       ${outList}
       ${reverbs.length ? `<h3 class="group-title">${esc(translate("ui.externalEffects", "Effects"))}</h3><ul class="device-list">${reverbHtml}</ul>` : ""}
       ${recorders.length ? `<h3 class="group-title">${translate("ui.recorderHeading", "Recorder")}</h3><ul class="device-list">${recHtml}</ul>` : ""}
-      ${amps.length ? `<h3 class="group-title">${electroacoustic ? translate("ui.electroacousticAmplifier", "Amplifier") : "Amplifier"}</h3><ul class="device-list">${ampHtml}</ul>` : ""}
+      ${amps.length ? `<h3 class="group-title">${karaoke ? translate("ui.karaokeAmplifier", "Amplifier") : electroacoustic ? translate("ui.electroacousticAmplifier", "Amplifier") : "Amplifier"}</h3><ul class="device-list">${ampHtml}</ul>` : ""}
       ${gear.length ? `<h3 class="group-title">${electroacoustic ? translate("ui.electroacousticRackGear", "Rack gear") : "Rack gear"}</h3><ul class="device-list">${gearHtml}</ul>` : ""}
       <h3 class="group-title">${icon("role-destination", { size: 22 })}${speakers.every((d) => DEVICE_TYPES[d.type].camera) ? translate("ui.cameraLevelHeading", "Camera — does the level match?") : translate("ui.speakersWhereAmp", "Speakers — where is the amplifier?")}</h3>
       <ul class="device-list">${spkHtml}</ul>`;
@@ -736,7 +741,8 @@ function micSwitchHtml(d) {
   const sw = DEVICE_TYPES[d.type].micSwitch;
   if (!sw) return "";
   const on = d[sw.key] === 1;
-  return `<div class="dev-settings"><label>Ashly Ch.1 <select data-device="${esc(d.id)}" data-device-key="${sw.key}" aria-label="${esc(d.label)}: Ashly Ch.1 Line / Mic button"><option value="0"${on ? "" : " selected"}>LINE</option><option value="1"${on ? " selected" : ""}>MIC (+${sw.gainDb} dB)</option></select></label></div>`;
+  const label = translate("ui.karaokeMicSwitch", `${d.label}: Ashly Ch.1 Line / Mic button`, { rack: translate("ui.karaokeRackName", d.label) });
+  return `<div class="dev-settings"><label>Ashly Ch.1 <select data-device="${esc(d.id)}" data-device-key="${sw.key}" aria-label="${esc(label)}"><option value="0"${on ? "" : " selected"}>LINE</option><option value="1"${on ? " selected" : ""}>MIC (+${sw.gainDb} dB)</option></select></label></div>`;
 }
 
 // ---------- the patch dialog ----------

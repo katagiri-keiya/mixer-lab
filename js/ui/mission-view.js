@@ -620,7 +620,10 @@ export class MissionView {
       return language() === "ja" ? sourceText(s, "name", s.name.toLowerCase()) : s.name.toLowerCase();
     });
     const resting = out.length ? translate("ui.musicSittingOut", ` Sitting out here: ${listOf(restingSources)}.`, { sources: restingSources.join("、") }) : "";
-    const songName = translate("ui.musicSongArtist", `“${song.title}” by ${song.artist}`, { song: song.title, artist: song.artist });
+    const songName = translate("ui.musicSongArtist", `“${song.title}” by ${song.artist}`, {
+      song: song.id === "karaoke" ? translate("ui.karaokeMusicTitle", song.title) : song.title,
+      artist: song.id === "karaoke" ? translate("ui.karaokeMusicArtist", song.artist) : song.artist,
+    });
     if (!this.def || this.def.id !== "free-play") {
       box.classList.add("music-now");
       const note = silent ? translate("ui.musicSilent", "♪ The band isn't playing in this one.") : section

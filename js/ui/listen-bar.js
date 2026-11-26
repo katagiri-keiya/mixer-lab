@@ -287,7 +287,12 @@ export class ListenBar {
         msg += ` ${short(e)}: ${language() === "ja" && e.messages?.[0] ? connectionMessage(e.messages[0]) : warning + "."}`;
       }
       // A speaker behind a line mixer set to MIC (BH 109).
-      for (const e of ends[dest].filter((e) => !e.camera && e.hotWhy)) msg += ` ${short(e)}: distorting, ${e.hotWhy}.`;
+      for (const e of ends[dest].filter((e) => !e.camera && e.hotWhy)) {
+        const warning = `${short(e)}: distorting, ${e.hotWhy}.`;
+        const label = devices.get(e.deviceId)?.label;
+        msg += ` ${e.hotWhy === "the rack's line mixer is set to MIC"
+          ? translate("ui.karaokeListenHot", warning, { speaker: translate(`ui.outputDeviceNames.${label}`, short(e)) }) : warning}`;
+      }
     }
     else msg = translate("ui.silence", `Silence: ${busName} doesn't reach a working speaker. Check Stage & patch.`, { bus: busName });
     if (msg !== this.lastMsg) {

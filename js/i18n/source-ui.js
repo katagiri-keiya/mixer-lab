@@ -1,5 +1,9 @@
 export const sourceEn = {};
 export const sourceJa = {
+  "ky-mic1": { name: "SM58 1 · リードボーカル", device: "Shure SM58（ダイナミックマイク）" },
+  "ky-mic2": { name: "SM58 2 · ハーモニー", device: "Shure SM58（ダイナミックマイク）" },
+  "ky-v3": { name: "Zoom V3 · 3人目の歌い手", device: "SM58 → Zoom V3ボーカルプロセッサー、OUTPUT L", note: "SM58をV3のMIC INにつなぎます。OUTPUT L（民生レベル、約−10）から1/4インチTSケーブルで7/8 L (MONO)へ送ります。ラボではV3固有のエフェクトを再現していないため、歌い手の声がそのまま出ます。" },
+  "ky-track": { name: "カラオケ音源（ノートPC）", device: "カラオケ動画を再生するノートPC", noteStereo: "カラオケ動画のステレオ音声を送ります。ノートPCのヘッドホン出力から、3.5 mmを1/4インチ2本に分けるケーブルでLINE IN 5/6のL・Rにつなぎます。" },
   "ea-click": { name: "クリック（Mac mini、SSL 2+ OUT 3）", device: "Mac mini · SSL 2+ OUT 3のクリック", note: "FOHのMac miniから送る演奏者用のクリックです。SalmonではAUX INに入れていました。ラボのX32にはAUX IN 1/2しかないため、LOCAL 1に入れます。演奏者用のミックスだけに送ります。" },
   "ea-pots": { name: "植木鉢用マイク（SD8 IN 1）", device: "SD8につないだ植木鉢用のダイナミックマイク", note: "Betweennessでは、植木鉢の上にマイクを1本立てます。ラボではFTWのパーカッション音源が代わりに鳴ります。" },
   "ea-kat": { name: "MalletKATの機材一式（SD8 IN 2）", device: "MalletKAT · ノートPC · Scarlett 18i8のLINE出力 → SD8", note: "Betweennessでは、MalletKATのパッドでノートPC内のボーカルを細かく切り分けたサンプルを鳴らします。Scarlett 18i8のLINE出力をSD8に送ります。ラボではFTWのボーカル音源が代わりに鳴ります。" },
