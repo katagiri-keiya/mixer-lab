@@ -3,6 +3,12 @@ export const uiEn = {
 };
 
 export const uiJa = {
+  vocalJazzHandheld: "ワイヤレスハンドマイク{number}、{color}（受信機の{number}ch）",
+  vocalJazzStageBox: "S32 · ステージ脇のラック",
+  vocalJazzMicTap: "短く押す",
+  vocalJazzMicHold: "長押しする",
+  vocalJazzMicUse: "短く押すとミュートを切り替え、長押しすると電源を切り替えます。",
+  vocalJazzAmpInputEmpty: "アンプのInput {channel}に何も接続されていません。",
   musicBarNames: { intro: "イントロ", loop: "ループ" },
   freeGear: "フリープレイの機材：",
   freeGearRemove: "{name}を取り外す",

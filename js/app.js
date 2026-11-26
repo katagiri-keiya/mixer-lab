@@ -144,6 +144,7 @@ const patchView = new PatchView({
   manifest: M,
   toast,
   getTerms: () => skin.terms,
+  getGigId: () => gigOf(current.def.id)?.id,
   onOpenRecorder: (id) => recorderView.open(id),
   onOpenDante: (tab) => openDante(tab),
   getRecorder: (id) => engine.recorder(id),

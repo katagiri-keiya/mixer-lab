@@ -105,7 +105,7 @@ export function portLabel(rig, ref, { short = false } = {}) {
 }
 
 export class PatchView {
-  constructor({ sourcesRoot, outputsRoot, store, manifest, toast, getTerms, onOpenRecorder = () => {}, getRecorder = () => null, onOpenDante = () => {}, onSettle = () => {}, onOpenConsole = () => {} }) {
+  constructor({ sourcesRoot, outputsRoot, store, manifest, toast, getTerms, getGigId = () => null, onOpenRecorder = () => {}, getRecorder = () => null, onOpenDante = () => {}, onSettle = () => {}, onOpenConsole = () => {} }) {
     this.onOpenRecorder = onOpenRecorder;
     this.onOpenConsole = onOpenConsole;
     this.onSettle = onSettle;
@@ -117,6 +117,7 @@ export class PatchView {
     this.manifest = manifest;
     this.toast = toast;
     this.getTerms = getTerms;
+    this.getGigId = getGigId;
     this.dialog = new PatchDialog(this);
     // Each device's card, by device id ("mixer" = its outputs), for the stage diagram's inspector.
     this.cards = new Map();
@@ -198,6 +199,7 @@ export class PatchView {
   }
 
   renderSources(mix) {
+    const vocalJazz = this.getGigId?.() === "vocal-jazz";
     const state = this.store.state;
     const rig = state.rig;
     const { SOURCES_BY_ID } = this.manifest;
@@ -205,6 +207,10 @@ export class PatchView {
     const pairs = rig.devices.filter((d) => d.type === "stereo-mic-pair" || d.type === "piano-mic-pair");
     const cards = sources.map((d) => {
       const src = SOURCES_BY_ID[d.sourceId];
+      const handheld = vocalJazz && /^Wireless handheld (\d+), ([\w/]+) \(receiver channel \1\)$/.exec(src.device);
+      const device = handheld
+        ? translate("ui.vocalJazzHandheld", src.device, { number: handheld[1], color: handheld[2] })
+        : sourceText(src, "device", gearText(src.device));
       const ref = `${d.id}/out`;
       // A radio handheld has no cable: its channel is the one its receiver feeds.
       const rf = DEVICE_TYPES[d.type].rf;
@@ -240,12 +246,12 @@ export class PatchView {
         <div class="source-top">
           <span class="source-order" aria-label="Input list number">${esc(listNo)}</span>
           <span class="dev-ico">${icon(deviceIconName(d), { size: 40 })}</span>
-          <div class="source-names"><strong>${esc(displayDevice(sourceText(src, "name", src.name)))}</strong><span>${nameMode() === "musicians" && src.musician ? `${esc(sourceText(src, "name"))} · ` : ""}${esc(sourceText(src, "device", gearText(src.device)))}</span></div>
+          <div class="source-names"><strong>${esc(displayDevice(sourceText(src, "name", src.name)))}</strong><span>${nameMode() === "musicians" && src.musician ? `${esc(sourceText(src, "name"))} · ` : ""}${esc(device)}</span></div>
           <span class="status-pill status-${status}">${pill}</span>
         </div>
         <div class="tags">${tags}</div>
         ${rf ? rfLine(rig, d) : this.portButton(ref, "out")}
-        ${sourceGearHtml(d, src, rig)}
+        ${sourceGearHtml(d, src, rig, !!handheld)}
         ${isRecordingMac(d) ? this.logicHtml(mix) : ""}
         ${powerHtml(rig, d)}
         ${msgs.map((m) => `<p class="port-msg">${esc(connectionMessage(m))}</p>`).join("")}
@@ -334,6 +340,8 @@ export class PatchView {
   stageBoxCard(d, mix) {
     const rig = this.store.state.rig;
     const type = DEVICE_TYPES[d.type];
+    const label = this.getGigId?.() === "vocal-jazz" && d.label === "S32 · stage-side rack"
+      ? translate("ui.vocalJazzStageBox", d.label) : d.label || type.name;
     const links = throughLinks(rig).filter((l) => l.via === d.id);
     const live = mix.channels.filter((c) => c.input.connected && links.some((l) => l.from === c.input.fromPort));
     const plugged = listPorts(rig, d).filter((p) => cableAt(rig, p.ref) && !p.network);
@@ -359,7 +367,7 @@ export class PatchView {
       <div class="source-top">
         <span class="source-order">BOX</span>
         <span class="dev-ico">${icon("stage-box", { size: 40 })}</span>
-        <div class="source-names"><strong>${esc(d.label || type.name)}</strong><span>${esc(gearTypeText(d.type, "blurb", type.blurb))}</span></div>
+        <div class="source-names"><strong>${esc(label)}</strong><span>${esc(gearTypeText(d.type, "blurb", type.blurb))}</span></div>
         <span class="status-pill status-${status}">${esc(translate("ui.stageboxLanded", "{count} on the console", { count: live.length }))}</span>
       </div>
       <p class="source-note">${esc(note)}</p>
@@ -397,6 +405,7 @@ export class PatchView {
   }
 
   renderOutputs(mix) {
+    const vocalJazz = this.getGigId?.() === "vocal-jazz";
     const state = this.store.state;
     const rig = state.rig;
     const terms = this.getTerms();
@@ -536,7 +545,11 @@ export class PatchView {
           ${settings}
           ${knobsHtml(d)}
           ${powerHtml(rig, d)}
-          ${ep.messages.map((m) => `<p class="port-msg">${esc(connectionMessage(m))}</p>`).join("")}
+          ${ep.messages.map((m) => {
+            const amp = vocalJazz && /^The amp's Input ([AB]) has nothing plugged in\.$/.exec(m);
+            const text = amp ? translate("ui.vocalJazzAmpInputEmpty", m, { channel: amp[1] }) : connectionMessage(m);
+            return `<p class="port-msg">${esc(text)}</p>`;
+          }).join("")}
         </li>`);
       })
       .join("");
@@ -614,7 +627,7 @@ function receiverHtml(rig, d, sources) {
 
 // What a source's own gear lets you do: a wireless handheld's one button, or
 // the volume knob on the amp or instrument in front of its mic or DI.
-function sourceGearHtml(d, src, rig) {
+function sourceGearHtml(d, src, rig, vocalJazzHandheld) {
   if (d.type === "wireless-handheld" || d.type === "rf-handheld") {
     // A dead handheld (`dead`: it won't switch on, whatever its button does): set it aside.
     if (d.dead) {
@@ -629,10 +642,11 @@ function sourceGearHtml(d, src, rig) {
     const port = rxDev && Object.keys(rxDev.pairs).find((k) => rxDev.pairs[k] === d.sourceId);
     const ch = port && receiverChannel(rig, rxDev, Number(port.slice(3)));
     const rx = ch && !ch.on ? "Receiver: off (no power)" : ch && !(ch.a || ch.b) ? "Receiver: no antenna signal" : ["Receiver: signal ✓ · audio ✓", "Receiver: signal ✓ · audio —", "Receiver: no signal"][st];
+    const instruction = (key, english) => vocalJazzHandheld ? translate(`ui.${key}`, english) : english;
     return `<div class="dev-settings mic-button" data-device-card="${esc(d.id)}">
       <p class="mic-display"><strong>Mic: ${MIC_STATES[st]}</strong> · ${rx}</p>
-      <div class="mic-press"><button type="button" class="btn" data-device="${esc(d.id)}" data-mic-press="tap">Tap the button</button><button type="button" class="btn" data-device="${esc(d.id)}" data-mic-press="hold">Press and hold</button></div>
-      <p class="source-note">One button: a tap mutes or unmutes it, press and hold switches it on or off.</p>
+      <div class="mic-press"><button type="button" class="btn" data-device="${esc(d.id)}" data-mic-press="tap">${instruction("vocalJazzMicTap", "Tap the button")}</button><button type="button" class="btn" data-device="${esc(d.id)}" data-mic-press="hold">${instruction("vocalJazzMicHold", "Press and hold")}</button></div>
+      <p class="source-note">${instruction("vocalJazzMicUse", "One button: a tap mutes or unmutes it, press and hold switches it on or off.")}</p>
     </div>`;
   }
   const k = src.volumeKnob;
