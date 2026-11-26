@@ -395,8 +395,10 @@ export class PatchView {
     const cme = gig === "cme" || gig === "cme-advanced";
     const cmeSnake = cme && d.label === "Hosa sub snake · by the piano";
     const label = cmeSnake ? translate("ui.cmeSnakeLabel", d.label)
-      : (gig === "vocal-jazz" || gig === "vocal-jazz-recording" || gig === "mariachi" || cme) && d.label === "S32 · stage-side rack"
-        ? translate("ui.vocalJazzStageBox", d.label) : d.label || type.name;
+      : (gig === "vocal-jazz" || gig === "vocal-jazz-recording" || gig === "mariachi" || gig === "electroacoustic" || cme) && d.label === "S32 · stage-side rack"
+        ? translate("ui.vocalJazzStageBox", d.label)
+        : gig === "electroacoustic" && d.label === "SD8 · far side of the stage"
+          ? translate("ui.electroacousticStageBox", d.label) : d.label || type.name;
     const blurb = gearTypeText(d.type, "blurb", type.blurb);
     const links = throughLinks(rig).filter((l) => l.via === d.id);
     const live = mix.channels.filter((c) => c.input.connected && links.some((l) => l.from === c.input.fromPort));
@@ -461,6 +463,9 @@ export class PatchView {
   }
 
   renderOutputs(mix) {
+    const electroacoustic = this.getGigId?.() === "electroacoustic";
+    const outputLabel = (label, fallback = outputDeviceName(label)) =>
+      electroacoustic ? translate(`ui.electroacousticOutputNames.${label}`, fallback) : fallback;
     const cob = this.getGigId?.() === "cob";
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
     const mariachi = this.getGigId?.() === "mariachi";
@@ -497,7 +502,7 @@ export class PatchView {
         const target = cable ? getPort(rig, cable.to) : null;
         const feeds = target && !DEVICE_TYPES[target.device.type].endpoint && !DEVICE_TYPES[target.device.type].poweramp;
         const note = reached.length
-          ? `<p class="port-msg ok">${esc(translate("ui.soundFrom", "✓ Sound from: {devices}", { devices: reached.map((id) => outputDeviceName(rig.devices.find((d) => d.id === id).label)).join(", ") }))}</p>`
+          ? `<p class="port-msg ok">${esc(translate("ui.soundFrom", "✓ Sound from: {devices}", { devices: reached.map((id) => outputLabel(rig.devices.find((d) => d.id === id).label)).join(", ") }))}</p>`
           : feeds
             ? `<p class="port-msg ok">${translate("ui.feeds", "→ Feeds {port}", { port: portLabel(rig, cable.to) })}</p>`
             : `<p class="port-msg">${translate("ui.emptyOutput", "No working speaker on this output yet.")}</p>`;
@@ -546,7 +551,7 @@ export class PatchView {
     const ampHtml = amps
       .map(
         (d) => this.card(d.id, `<li class="device-card">
-        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 48 })}</span><div class="source-names"><strong>${esc(translate(`ui.outputDeviceNames.${d.label}`, d.label))}</strong><span class="amp-where">${esc(translate("ui.powerAmpSignalLevels", "Line level in → speaker level out"))}</span></div></div>
+        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 48 })}</span><div class="source-names"><strong>${esc(outputLabel(d.label, translate(`ui.outputDeviceNames.${d.label}`, d.label)))}</strong><span class="amp-where">${esc(translate("ui.powerAmpSignalLevels", "Line level in → speaker level out"))}</span></div></div>
         <div class="amp-sides">
           <div class="amp-side amp-in"><p class="amp-side-title">${icon("level-line", { size: 26 })}<span>${esc(translate("ui.powerAmpLineIn", "Line level IN"))} <small>${esc(translate("ui.powerAmpFromMixer", "from the mixer"))}</small></span></p>${listPorts(rig, d)
             .filter((p) => p.dir === "in")
@@ -573,7 +578,7 @@ export class PatchView {
         const blurb = gearTypeText(d.type, "blurb", type.blurb || "");
         const description = (cme || mariachi) && d.label === "IEM transmitters · rack drawer" ? translate("ui.cmeIemNote", blurb) : blurb;
         return this.card(d.id, `<li class="device-card" data-device-card="${esc(d.id)}">
-        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span><div class="source-names"><strong>${esc(d.label ? displayDevice(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${esc(description)}</span></div></div>
+        <div class="device-top"><span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span><div class="source-names"><strong>${esc(d.label ? outputLabel(d.label, displayDevice(d.label)) : gearTypeText(d.type, "name", type.name))}</strong><span>${esc(description)}</span></div></div>
         ${type.receiver ? receiverHtml(rig, d, this.manifest.SOURCES_BY_ID) : ""}
         ${type.console ? "" : knobsHtml(d)}
         ${powerHtml(rig, d)}
@@ -599,7 +604,7 @@ export class PatchView {
         return this.card(d.id, `<li class="device-card status-${status}" data-device-card="${esc(d.id)}">
           <div class="device-top">
             <span class="dev-ico">${icon(deviceIconName(d), { size: 44 })}</span>
-            <div class="source-names"><strong>${esc(d.label ? outputDeviceName(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${amp}${zoneName[d.zone] ? ` · ${zoneName[d.zone]}` : ""}</span></div>
+            <div class="source-names"><strong>${esc(d.label ? outputLabel(d.label) : gearTypeText(d.type, "name", type.name))}</strong><span>${amp}${zoneName[d.zone] ? ` · ${zoneName[d.zone]}` : ""}</span></div>
             <span class="status-pill status-${status}">${statusText}</span>
           </div>
           ${listPorts(rig, d)
@@ -632,8 +637,8 @@ export class PatchView {
       ${outList}
       ${reverbs.length ? `<h3 class="group-title">${esc(translate("ui.externalEffects", "Effects"))}</h3><ul class="device-list">${reverbHtml}</ul>` : ""}
       ${recorders.length ? `<h3 class="group-title">${translate("ui.recorderHeading", "Recorder")}</h3><ul class="device-list">${recHtml}</ul>` : ""}
-      ${amps.length ? `<h3 class="group-title">Amplifier</h3><ul class="device-list">${ampHtml}</ul>` : ""}
-      ${gear.length ? `<h3 class="group-title">Rack gear</h3><ul class="device-list">${gearHtml}</ul>` : ""}
+      ${amps.length ? `<h3 class="group-title">${electroacoustic ? translate("ui.electroacousticAmplifier", "Amplifier") : "Amplifier"}</h3><ul class="device-list">${ampHtml}</ul>` : ""}
+      ${gear.length ? `<h3 class="group-title">${electroacoustic ? translate("ui.electroacousticRackGear", "Rack gear") : "Rack gear"}</h3><ul class="device-list">${gearHtml}</ul>` : ""}
       <h3 class="group-title">${icon("role-destination", { size: 22 })}${speakers.every((d) => DEVICE_TYPES[d.type].camera) ? translate("ui.cameraLevelHeading", "Camera — does the level match?") : translate("ui.speakersWhereAmp", "Speakers — where is the amplifier?")}</h3>
       <ul class="device-list">${spkHtml}</ul>`;
   }

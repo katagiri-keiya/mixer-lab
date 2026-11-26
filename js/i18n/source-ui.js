@@ -1,5 +1,12 @@
 export const sourceEn = {};
 export const sourceJa = {
+  "ea-click": { name: "クリック（Mac mini、SSL 2+ OUT 3）", device: "Mac mini · SSL 2+ OUT 3のクリック", note: "FOHのMac miniから送る演奏者用のクリックです。SalmonではAUX INに入れていました。ラボのX32にはAUX IN 1/2しかないため、LOCAL 1に入れます。演奏者用のミックスだけに送ります。" },
+  "ea-pots": { name: "植木鉢用マイク（SD8 IN 1）", device: "SD8につないだ植木鉢用のダイナミックマイク", note: "Betweennessでは、植木鉢の上にマイクを1本立てます。ラボではFTWのパーカッション音源が代わりに鳴ります。" },
+  "ea-kat": { name: "MalletKATの機材一式（SD8 IN 2）", device: "MalletKAT · ノートPC · Scarlett 18i8のLINE出力 → SD8", note: "Betweennessでは、MalletKATのパッドでノートPC内のボーカルを細かく切り分けたサンプルを鳴らします。Scarlett 18i8のLINE出力をSD8に送ります。ラボではFTWのボーカル音源が代わりに鳴ります。" },
+  "ea-bcl": { name: "バスクラリネット用マイク（S32 IN 25）", device: "S32につないだバスクラリネット用のコンデンサーマイク", note: "Electrostatic WhaleとBlood Memoryでは、スタンドにコンデンサーマイクを1本立てます。ラボではFTWの木管楽器の音源が代わりに鳴ります。" },
+  "ea-piano": { name: "ピアノ用マイク（S32 IN 26）", device: "S32につないだグランドピアノ内部のコンデンサーマイク", note: "I PUNCH PIANOSでは、弦の上にスピーカーを2台置き、弦が響く音をこのマイクで拾います。ラボではFTWの弦楽器の音源が代わりに鳴ります。" },
+  "ea-guitar": { name: "ギターの機材一式（S32 IN 27）", device: "ギター → ペダル → ノートPCとオーディオインターフェース → DI → S32", note: "Running Springでは、ギター奏者の機材をDI経由でステージボックスに接続します。ラボではFTWのギター音源が代わりに鳴ります。" },
+  "ea-track": { name: "電子音源（Mac mini、SSL 2+ OUT 1/2）", device: "Mac mini · SSL 2+ OUT 1/2の電子音源", noteStereo: "バスクラリネットの曲で使う事前制作の電子音源です。FOHのMac miniからAUX IN 1/2へ送ります。ラボではFTWのシンセ音源が代わりに鳴ります。" },
   drums: { name: "ドラム", device: "ドラム用オーバーヘッド（コンデンサーマイク）", note: "1本のオーバーヘッド・コンデンサーマイクでドラム全体を収音します。" },
   bass: { name: "ベース", device: "ベースギター → DIボックス", note: "ベースは楽器レベルです。DIボックスでバランス・マイクレベルのXLR信号に変換します。" },
   guitars: { name: "リズムギター", device: "ギターアンプ（ダイナミックマイク）", variants: { Guitar: { name: "ギター" } } },

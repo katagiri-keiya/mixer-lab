@@ -392,6 +392,16 @@ export const uiJa = {
   missionMixerPickerTitle: "このミキサーの全シナリオ",
   missionTopicPickerTitle: "すべてのテーマとシナリオ",
   missionMixerSteps: "{mixer}のシナリオ",
+  electroacousticStageBox: "SD8 · ステージの反対側",
+  electroacousticAmplifier: "パワーアンプ",
+  electroacousticRackGear: "ラック機材",
+  electroacousticOutputNames: {
+    "Powered wedge · bass clarinetist": "パワード・ウェッジ（バスクラリネット奏者用）",
+    "Mains amp · mains rack": "メイン用パワーアンプ · メインラック",
+    "Mackie mini mixer · mains rack": "Mackie小型ミキサー · メインラック",
+    "Hall main L": "ホールのメインスピーカー（L）",
+    "Hall main R": "ホールのメインスピーカー（R）",
+  },
   outputDeviceNames: {
     "Power amp (2-channel)": "パワーアンプ（2チャンネル）",
     "Powered wedge · lead singer": "パワード・ウェッジ（リードボーカル用）",
