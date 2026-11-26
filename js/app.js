@@ -69,9 +69,21 @@ function localizeNavigation() {
     ["[data-open-drawer]", "navigationBrowse", "Every scenario, by topic or by mixer"],
     [".topbar .mode-switch", "navigationMode", "How to choose what to practise"],
     ["#mission-dock", "navigationCurrent", "Current scenario"],
+    ["#mission", "rigScenario", "Scenario"],
+    ["#listen-bar", "rigListening", "Listening"],
+    [".names-switch", "rigTrackNames", "Track names"],
+    ["[data-turn]", "rigTurnAria", "Turn around (shortcut: T)"],
   ]) {
     $(selector).setAttribute("aria-label", t(`ui.${key}`, english));
   }
+  for (const nav of document.querySelectorAll(".tabs, .view-switch")) {
+    nav.setAttribute("aria-label", t("ui.rigViewChoice", "Which side of the rig"));
+  }
+  $("[data-turn]").title = t("ui.rigTurnTitle", "Turn around (T)");
+  $("[data-turn] span").firstChild.nodeValue = t("ui.rigTurn", "Turn around") + " ";
+  $('.view-switch [data-view-btn="console"] small').textContent = t("ui.rigFront", "the front: faders & knobs");
+  $('.view-switch [data-view-btn="patch"] small').textContent = t("ui.rigBack", "the back: inputs, cables, outputs");
+  $("#patch-title-main small").textContent = t("ui.rigPatchHint", "Signal flows left to right: sources → console → amps and speakers.");
 }
 document.addEventListener("click", (event) => {
   if (event.target.closest("[data-language-toggle]")) setLanguage(language() === "ja" ? "en" : "ja");
@@ -113,7 +125,8 @@ let current = { def: SCENARIOS_BY_ID["free-play"], baseline: {}, session: { list
 let freeSong = manifest.SONGS[readPref("mixer-lab-song")] ? readPref("mixer-lab-song") : manifest.DEFAULT_SONG;
 let musicMode = "excerpt";
 let ready = false;
-let loadingText = "Press Start Audio to begin.";
+let loadingText = () => t("ui.audioStartPrompt", "Press Start Audio to begin.");
+let audioLoadErrors = [];
 let lastEval = "";
 let lastMix = null;
 let lastListen = null;
@@ -176,7 +189,7 @@ const missionView = new MissionView($("#mission"), {
   onReset: () => selectScenario(current.def.id),
   onClear: () => {
     for (const c of [...store.state.rig.cables]) store.disconnect(c.id);
-    toast("Everything unplugged. Rebuild it!", "");
+    toast(() => t("ui.freePlayUnplugged", "Everything unplugged. Rebuild it!"));
   },
   getMusic: () => {
     const m = musicFor(current.def);
@@ -204,7 +217,8 @@ const missionView = new MissionView($("#mission"), {
     freeSong = id;
     writePref("mixer-lab-song", id);
     selectScenario("free-play", { keepSurface: true }); // another band, the same console as you left it
-    toast(`${manifest.SONGS[id].title} (${manifest.SONGS[id].artist}) is on stage`, "");
+    const { title, artist } = manifest.SONGS[id];
+    toast(() => t("ui.freePlaySongChanged", `${title} (${artist}) is on stage`, { song: title, artist }));
   },
   onMusicMode: (m) => {
     if (m === musicMode) return;
@@ -239,6 +253,10 @@ const listenBar = new ListenBar($("#listen-bar"), {
 renderFlow($("#flow"), skin);
 
 function refreshLocalizedViews() {
+  const focused = document.activeElement;
+  const focusRoot = focused?.closest("#mission, #mission-dock, #listen-bar, #region-patch");
+  const focusSelector = "button, a, input, select, [tabindex]";
+  const focusIndex = focusRoot ? [...focusRoot.querySelectorAll(focusSelector)].indexOf(focused) : -1;
   const scroll = new Map([
     [$("#region-patch"), $("#region-patch")?.scrollTop || 0],
     [$("#stage"), $("#stage")?.scrollTop || 0],
@@ -258,9 +276,12 @@ function refreshLocalizedViews() {
   if (!$("#console-tip").hidden) localizeConsoleTip(skin.id);
   localizeDom(document);
   localizeNavigation();
+  if (!$("#load-errors").hidden) showLoadErrors(audioLoadErrors);
+  toast.refresh();
   if (current?.def) missionView.render(current.def, evaluateNow(), { skinId: skin.id, mode });
   if (lastMix) {
     mixerView.sync(lastMix);
+    syncConsoles(lastMix);
     patchView.render(lastMix);
     stageView.render(lastMix);
     renderFlow($("#flow"), skin);
@@ -268,7 +289,8 @@ function refreshLocalizedViews() {
   danteView.sync();
   if (recorderView.isOpen) recorderView.syncLanguage();
   listenBar.render();
-  if (lastMix) listenBar.update(lastMix, { playing: engine.playing, ready, loadingText, buffering });
+  if (lastMix) listenBar.update(lastMix, { playing: engine.playing, ready, loadingText: loadingText(), buffering });
+  if (focused && !focused.isConnected) focusRoot?.querySelectorAll(focusSelector)[focusIndex]?.focus({ preventScroll: true });
   for (const [el, top] of scroll) if (el) el.scrollTop = top;
 }
 onLanguageChange(refreshLocalizedViews);
@@ -297,7 +319,7 @@ function refresh() {
   lastMix = mix;
   mixerView.sync(mix);
   syncConsoles(mix);
-  listenBar.update(mix, { playing: engine.playing, ready, loadingText, buffering });
+  listenBar.update(mix, { playing: engine.playing, ready, loadingText: loadingText(), buffering });
   // The diagram's figure follows where you're listening.
   if (pending.patch || store.state.listen !== lastListen) {
     lastListen = store.state.listen;
@@ -320,7 +342,13 @@ function refresh() {
       lastEval = key;
       if (result.complete) progress.add(current.def.id);
       missionView.update(result);
-      if (result.complete && !wasComplete) toast(`${t("ui.solved", "Solved ✓")}: ${current.def.title}`, "ok");
+      if (result.complete && !wasComplete) {
+        const def = current.def;
+        toast(() => {
+          const status = t("ui.solved", "Solved ✓"), title = scenarioText(def, "title");
+          return t("ui.missionSolvedToast", `${status}: ${title}`, { status, title });
+        }, "ok");
+      }
     }
   }
   pending.any = false;
@@ -352,7 +380,7 @@ function undoLast() {
   undo.key = "";
   store.replace(prev);
   lastEval = "";
-  toast(t("ui.undo", "Undone"), "");
+  toast(() => t("ui.missionUndoToast", t("ui.undo", "Undone")));
 }
 function resetUndo() {
   undo.stack = [];
@@ -436,13 +464,13 @@ function loadSources() {
   setStandIns(Object.fromEntries(Object.entries(stage.voices).map(([src, v]) => [src, { musician: manifest.VOICES[v].speaker, musicianShort: manifest.VOICES[v].speakerShort }])));
   pending.patch = true;
   engine.setSources(ids, { mode, section: section ? section.id : "excerpt", stage }).catch((err) => {
-    loadingText = `Couldn't start audio: ${err.message}`;
+    loadingText = () => t("ui.audioStartFailed", `Couldn't start audio: ${err.message}`, { reason: err.message });
     pending.any = true;
   });
 }
 
 engine.on((evt) => {
-  if (evt.type === "loading") loadingText = evt.what ? `Loading ${evt.what}…` : `Loading stems ${evt.done}/${evt.total}…`;
+  if (evt.type === "loading") loadingText = () => audioLoadingStatus(evt);
   if (evt.type === "ready") {
     ready = true;
     showLoadErrors(evt.errors);
@@ -455,16 +483,28 @@ engine.on((evt) => {
   pending.any = true;
 });
 
+function audioLoadingStatus({ what, done, total }) {
+  if (!what) return t("ui.audioLoadingStemCount", `Loading stems ${done}/${total}…`, { done, total });
+  const fallback = `Loading ${what}…`;
+  if (what === "the first 20 seconds of the song") return t("ui.audioLoadingFirst", fallback);
+  const bars = /^bars (.+) of the song$/.exec(what);
+  if (bars) return t("ui.audioLoadingBars", fallback, { bars: bars[1] });
+  const section = /^the (.+) of the song$/.exec(what);
+  if (section) return t("ui.audioLoadingSection", fallback, { section: t(`ui.musicBarNames.${section[1]}`, section[1]) });
+  return fallback;
+}
+
 function showLoadErrors(errors) {
+  audioLoadErrors = errors;
   const box = $("#load-errors");
   if (!errors.length) {
     box.hidden = true;
     return;
   }
   box.hidden = false;
-  box.innerHTML = `<strong>Some audio didn't load.</strong> Those channels play a plain test tone instead (development fallback):
+  box.innerHTML = `<strong>${t("ui.audioLoadErrorTitle", "Some audio didn't load.")}</strong> ${t("ui.audioLoadErrorDetail", "Those channels play a plain test tone instead (development fallback):")}
     <ul>${errors.map(([, msg]) => `<li>${msg.replace(/</g, "&lt;")}</li>`).join("")}</ul>
-    <button type="button" class="chip" onclick="this.parentElement.hidden = true">Dismiss</button>`;
+    <button type="button" class="chip" onclick="this.parentElement.hidden = true">${t("ui.audioLoadDismiss", "Dismiss")}</button>`;
 }
 
 // ---------- consoles ----------
@@ -593,7 +633,8 @@ function setView(view, { focus = false } = {}) {
 // own (the hall's Mix5) adds its console next to it.
 const mix5View = new Mix5View($("#mix5"), { store });
 function syncConsoles(mix) {
-  const name = `Console: ${skin.name.replace(/^(Behringer|Mackie|Yamaha|Soundcraft|Zoom|Sound Devices)\s+/, "")}`;
+  const model = skinName(skin.id).replace(/^(Behringer|Mackie|Yamaha|Soundcraft|Zoom|Sound Devices)\s+/, "");
+  const name = t("ui.rigConsoleName", `Console: ${model}`, { name: model });
   for (const el of document.querySelectorAll("[data-console-name]")) if (el.textContent !== name) el.textContent = name;
   const has = store.state.rig.devices.some((d) => DEVICE_TYPES[d.type]?.console);
   for (const b of document.querySelectorAll('[data-view-btn="mix5"], [data-tab-btn="mix5"]')) b.hidden = !has;
@@ -649,7 +690,7 @@ const startScreen = new StartScreen(overlay, {
 function startAudio() {
   if (engine.started) return;
   engine.start(); // synchronous inside the gesture: creates/resumes the AudioContext
-  loadingText = "Loading stems…";
+  loadingText = () => t("ui.audioLoadingStems", "Loading stems…");
   loadSources();
   missionView.renderMusic();
 }
@@ -803,12 +844,16 @@ document.addEventListener("click", (e) => {
 
 function makeToast(el) {
   let t = 0;
-  return (msg, tone = "") => {
-    el.textContent = msg;
+  let render = null;
+  const show = (msg, tone = "") => {
+    render = typeof msg === "function" ? msg : () => msg;
+    el.textContent = render();
     el.className = `toast show ${tone}`;
     clearTimeout(t);
-    t = setTimeout(() => (el.className = "toast"), 3200);
+    t = setTimeout(() => { el.className = "toast"; render = null; }, 3200);
   };
+  show.refresh = () => { if (render) el.textContent = render(); };
+  return show;
 }
 
 function readPref(key) {

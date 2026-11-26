@@ -60,6 +60,8 @@ const gearText = (value) => Object.hasOwn(roomDisplayKeys, value)
   : localized("gear", value, "", value);
 const gearTypeText = (id, field, fallback) => localized("gearById", id, field, fallback);
 export const connectionMessage = (message) => {
+  if (message === "This speaker isn't fed from a mixer output.") return translate("ui.speakerNoMixerFeed", message);
+  if (message === "The amp isn't fed from a mixer output.") return translate("ui.ampNoMixerFeed", message);
   if (message === "Nothing connected.") return translate("ui.outputDisconnected", message);
   if (message === "Nothing connected. A passive speaker needs a power amp.") return translate("ui.passiveOutputDisconnected", message);
   if (message === "Speaker cable carrying line level: unshielded, may hum.") return translate("ui.speakerCableOnLine", message);

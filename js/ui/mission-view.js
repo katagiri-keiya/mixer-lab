@@ -23,6 +23,8 @@ import {
   conditionText,
   scenarioText,
   language,
+  LANGUAGES,
+  sourceText,
   t as translate,
 } from "../i18n/index.js";
 
@@ -47,6 +49,10 @@ const barsLoop = (section) => {
 };
 // "bars 5–12", or a section with no bar numbers by name ("the intro": rubato, before the beat).
 const barsText = (section) => (/\d/.test(section.bars) ? `bars ${section.bars}` : `the ${section.bars}`);
+const sectionLabel = (section) => LANGUAGES[language()].ui.musicSections?.[section.label] ?? section.label;
+const sectionBars = (section) => /\d/.test(section.bars)
+  ? translate("ui.musicBars", barsText(section), { bars: section.bars })
+  : translate("ui.musicSection", barsText(section), { bars: translate(`ui.musicBarNames.${section.bars}`, section.bars) });
 const clock = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 const titleOf = (s) => scenarioText(s, "title", s.title);
 const displayShortTitle = (s) => {
@@ -56,6 +62,13 @@ const displayShortTitle = (s) => {
   return translated !== english ? translated : titleOf(s);
 };
 const textOf = (s, field) => scenarioText(s, field, s[field]);
+function conditionDetail(detail) {
+  const counts = /^(\d+) of (\d+)$/.exec(detail);
+  if (counts) return translate("ui.missionCountDetail", detail, { count: counts[1], total: counts[2] });
+  const broken = /^(\d+) broken$/.exec(detail);
+  if (broken) return translate("ui.missionBrokenDetail", detail, { count: broken[1] });
+  return LANGUAGES[language()].ui.missionDetails?.[detail] ?? detail;
+}
 const progressText = (done, total) => done ? translate("ui.progressSolved", `${done} of ${total} solved`, { done, total }) : translate("ui.scenarioCount", count(total, "scenario"), { count: total });
 const solvedProgress = (done, total) => translate("ui.progressSolved", "{done} of {total} solved", { done, total });
 const compactProgress = (done, total) => translate("ui.compactProgress", "{done}/{total}", { done, total });
@@ -426,6 +439,8 @@ export class MissionView {
 
   renderFree(def, skinId) {
     const t = this.getTerms();
+    const prompt = LANGUAGES[language()].ui.freePlaySetups?.[def.prompt] ?? def.prompt;
+    const goalKey = def.goal.startsWith("No objective — try muting") ? "ui.freePlayGoalAnalog" : "ui.freePlayGoalMixer";
     this.root.innerHTML = `<div class="mission-inner mission-free">
       <div class="mission-head">
         <button type="button" class="mission-theme" data-act="drawer" title="${esc(translate("ui.missionTopicPickerTitle", "Every topic and scenario"))}"><span class="mt-label">${translate("ui.freePlay", "Free play")}</span><span class="mt-step">${translate("ui.freePlayNoGoals", "no goals")}</span></button>
@@ -434,12 +449,12 @@ export class MissionView {
             <select class="free-console" aria-label="${esc(translate("ui.freePlayConsole", "Free play console"))}">${FREE_CONSOLES.map((id) => `<option value="${id}" ${id === skinId ? "selected" : ""}>${esc(skinName(id))}</option>`).join("")}</select></label>
         </div>
         <div class="mission-nav">
-          <button type="button" class="chip" data-act="reset">Reset the band</button>
-          <button type="button" class="chip" data-act="clear">Unplug everything</button>
+          <button type="button" class="chip" data-act="reset">${translate("ui.freePlayReset", "Reset the band")}</button>
+          <button type="button" class="chip" data-act="clear">${translate("ui.freePlayUnplug", "Unplug everything")}</button>
         </div>
       </div>
-      <p class="mission-prompt">${esc(fillTerms(def.prompt, t))}</p>
-      <p class="mission-goal"><strong>Try:</strong> ${esc(fillTerms(def.goal, t))}</p>
+      <p class="mission-prompt">${esc(fillTerms(prompt, t))}</p>
+      <p class="mission-goal"><strong>${translate("ui.freePlayTry", "Try:")}</strong> ${esc(fillTerms(translate(goalKey, def.goal), t))}</p>
       <section class="music" aria-label="Band audio"></section>
     </div>`;
     this.renderMusic();
@@ -499,7 +514,7 @@ export class MissionView {
           <span class="check-box" aria-hidden="true">${i.met ? "✓" : i.kind === "keep" ? "!" : ""}</span>
           <span class="check-text">${i.kind === "keep" ? `<em>${translate("ui.keep", "Keep:")}</em> ` : ""}${esc(fillTerms(conditionText(this.def, i.id, i.label), t))}
             <span class="visually-hidden">${i.met ? translate("ui.conditionMet", "— done") : translate("ui.conditionUnmet", "— not yet")}</span>
-            ${i.detail && !i.met ? `<small>${esc(i.detail)}</small>` : ""}
+            ${i.detail && !i.met ? `<small>${esc(conditionDetail(i.detail))}</small>` : ""}
             ${i.kind === "keep" && !i.met ? `<span class="keep-fix">${translate("ui.keepBroken", "That broke something you had to keep.")} ${this.canUndo() ? `<button type="button" class="chip" data-act="undo">${translate("ui.undo", "Undo")}</button>` : ""}<button type="button" class="chip" data-act="reset">${translate("ui.startOver", "Start over")}</button></span>` : ""}
           </span>
         </li>`,
@@ -559,7 +574,7 @@ export class MissionView {
     if (!dock || !def) return;
     const t = this.getTerms();
     if (!def.conditions.length) {
-      dock.innerHTML = `<div class="dock-inner"><span class="dock-where">${translate("ui.freePlay", "Free play")}</span><strong class="dock-title">${esc(skinName(this.skinId))}</strong><span class="dock-next">No goals: try anything.</span>
+      dock.innerHTML = `<div class="dock-inner"><span class="dock-where">${translate("ui.freePlay", "Free play")}</span><strong class="dock-title">${esc(skinName(this.skinId))}</strong><span class="dock-next">${translate("ui.freePlayDockGuide", "No goals: try anything.")}</span>
         <button type="button" class="chip dock-btn" data-act="dock-top">${translate("ui.backToTop", "Back to the top ↑")}</button></div>`;
       return;
     }
@@ -600,11 +615,19 @@ export class MissionView {
     const box = this.root.querySelector(".music");
     if (!box) return;
     const { mode, song, songs, duration, sections, section, out, silent } = this.getMusic();
-    const resting = out.length ? ` Sitting out here: ${esc(listOf(out.map((s) => (nameMode() === "musicians" && s.musician ? s.musician : s.name.toLowerCase()))))}.` : "";
-    const songName = `“${esc(song.title)}” by ${esc(song.artist)}`;
+    const restingSources = out.map((s) => {
+      if (nameMode() === "musicians" && s.musician) return s.musician;
+      return language() === "ja" ? sourceText(s, "name", s.name.toLowerCase()) : s.name.toLowerCase();
+    });
+    const resting = out.length ? translate("ui.musicSittingOut", ` Sitting out here: ${listOf(restingSources)}.`, { sources: restingSources.join("、") }) : "";
+    const songName = translate("ui.musicSongArtist", `“${song.title}” by ${song.artist}`, { song: song.title, artist: song.artist });
     if (!this.def || this.def.id !== "free-play") {
       box.classList.add("music-now");
-      box.innerHTML = silent ? `<p class="music-note">♪ The band isn't playing in this one.</p>` : section ? `<p class="music-note">♪ ${songName}: the band loops ${esc(barsText(section))} of the song (${clock(section.start)}), ${esc(section.label.toLowerCase())}.${resting}</p>` : "";
+      const note = silent ? translate("ui.musicSilent", "♪ The band isn't playing in this one.") : section
+        ? translate("ui.musicScenarioLoop", `♪ ${songName}: the band loops ${barsText(section)} of the song (${clock(section.start)}), ${section.label.toLowerCase()}.${resting}`, {
+          song: songName, bars: sectionBars(section), start: clock(section.start), section: sectionLabel(section), resting,
+        }) : "";
+      box.innerHTML = note ? `<p class="music-note">${esc(note)}</p>` : "";
       this.seekEl = this.timeEl = null;
       return;
     }
@@ -617,13 +640,14 @@ export class MissionView {
         ${songs.map(songOpt).join("")}
       </div>
       <div class="music-modes" role="radiogroup" aria-label="Band audio"><span class="music-title">Band audio</span>
-        ${sections.map((s) => opt(s.id, s.label, barsText(s))).join("")}${opt("full", "Full song", len)}
+        ${sections.map((s) => opt(s.id, sectionLabel(s), sectionBars(s))).join("")}${opt("full", translate("ui.musicFull", "Full song"), len)}
       </div>
       <div class="music-pos" ${mode === "full" ? "" : "hidden"}>
-        <input type="range" class="seek" min="0" max="${Math.round(duration * 2) / 2}" step="0.5" value="0" aria-label="Song position" />
+        <input type="range" class="seek" min="0" max="${Math.round(duration * 2) / 2}" step="0.5" value="0" aria-label="${esc(translate("ui.musicPosition", "Song position"))}" />
         <span class="music-time" aria-hidden="true">0:00 / ${len}</span>
       </div>
-      <p class="music-note">${mode === "full" ? "The whole song streams about 20 seconds ahead. Drag to jump to any part." : `${barsLoop(section)} from ${clock(section.start)} into the song.${resting}`}</p>`;
+      <p class="music-note">${esc(mode === "full" ? translate("ui.musicFullHelp", "The whole song streams about 20 seconds ahead. Drag to jump to any part.")
+        : translate("ui.musicLoopAt", `${barsLoop(section)} from ${clock(section.start)} into the song.${resting}`, { time: clock(section.start), section: sectionBars(section), resting }))}</p>`;
     this.seekEl = box.querySelector(".seek");
     this.timeEl = box.querySelector(".music-time");
   }

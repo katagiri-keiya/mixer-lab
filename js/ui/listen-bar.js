@@ -295,7 +295,7 @@ export class ListenBar {
       this.lastMsg = msg;
     }
     this.transport.disabled = !ready;
-    this.transport.textContent = playing ? "■ Stop" : "▶ Play";
+    this.transport.textContent = playing ? translate("ui.transportStop", "■ Stop") : translate("ui.transportPlay", "▶ Play");
     this.transport.setAttribute("aria-label", playing ? translate("ui.ariaStopBand", "Stop the band") : translate("ui.ariaPlayBand", "Play the band"));
     this.transport.classList.toggle("btn-start", !playing);
     this.transport.classList.toggle("btn-stop", playing);

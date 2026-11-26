@@ -246,7 +246,7 @@ export class StageView {
     const nets = L.net.map((n) => this.netPortSvg(n));
 
     // Never shrink below ~70 %: a wide rig scrolls sideways in its frame instead.
-    this.canvas.innerHTML = `<svg class="stage-svg" viewBox="0 0 ${L.width} ${L.height}" width="${L.width}" height="${L.height}" style="min-width:${Math.round(L.width * 0.7)}px" role="group" aria-label="The rig: stage, console rear panel, amps and speakers">
+    this.canvas.innerHTML = `<svg class="stage-svg" viewBox="0 0 ${L.width} ${L.height}" width="${L.width}" height="${L.height}" style="min-width:${Math.round(L.width * 0.7)}px" role="group" aria-label="${esc(translate("ui.stageRigAria", "The rig: stage, console rear panel, amps and speakers"))}">
       <defs>
         <linearGradient id="sg-metal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3044"/><stop offset="1" stop-color="#1b2030"/></linearGradient>
         <linearGradient id="sg-panel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#262b3a"/><stop offset=".5" stop-color="#1e2230"/><stop offset="1" stop-color="#191c28"/></linearGradient>
@@ -277,9 +277,9 @@ export class StageView {
     const kinds = ["snake", ...(aes50 ? ["s32", "sd8"] : [])];
     const present = rig.devices.filter((d) => DEVICE_TYPES[d.type].stagebox);
     const btn = (gear, text) => `<button type="button" class="chip" data-gear="${gear}">${esc(text)}</button>`;
-    this.gear.innerHTML = `<span class="stage-gear-label">Free play gear:</span>${
-      present.length ? present.map((d) => btn(`remove:${d.id}`, `Remove the ${DEVICE_TYPES[d.type].name}`)).join("") : kinds.map((k) => btn(`add:${k}`, `+ ${DEVICE_TYPES[k].name}`)).join("")
-    }<span class="stage-gear-note">${present.length ? "" : aes50 ? "A snake, or a digital stage box on AES50." : "Run the band through a 16 × 4 snake."}</span>`;
+    this.gear.innerHTML = `<span class="stage-gear-label">${translate("ui.freeGear", "Free play gear:")}</span>${
+      present.length ? present.map((d) => btn(`remove:${d.id}`, translate("ui.freeGearRemove", "Remove the {name}", { name: DEVICE_TYPES[d.type].name }))).join("") : kinds.map((k) => btn(`add:${k}`, `+ ${DEVICE_TYPES[k].name}`)).join("")
+    }<span class="stage-gear-note">${present.length ? "" : aes50 ? translate("ui.freeGearAes50", "A snake, or a digital stage box on AES50.") : translate("ui.freeGearSnake", "Run the band through a 16 × 4 snake.")}</span>`;
   }
 
   // Your ears: the figure stands beside what you're hearing (a speaker, or the
