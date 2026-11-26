@@ -3,6 +3,124 @@ export const uiEn = {
 };
 
 export const uiJa = {
+  "gigs": {
+    "vocal-jazz": {
+      "title": "SalmonのVocal Jazz",
+      "question": "リハーサルまでにVocal Jazzの音響を準備できる？",
+      "concept": "11人の歌い手がワイヤレスハンドマイクを使います。FOHのX32は入力をLOCALに設定し、S32をAES50で接続します。NX3000から1本のspeakON経路でパッシブウェッジ3台を駆動し、AUX IN 1/2のノートPCからテスト音源を流します。チェックリストのメインとモニターの点検から始め、最後にウェッジを一から配線します。途中の故障はチェックリストやリセット手順に沿っています。アンサンブルの2曲が交互に流れます。"
+    },
+    "vocal-jazz-recording": {
+      "title": "Vocal Jazz v2：録音セッション",
+      "question": "Vocal Jazzの録音を最初から最後まで進められる？",
+      "concept": "Salmonの設備でVocal Jazzを録音します。ワイヤレスラックにハンドマイク11本、NX3000にウェッジを接続し、客席スピーカーはオフ。録音用のORTFルームペアとグランドピアノ用の小型コンデンサーマイク2本はS32へ接続します。X32のX-DANTEカードが全入力をDanteでFOHのMac mini上のLogicへ送ります。実際のセッションと同様、S32のノイズに対処して4本をX32のLOCAL 29〜32へ移し、無音になった1本を復旧しながらLogicの入力も移します。元の録音にピアノトラックがないため、ピアノマイクは代替音源を使います。"
+    },
+    "cme": {
+      "title": "SalmonのCME：基本編",
+      "question": "ロックバンドの公演を準備から撤収まで進められる？",
+      "concept": "Commercial Music EnsembleをSalmonのX32で担当します。ワイヤレスはLOCAL 17〜21、バンドはHosaサブスネーク経由でS32のIN 25〜32へ。MIX 9〜11のウェッジ3台は、KM750で駆動するパッシブ2台と、VOLUMEとIEC電源を持つパワード1台です。CMEのメインスピーカーはマイクより客席側のスタンドに設置し、会場のスピーカーはメインラックのMix5で絞ります。正常な状態から、スピーカー、音楽テスト、マイク、バンド、レベル、ケーブル故障、撤収まで順に進めます。"
+    },
+    "cme-advanced": {
+      "title": "SalmonのCME：応用編",
+      "question": "トラブルが起きてもCMEの公演を続けられる？",
+      "concept": "翌週も同じ機材を使います。ワイヤレスラックのアンテナ経路とVOL、聞こえないゲスト用ヘッドセット、電源の入らないステージボックスとギターアンプ、ウェッジの誤配線と出力違い、サブスネークの入力不足、ピアノ奏者のリードボーカル、撤収時に抜かれたMix5のケーブル、最後に4件同時の故障に対処します。"
+    },
+    "mariachi": {
+      "title": "SalmonのMariachi",
+      "question": "6台のウェッジに個別のミックスを送り、使い続けられる？",
+      "concept": "Mariachi PanterasのリハーサルをSalmonのX32で再現します。受信機1・2にワイヤレス9本を接続します。内訳はバイオリン4本、ギタロン、ビウエラ、ギター、前列のボーカル2本です。トランペットにマイクは不要です。ウェッジ6台はMIX 3〜8を使用し、パワード1台、KM750からspeakONで駆動する3台、Crownから1/4インチで駆動する2台に分かれます。客席には会場のスピーカーを使います。会場出力の復旧、ウェッジの配線と試聴、端子・ミックス違い、マイク故障、各ウェッジの歌声、ゲイン、フィードバック、ケーブル故障を扱います。"
+    },
+    "cob": {
+      "title": "IrvineのCOB",
+      "question": "ブースからミュージカルの音響を担当できる？",
+      "concept": "ワイヤレスヘッドセット11本と予備、伴奏用ノートPCをブースのX32 Compactへ接続します。SD8が出力をフロアへ運び、STAGEPAS 600BTがメインを駆動します。B207MP3のウェッジはTHRUで連結します。故障はCOBの公演チェックリストに沿っています。"
+    },
+    "electroacoustic": {
+      "title": "Salmonのエレクトロアコースティック公演",
+      "question": "ステージボックスが故障しても9曲の演奏を続けられる？",
+      "concept": "ノートPC、クリック、ピアノ内のマイク、MalletKATをSalmonのX32へ送ります。AES50 AにS32を接続し、ステージ反対側のSD8をS32のAES50 Bから連結します。SD8の入力はAES50 A33〜40に届きます。2026年10月18日の公演とチェックリストの故障を扱い、最後は本番中にSD8の出力が停止した事例を再現します。"
+    },
+    "karaoke": {
+      venue: "BH 109（合唱室）",
+      "title": "BH 109のカラオケ",
+      "question": "部屋の常設PAでカラオケを運営できる？",
+      "concept": "歌い手のSM58、カラオケ用ノートPC、Zoom V3をBehringer Xenyx QX1204USBに接続します。内蔵のディレイとリバーブはRETURN 2へ戻します。合唱室ではAUX AUDIO INPUTからAshlyのラインミキサーのCh.1に入り、Crownアンプが壁のパッシブスピーカーを駆動します。故障はBH 109のカラオケ公演チェックリストに沿っています。"
+    },
+    "film": {
+      venue: "セッション会場",
+      "title": "映画録音ワークショップ",
+      "question": "演奏者にはクリックだけを返しながら、各マイクを別トラックに録音できる？",
+      "concept": "Zoom LiveTrak L-20を使うマルチトラック録音です。各入力をMUTEとフェーダーの前で取り出し、USBでLogicへ録音します。L-20のミックスは演奏者のヘッドホン用で、MASTERに設定したMONITOR OUT AからAKG HP12Uへ、17/18のLogicのクリックだけを送り、マイクの音は送りません。フェーダーはモーター駆動ではなく、緑のLEDが現在のレベルを示します。故障はL-20のマルチトラック録音チェックリストに沿っています。"
+    }
+  },
+  "mixerDescriptions": {
+    "generic": "フェーダー、MUTE、AUX 2系統で、メーカー固有の配置に依存せず基本を学べます。Assignment 1の10問で使われたミキサーです。",
+    "b207mp3": "スピーカー、アンプ、ミキサーを1台に搭載。入力ごとのLEVEL、共通EQ、ミックスを次へ送るTHRUがあります。",
+    "mix8": "4チャンネル、フェーダー後のAUX 1系統。MUTEやSOLOのない構成で基本を学びます。",
+    "stagepas400bt": "アンプ内蔵。GAINの代わりにMIC/LINEを切り替え、MONITOR OUTにミックス全体を送ります。",
+    "mg102": "各マイク入力にGAIN、HPF、PEAK。AUXつまみ1つをウェッジかリバーブに使います。",
+    "vlz1202": "PRE切替付きAUX 2系統、エフェクトのセンドとリターン、MUTE/ALT 3-4、SOLO、C-R SOURCEの選択があります。",
+    "x1204usb": "フェーダー、コンプレッサー、内蔵エフェクト、チャンネルごとのPRE、PFLとSOLO IN PLACE、専用フェーダー付きALTバスを備えます。",
+    "cr1604": "16チャンネル、SHIFT付きAUX 6系統、4サブグループ、モノ出力、4リターン、録音機へ送るDIRECT OUTを備えます。",
+    "gdig": "デジタル卓の入門機。フェーダーのレイヤー、SELで選ぶ操作ストリップ、ONにして使うEQとコンプレッサー、ウェッジ用のSENDS ON FADERSを学べます。",
+    "ui16": "ページとSELで操作するデジタル卓。フェーダーで送りを調整でき、各チャンネルにパラメトリックEQとコンプレッサーがあります。",
+    "l20": "各つまみが表面にあるデジタル卓。FADER MODEで6つのモニターミックスを調整し、EFX RTNはミックスごとに設定できます。MONITOR OUTは各ミックスとMASTERを切り替えられます。",
+    "x32c": "大型デジタル卓と同じ構成。フェーダーのレイヤー、選択チャンネル用ストリップ、SENDS ON FADERS、DCA、ミュートグループ、各チャンネルのMAIN LRを備えます。",
+    "yam01v96": "上部にアナログのGAINとPADを配置。LAYER、AUX用のFADER MODE、ONキーがあり、画面でルーティング、EQ、ダイナミクス、AUXを設定します。",
+    "dm2000": "01V96の上位機。24本のフェーダーに個別のエンコーダーがあり、SELECTED CHANNELに操作が集約されています。キーとBUS TO STで8バスを送り、OUTPUT PATCH、フェーダーグループとミュートグループを使えます。",
+    "x32": "32入力、サブグループにも使える16ミックスバス、MONO/CENTER、6マトリクス、FXラック、出力ROUTING、SCENESを備えます。",
+    "cl3": "ツアー向けの卓。Rioにマイクを接続し、DanteのOUTPUT PATCHを使用。画面のOVERVIEWとSELECTED CHANNEL VIEW、Centralogic、ONキー、DCA 16系統、マトリクス8系統、シーンを備えます。",
+    "sd442": "カメラへ送るフィールドミキサー。出力レベル、基準トーン、リミッター、モノラル試聴を扱います。",
+    "f8n": "入力を個別トラックに録音しながら、トラックつまみでカメラ用ミックスを作ります。TRIMとフェーダーの違い、MAIN OUTのルーティング、出力レベルを学べます。"
+  },
+  "genericDigitalMixer": "汎用デジタルミキサー",
+  "gigHeading": "Chapmanの公演",
+  "gigHeadingDescription": "MUS 248の公演を再現した会場・機材・チェックリスト",
+  "gigChecklist": "公演チェックリスト ↗",
+  "gigComingLater": "{title}：準備中です。",
+  "legacyAssignmentIntro": "Assignment 1（全10問）がまだの場合は、",
+  "legacyAssignmentLink": "旧版で完了してください",
+  "legacyAssignmentProgress": "。旧版の進捗もそのまま残っています。",
+  "progressTransferEnd": "を選び、移行先で読み込んでください。",
+  progressBackupHelp: "別のブラウザや端末へ移る場合は、ここで進捗ファイルを保存し、移行先で読み込んでください。移行先の進捗に追加され、既存データは消去されません。",
+  progressBackupSaved: "{file}を保存しました。移行先のブラウザで「Canvasへエクスポート」を開き、「進捗ファイルを読み込む」を選びます。",
+  progressBackupUnreadable: "ファイルを読み込めませんでした。もう一度選んでください。",
+  progressBackupSaveFailed: "このブラウザに保存できませんでした。プライベートブラウジングや空き容量を確認してください。進捗は変更されていません。",
+  progressBackupLoaded: "進捗を読み込みました。新たに{added}問が達成済みになりました。各シナリオの作業時間と操作数は、それぞれ大きい方の値を保持しました。",
+  progressBackupLoadedNone: "進捗を読み込みました。達成済みのシナリオは増えていません。各シナリオの作業時間と操作数は、それぞれ大きい方の値を保持しました。",
+  "resumeFreePlay": "{mixer}のフリープレイ",
+  "navigationScenarios": "シナリオ一覧",
+  "navigationGroup": "シナリオの分類",
+  "navigationClose": "閉じる",
+  "navigationMixerFree": "{mixer}でフリープレイ",
+  "navigationBrowse": "テーマ別・ミキサー別・公演別のシナリオ一覧",
+  "navigationMode": "練習内容の選び方",
+  "navigationCurrent": "現在のシナリオ",
+  "navigationSkip": "練習画面へ移動",
+  "navigationTopicShort": "テーマ",
+  "navigationMixerShort": "機種",
+  "navigationFreeShort": "自由練習",
+  freePlayConsole: "フリープレイのミキサー",
+  freePlayNoGoals: "目標なし",
+  progressBackupFromPreview: "このファイルはMixer Labのテスト版（{preview}）で保存されました。ここで進捗に追加しますか？",
+  progressBackupFromLive: "このファイルはMixer Labの正式版で保存されました。テスト版の進捗に追加しますか？",
+  progressBackupErrors: {
+    "That file is empty.": "ファイルが空です。",
+    "That file is too big to be a Mixer Lab progress file.": "Mixer Labの進捗ファイルとしては容量が大きすぎます。",
+    "That isn't a Mixer Lab progress file. Choose the .json file you saved with “Save progress file”.": "Mixer Labの進捗ファイルではありません。「進捗ファイルを保存」で作成した.jsonファイルを選んでください。",
+    "That progress file is damaged (no version).": "進捗ファイルが壊れています。バージョン情報がありません。",
+    "That progress file is from a newer Mixer Lab. Reload this page and try again.": "新しいバージョンで保存された進捗ファイルです。ページを再読み込みしてからお試しください。",
+    "That progress file is damaged: its scenario list is missing.": "進捗ファイルが壊れています。シナリオ一覧がありません。",
+    "That progress file is damaged: some of its entries can't be read.": "進捗ファイルが壊れています。一部の項目を読み込めません。",
+  },
+  "tipHeadline": "{mixer}を初めて使う方へ",
+  "tipDismiss": "わかりました",
+  "tipConsole": {
+    "cl3": "CL3では、フェーダー付近にないつまみがほとんどです。チャンネルのSELを押すと、タッチ画面左のつまみやSELECTED CHANNELページで、そのチャンネルのゲイン、EQ、コンプレッサー、+48Vを設定できます。バンクキーでフェーダーに表示するチャンネルを切り替えます。",
+    "dm2000": "DM2000では、チャンネルのSELを押すと、SELECTED CHANNELでそのチャンネルのEQ、コンプレッサー、センド、ルーティングを調整できます。DISPLAY ACCESSで各ページを開きます。GAIN、PAD、+48Vは上段のINPUTにあり、LAYERでフェーダーに表示するチャンネルを切り替えます。",
+    "x32": "X32では、チャンネルのSELを押すと左の操作ストリップでゲイン、ローカット、EQ、コンプレッサー、+48Vを調整でき、メイン画面に特性カーブが表示されます。レイヤーキーでフェーダーに表示するチャンネルを切り替えます。",
+    "x32c": "X32 Compactでは、チャンネルのSELを押すと左の操作ストリップでゲイン、ローカット、EQ、コンプレッサー、+48Vを調整できます。レイヤーキーでフェーダーに表示するチャンネルを切り替えます。",
+    "gdig": "デジタル卓では、フェーダー付近にないつまみがほとんどです。チャンネルのSELを押し、左の操作ストリップでゲイン、ローカット、EQ、コンプレッサー、48Vを調整します。レイヤーボタンでフェーダーに表示するチャンネルを切り替えます。"
+  },
   topicSystemTitle: "スピーカーとアンプ",
   topicSystemQuestion: "アンプはどこにある？",
   topicSystemConcept: "ミキサーが出力するのはLINEレベルの信号です。パワーアンプは、その信号をスピーカーを駆動できるレベルまで増幅します。パワードスピーカーにはアンプが内蔵されていますが、パッシブスピーカーには外部アンプが必要です。ケーブルが接続できても、音が出るとは限りません。",

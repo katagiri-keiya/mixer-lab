@@ -27,9 +27,11 @@ import {
 } from "../i18n/index.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const skinName = (id, fallback = "") => {
+export const skinName = (id, fallback = "") => {
   const name = SKINS[id]?.name || fallback;
-  return id === "analog" ? translate("ui.genericAnalogMixer", name) : name;
+  if (id === "analog") return translate("ui.genericAnalogMixer", name);
+  if (id === "gdig") return translate("ui.genericDigitalMixer", name);
+  return name;
 };
 const consoleName = (s) => skinName(skinOf(consoleOf(s)));
 // The console a scenario id runs on (null for Free play or an unknown id).
@@ -58,10 +60,13 @@ const progressText = (done, total) => done ? translate("ui.progressSolved", `${d
 const solvedProgress = (done, total) => translate("ui.progressSolved", "{done} of {total} solved", { done, total });
 const compactProgress = (done, total) => translate("ui.compactProgress", "{done}/{total}", { done, total });
 const solvedStatus = () => translate("ui.solvedStatus", "solved");
-const topicText = (theme, field) => theme ? translate(
-  `ui.topic${theme.id[0].toUpperCase()}${theme.id.slice(1)}${field[0].toUpperCase()}${field.slice(1)}`,
-  theme[field],
-) : "";
+const topicText = (theme, field) => {
+  if (!theme) return "";
+  const key = GIGS.includes(theme)
+    ? `ui.gigs.${theme.id}.${field}`
+    : `ui.topic${theme.id[0].toUpperCase()}${theme.id.slice(1)}${field[0].toUpperCase()}${field.slice(1)}`;
+  return translate(key, theme[field]);
+};
 
 // The consoles Free play offers, in learning order (the generic one first).
 export const FREE_CONSOLES = ["analog", "b207mp3", "mix8", "stagepas400bt", "mg102", "vlz1202", "x1204usb", "mackie1604", "gdig", "ui16", "l20", "x32c", "yam01v96", "dm2000", "x32", "cl3", "sd442", "f8n"].filter((id) => SKINS[id]);
@@ -77,13 +82,14 @@ function mixerProgress(m, progress) {
 }
 
 const mixerName = (m) => skinName(m.skin, m.model);
+const mixerDescription = (m) => translate(`ui.mixerDescriptions.${m.model}`, m.why);
 
 // A mixer card: its name, what makes it different (to get curious about), progress.
 function mixerCard(m, p, attrs) {
   const { done, total } = mixerProgress(m, p);
   return `<button type="button" class="theme-card mixer-card" ${attrs}>
     <strong>${esc(mixerName(m))}</strong>
-    <span class="theme-q">${esc(m.why)}</span>
+    <span class="theme-q">${esc(mixerDescription(m))}</span>
     <span class="theme-meter" aria-label="${esc(solvedProgress(done, total))}"><i style="width:${(100 * done) / total}%"></i></span>
     <small>${progressText(done, total)}</small>
   </button>`;
@@ -94,15 +100,15 @@ function mixerCard(m, p, attrs) {
 function gigCard(g, p, attrs) {
   if (g.soon) {
     return `<div class="theme-card gig-card gig-soon" aria-disabled="true">
-      <strong>${esc(g.title)}</strong>
-      <span class="theme-q">${esc(g.concept)}</span>
+      <strong>${esc(topicText(g, "title"))}</strong>
+      <span class="theme-q">${esc(topicText(g, "concept"))}</span>
       <small>${translate("ui.comingLater", "Coming later")}</small>
     </div>`;
   }
   const { done, total } = themeProgress(g, p);
   return `<button type="button" class="theme-card gig-card" ${attrs}>
-    <strong>${esc(g.question)}</strong>
-    <span class="theme-q">${esc(g.title)} · ${esc(consoleName(themeScenarios(g)[0]))}</span>
+    <strong>${esc(topicText(g, "question"))}</strong>
+    <span class="theme-q">${esc(topicText(g, "title"))} · ${esc(consoleName(themeScenarios(g)[0]))}</span>
     <span class="theme-meter" aria-label="${esc(solvedProgress(done, total))}"><i style="width:${(100 * done) / total}%"></i></span>
     <small>${progressText(done, total)}</small>
   </button>`;
@@ -136,15 +142,16 @@ export class StartScreen {
     };
     this.root.innerHTML = `<div class="start-inner">
       <p class="start-overlay-kicker">Mixer Lab · MUS 248</p>
+      <button type="button" class="chip" data-language-toggle aria-label="${language() === "ja" ? "Switch to English" : "日本語に切り替え"}" title="${language() === "ja" ? "Switch to English" : "日本語に切り替え"}">${language() === "ja" ? "日本語" : "English"}</button>
       <h1>${translate("ui.startQuestion", "What do you want to work on?")}</h1>
       <p class="start-overlay-sub">${translate("ui.startDescription", "Pick a question you want answered, or the mixer in front of you. Headphones recommended; on iPhone turn off Silent Mode.")}</p>
       <div class="start-top">
         ${resume ? `<button type="button" class="start-big start-resume" data-choose="resume"><strong>▶ ${translate("ui.continue", "Continue")}</strong><span>${esc(resume)}</span></button>` : ""}
         <button type="button" class="start-big start-free" data-choose="free"><strong>${translate("ui.freePlay", "Free play")}</strong><span>${translate("ui.freePlayDescription", "No goals: any console, the whole band, break things")}</span></button>
       </div>
-      <p class="start-legacy">Late with Assignment 1 (the ten scenarios)? <a href="${legacyHref()}">Finish it in the original version</a>: your saved progress is there too.</p>
-      <p class="start-legacy">${translate("ui.progressSaveNotice", "Your progress is saved in this browser only.")} ${translate("ui.switchingDevices", "Switching devices?")} <button type="button" class="linkish" data-open-canvas>${translate("ui.saveProgressFile", "Save a progress file")}</button> to load on the other one.</p>
-      <h2 class="start-h">${translate("ui.chapmanGigs", "Chapman gigs")} <small>${translate("ui.chapmanGigsDescription", "a real MUS 248 gig: its room, its rig, its checklist")}</small></h2>
+      <p class="start-legacy">${translate("ui.legacyAssignmentIntro", "Late with Assignment 1 (the ten scenarios)? ")}<a href="${legacyHref()}">${translate("ui.legacyAssignmentLink", "Finish it in the original version")}</a>${translate("ui.legacyAssignmentProgress", ": your saved progress is there too.")}</p>
+      <p class="start-legacy">${translate("ui.progressSaveNotice", "Your progress is saved in this browser only.")} ${translate("ui.switchingDevices", "Switching devices?")} <button type="button" class="linkish" data-open-canvas>${translate("ui.saveProgressFile", "Save a progress file")}</button>${translate("ui.progressTransferEnd", " to load on the other one.")}</p>
+      <h2 class="start-h">${translate("ui.gigHeading", "Chapman gigs")} <small>${translate("ui.gigHeadingDescription", "a real MUS 248 gig: its room, its rig, its checklist")}</small></h2>
       <div class="theme-grid gig-grid">${GIGS.map((g) => gigCard(g, p, `data-choose="theme:${g.id}"`)).join("")}</div>
       <h2 class="start-h">${translate("ui.byTopic", "By topic")} <small>${translate("ui.byTopicDescription", "one question, answered on mixer after mixer")}</small></h2>
       <div class="theme-grid">${THEMES.map(card).join("")}</div>
@@ -191,7 +198,19 @@ export class ThemeDrawer {
 
   // `tab`: "topic", "mixer" or "gig" (by default the one last shown). A gig's
   // scenario opens on the gigs, whichever tab was asked for.
-  open(currentId, tab = this.tab) {
+  syncLanguage() {
+    if (!this.el.open) return;
+    const controls = "button, a, summary";
+    const focused = [...this.el.querySelectorAll(controls)].indexOf(document.activeElement);
+    const expanded = [...this.el.querySelectorAll("details")].map((el) => el.open);
+    const scrollTop = this.el.scrollTop;
+    this.open(this.currentId, this.tab, { keepPosition: true });
+    this.el.querySelectorAll("details").forEach((el, i) => { el.open = expanded[i]; });
+    this.el.querySelectorAll(controls)[focused]?.focus({ preventScroll: true });
+    this.el.scrollTop = scrollTop;
+  }
+
+  open(currentId, tab = this.tab, { keepPosition = false } = {}) {
     const p = this.progress;
     if (tab === "topic" && gigOf(currentId)) tab = "gig";
     this.currentId = currentId;
@@ -216,26 +235,27 @@ export class ThemeDrawer {
     const mixer = (m) => {
       const { done, total } = mixerProgress(m, p);
       return `<details class="drawer-theme" ${m.model === currentConsole ? "open" : ""}>
-        <summary><span class="dt-name"><strong>${esc(mixerName(m))}</strong><small>${esc(m.why)}</small></span><span class="dt-prog">${esc(compactProgress(done, total))}</span></summary>
+        <summary><span class="dt-name"><strong>${esc(mixerName(m))}</strong><small>${esc(mixerDescription(m))}</small></span><span class="dt-prog">${esc(compactProgress(done, total))}</span></summary>
         <ol class="drawer-list">${mixerScenarios(m.model).map((s, k) => row(s, k + 1, { console: false })).join("")}</ol>
-        <p class="dt-concept"><button type="button" class="linkish" data-free="${esc(m.skin)}">Free play on the ${esc(mixerName(m))}</button></p>
+        <p class="dt-concept"><button type="button" class="linkish" data-free="${esc(m.skin)}">${esc(translate("ui.navigationMixerFree", "Free play on the {mixer}", { mixer: mixerName(m) }))}</button></p>
       </details>`;
     };
     const gig = (g) => {
-      if (g.soon) return `<div class="drawer-theme gig-soon"><p class="dt-concept"><strong>${esc(g.title)}</strong>: coming later.</p></div>`;
+      if (g.soon) return `<div class="drawer-theme gig-soon"><p class="dt-concept">${esc(translate("ui.gigComingLater", "{title}: coming later.", { title: topicText(g, "title") }))}</p></div>`;
       const { done, total } = themeProgress(g, p);
       return `<details class="drawer-theme" ${g.id === current ? "open" : ""}>
-        <summary><span class="dt-name"><strong>${esc(g.title)}</strong><small>${esc(g.venue)} · ${esc(consoleName(themeScenarios(g)[0]))}</small></span><span class="dt-prog">${esc(compactProgress(done, total))}</span></summary>
-        <p class="dt-concept">${esc(g.concept)}${g.checklist ? ` <a href="${esc(g.checklist)}" target="_blank" rel="noopener">The gig checklist ↗</a>` : ""}</p>
+        <summary><span class="dt-name"><strong>${esc(topicText(g, "title"))}</strong><small>${esc(topicText(g, "venue"))} · ${esc(consoleName(themeScenarios(g)[0]))}</small></span><span class="dt-prog">${esc(compactProgress(done, total))}</span></summary>
+        <p class="dt-concept">${esc(topicText(g, "concept"))}${g.checklist ? ` <a href="${esc(g.checklist)}" target="_blank" rel="noopener">${translate("ui.gigChecklist", "The gig checklist ↗")}</a>` : ""}</p>
         <ol class="drawer-list">${themeScenarios(g).map((s, k) => row(s, k + 1)).join("")}</ol>
       </details>`;
     };
     const tabBtn = (id, label) => `<button type="button" role="tab" class="mode-btn ${tab === id ? "active" : ""}" aria-selected="${tab === id}" data-drawer-tab="${id}">${label}</button>`;
     this.el.innerHTML = `<div class="drawer-inner">
-      <header class="drawer-head"><h2 id="drawer-title">Scenarios</h2>
-        <button type="button" class="chip" data-home>Start screen</button>
-        <button type="button" class="patch-x" data-close-drawer aria-label="Close">✕</button>
-        <div class="mode-switch drawer-tabs" role="tablist" aria-label="Group the scenarios">${tabBtn("topic", "By topic")}${tabBtn("mixer", "By mixer")}${tabBtn("gig", "Chapman gigs")}</div></header>
+      <header class="drawer-head"><h2 id="drawer-title">${translate("ui.navigationScenarios", "Scenarios")}</h2>
+        <button type="button" class="chip" data-home>${translate("ui.startScreen", "Start screen")}</button>
+        <button type="button" class="chip" data-language-toggle aria-label="${language() === "ja" ? "Switch to English" : "日本語に切り替え"}" title="${language() === "ja" ? "Switch to English" : "日本語に切り替え"}">${language() === "ja" ? "日本語" : "English"}</button>
+        <button type="button" class="patch-x" data-close-drawer aria-label="${esc(translate("ui.navigationClose", "Close"))}">✕</button>
+        <div class="mode-switch drawer-tabs" role="tablist" aria-label="${esc(translate("ui.navigationGroup", "Group the scenarios"))}">${tabBtn("topic", translate("ui.byTopic", "By topic"))}${tabBtn("mixer", translate("ui.byMixer", "By mixer"))}${tabBtn("gig", translate("ui.gigHeading", "Chapman gigs"))}</div></header>
       ${
         tab === "mixer"
           ? MIXERS.map(mixer).join("")
@@ -245,6 +265,7 @@ export class ThemeDrawer {
       }
     </div>`;
     if (!this.el.open) this.el.showModal();
+    if (keepPosition) return;
     // Scroll the drawer itself to the current scenario. (scrollIntoView would
     // also scroll the page behind the dialog, which made it jump.)
     const cur = this.el.querySelector(".drawer-row.current");
@@ -408,10 +429,10 @@ export class MissionView {
     const t = this.getTerms();
     this.root.innerHTML = `<div class="mission-inner mission-free">
       <div class="mission-head">
-        <button type="button" class="mission-theme" data-act="drawer" title="Every topic and scenario"><span class="mt-label">Free play</span><span class="mt-step">no goals</span></button>
+        <button type="button" class="mission-theme" data-act="drawer" title="${esc(translate("ui.missionTopicPickerTitle", "Every topic and scenario"))}"><span class="mt-label">${translate("ui.freePlay", "Free play")}</span><span class="mt-step">${translate("ui.freePlayNoGoals", "no goals")}</span></button>
         <div class="mission-title">
           <label class="free-pick"><span>Console</span>
-            <select class="free-console" aria-label="Free play console">${FREE_CONSOLES.map((id) => `<option value="${id}" ${id === skinId ? "selected" : ""}>${esc(SKINS[id].name)}</option>`).join("")}</select></label>
+            <select class="free-console" aria-label="${esc(translate("ui.freePlayConsole", "Free play console"))}">${FREE_CONSOLES.map((id) => `<option value="${id}" ${id === skinId ? "selected" : ""}>${esc(skinName(id))}</option>`).join("")}</select></label>
         </div>
         <div class="mission-nav">
           <button type="button" class="chip" data-act="reset">Reset the band</button>
@@ -539,8 +560,8 @@ export class MissionView {
     if (!dock || !def) return;
     const t = this.getTerms();
     if (!def.conditions.length) {
-      dock.innerHTML = `<div class="dock-inner"><span class="dock-where">Free play</span><strong class="dock-title">${esc(SKINS[this.skinId]?.name || "")}</strong><span class="dock-next">No goals: try anything.</span>
-        <button type="button" class="chip dock-btn" data-act="dock-top">Back to the top ↑</button></div>`;
+      dock.innerHTML = `<div class="dock-inner"><span class="dock-where">${translate("ui.freePlay", "Free play")}</span><strong class="dock-title">${esc(skinName(this.skinId))}</strong><span class="dock-next">No goals: try anything.</span>
+        <button type="button" class="chip dock-btn" data-act="dock-top">${translate("ui.backToTop", "Back to the top ↑")}</button></div>`;
       return;
     }
     const seq = this.sequence(def);

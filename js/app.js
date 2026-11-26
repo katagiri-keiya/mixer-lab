@@ -18,7 +18,7 @@ import { ListenBar } from "./ui/listen-bar.js";
 import { MixerView } from "./ui/mixer-view.js";
 import { PatchView } from "./ui/patch-view.js";
 import { Mix5View } from "./ui/mix5-view.js";
-import { MissionView, StartScreen, ThemeDrawer } from "./ui/mission-view.js";
+import { MissionView, StartScreen, ThemeDrawer, skinName } from "./ui/mission-view.js";
 import { SCENARIO_BY_ID, THEMES_BY_ID, consoleOf, gigOf, mixerEntry, nextInTheme, nextOnMixer, skinOf } from "./themes.js";
 import { BugLog } from "./bugs.js";
 import { BugView } from "./ui/bug-view.js";
@@ -48,12 +48,30 @@ const M = {
 };
 const $ = (sel) => document.querySelector(sel);
 
-const languageButton = () => $("[data-language-toggle]");
+const languageButton = () => $(".topbar [data-language-toggle]");
 function renderLanguageButton() {
   const button = languageButton();
   if (!button) return;
-  button.textContent = t("ui.language", language() === "ja" ? "English" : "日本語");
-  button.setAttribute("aria-label", language() === "ja" ? "Switch to English" : "日本語に切り替え");
+  button.textContent = language() === "ja" ? "日本語" : "English";
+  button.title = language() === "ja" ? "Switch to English" : "日本語に切り替え";
+  button.setAttribute("aria-label", button.title);
+}
+function localizeNavigation() {
+  for (const [selector, key, english] of [
+    [".skip-link", "navigationSkip", "Skip to the lab"],
+    ['[data-mode="topic"] .mode-short', "navigationTopicShort", "Topic"],
+    ['[data-mode="mixer"] .mode-short', "navigationMixerShort", "Mixer"],
+    ['[data-mode="free"] .mode-short', "navigationFreeShort", "Free"],
+  ]) {
+    $(selector).textContent = t(`ui.${key}`, english);
+  }
+  for (const [selector, key, english] of [
+    ["[data-open-drawer]", "navigationBrowse", "Every scenario, by topic or by mixer"],
+    [".topbar .mode-switch", "navigationMode", "How to choose what to practise"],
+    ["#mission-dock", "navigationCurrent", "Current scenario"],
+  ]) {
+    $(selector).setAttribute("aria-label", t(`ui.${key}`, english));
+  }
 }
 document.addEventListener("click", (event) => {
   if (event.target.closest("[data-language-toggle]")) setLanguage(language() === "ja" ? "en" : "ja");
@@ -61,6 +79,7 @@ document.addEventListener("click", (event) => {
 renderLanguageButton();
 document.documentElement.lang = language();
 localizeDom(document);
+localizeNavigation();
 let localizationQueued = false;
 const localizationObserver = new MutationObserver((records) => {
   if (localizationQueued) return;
@@ -227,8 +246,18 @@ function refreshLocalizedViews() {
   ]);
   document.documentElement.lang = language();
   renderLanguageButton();
-  if (!overlay.classList.contains("dismissed")) showStart();
+  if (!overlay.classList.contains("dismissed")) {
+    const scrollTop = overlay.scrollTop;
+    const options = "button, a";
+    const focused = [...overlay.querySelectorAll(options)].indexOf(document.activeElement);
+    showStart();
+    overlay.querySelectorAll(options)[focused]?.focus({ preventScroll: true });
+    overlay.scrollTop = scrollTop;
+  }
+  drawer.syncLanguage();
+  if (!$("#console-tip").hidden) localizeConsoleTip(skin.id);
   localizeDom(document);
+  localizeNavigation();
   if (current?.def) missionView.render(current.def, evaluateNow(), { skinId: skin.id, mode });
   if (lastMix) {
     mixerView.sync(lastMix);
@@ -490,18 +519,25 @@ function showConsoleTip(id) {
   }
   box.innerHTML = "";
   const text = document.createElement("p");
-  text.innerHTML = `<strong>New to the ${SKINS[id].name}?</strong> `;
-  text.append(tip);
+  text.append(document.createElement("strong"), document.createTextNode(""));
   const ok = document.createElement("button");
   ok.type = "button";
   ok.className = "chip";
-  ok.textContent = "Got it";
   ok.addEventListener("click", () => {
     writePref(key, "1");
     box.hidden = true;
   });
   box.append(text, ok);
+  localizeConsoleTip(id);
   box.hidden = false;
+}
+
+function localizeConsoleTip(id) {
+  const box = $("#console-tip");
+  const heading = box.querySelector("strong");
+  heading.textContent = t("ui.tipHeadline", "New to the {mixer}?", { mixer: skinName(id) });
+  heading.nextSibling.nodeValue = ` ${t(`ui.tipConsole.${id}`, CONSOLE_TIPS[id])}`;
+  box.querySelector("button").textContent = t("ui.tipDismiss", "Got it");
 }
 
 document.querySelector(".mode-switch").addEventListener("click", (e) => {
@@ -620,7 +656,9 @@ function showStart() {
   const target = resumeHash || (last ? `#/${last}` : "");
   resumeHash = target;
   const s = SCENARIO_BY_ID[target.replace(/^#\/(by-mixer\/)?/, "")];
-  const label = target.startsWith("#/free-play") ? `Free play on the ${SKINS[target.split("/")[2]]?.name || "mixer"}` : s ? `${scenarioText(s, "title")} · ${SKINS[skinOf(consoleOf(s))].name}` : "";
+  const label = target.startsWith("#/free-play")
+    ? t("ui.resumeFreePlay", "Free play on the {mixer}", { mixer: skinName(target.split("/")[2], t("ui.missionMixerLabel", "mixer")) })
+    : s ? `${scenarioText(s, "title")} · ${skinName(skinOf(consoleOf(s)))}` : "";
   startScreen.render({ resume: label });
   overlay.classList.remove("dismissed");
   overlay.removeAttribute("aria-hidden");

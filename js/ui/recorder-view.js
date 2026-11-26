@@ -204,8 +204,9 @@ export class RecorderView {
     find(".patch-kicker").textContent = translate("ui.recorderField", "Field recorder");
     find('[data-rec="close"]').setAttribute("aria-label", translate("ui.recorderClose", "Close"));
     const languageButton = find('[data-rec="language"]');
-    languageButton.textContent = language() === "ja" ? "English" : "日本語";
-    languageButton.setAttribute("aria-label", language() === "ja" ? "Switch to English" : "日本語に切り替え");
+    languageButton.textContent = language() === "ja" ? "日本語" : "English";
+    languageButton.title = language() === "ja" ? "Switch to English" : "日本語に切り替え";
+    languageButton.setAttribute("aria-label", languageButton.title);
     find(".rec-tracks").setAttribute("aria-label", translate("ui.recorderTracks", "Tracks"));
     find(".group-title").textContent = translate("ui.recorderTakes", "Takes on the card");
     find(".rec-note").textContent = translate("ui.recorderWavHelp", "Listen with RECORDER on the Listen bar. Downloads are 16-bit poly WAVs (one file, one channel per armed track); the real F8 writes {bits}-bit / {rate} kHz.", { bits: F8.bitDepth, rate: F8.sampleRate / 1000 });

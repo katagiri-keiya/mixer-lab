@@ -212,8 +212,9 @@ function createSheet() {
     languageBtn.hidden = !canSwitchLanguage;
     if (canSwitchLanguage) {
       const japanese = language() === "ja";
-      languageBtn.textContent = japanese ? "English" : "日本語";
-      languageBtn.setAttribute("aria-label", japanese ? "Switch to English" : "日本語に切り替え");
+      languageBtn.textContent = japanese ? "日本語" : "English";
+      languageBtn.title = japanese ? "Switch to English" : "日本語に切り替え";
+      languageBtn.setAttribute("aria-label", languageBtn.title);
     }
   };
   languageBtn.addEventListener("click", () => setLanguage(language() === "ja" ? "en" : "ja"));

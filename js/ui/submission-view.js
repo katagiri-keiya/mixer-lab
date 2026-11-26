@@ -11,6 +11,7 @@ import { PREVIEW, legacyHref } from "../deploy-context.js";
 import { backupFile, backupFileName, parseBackup } from "../progress.js";
 import { contextLine } from "../bugs.js";
 import { count, duration } from "../submission.js";
+import { LANGUAGES, language, t as translate } from "../i18n/index.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -28,7 +29,7 @@ export class SubmissionView {
       <section class="canvas-total" aria-label="Your time so far"></section>
       <section class="canvas-backup" aria-labelledby="canvas-backup-title">
         <p class="ca-head"><strong id="canvas-backup-title">Your progress is saved in this browser only.</strong></p>
-        <p class="canvas-note">Switching browser, computer or lab machine? Save a progress file here and load it there: it's added to what that browser already has, and nothing is erased.</p>
+        <p class="canvas-note" data-i18n="ui.progressBackupHelp">Switching browser, computer or lab machine? Save a progress file here and load it there: it's added to what that browser already has, and nothing is erased.</p>
         <div class="canvas-backup-btns">
           <button type="button" class="chip" data-backup-save>Save progress file</button>
           <button type="button" class="chip" data-backup-load>Load progress file</button>
@@ -134,7 +135,7 @@ export class SubmissionView {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    this.backupStatus(`Saved ${a.download}. On the other browser, open Export to Canvas and choose “Load progress file”.`, "ok");
+    this.backupStatus(translate("ui.progressBackupSaved", "Saved {file}. On the other browser, open Export to Canvas and choose “Load progress file”.", { file: a.download }), "ok");
   }
 
   async loadBackup(input) {
@@ -145,17 +146,19 @@ export class SubmissionView {
     try {
       text = await file.text();
     } catch (e) {
-      return this.backupStatus("Couldn't read that file. Try choosing it again.", "bad");
+      return this.backupStatus(translate("ui.progressBackupUnreadable", "Couldn't read that file. Try choosing it again."), "bad");
     }
     const r = parseBackup(text);
-    if (!r.ok) return this.backupStatus(r.reason, "bad");
+    if (!r.ok) return this.backupStatus(LANGUAGES[language()].ui.progressBackupErrors?.[r.reason] ?? r.reason, "bad");
     // A preview's progress is kept apart from the live site's; mixing them is the student's call.
-    if (r.preview !== PREVIEW && !confirm(r.preview ? `This file was saved on a test version of Mixer Lab (${r.preview}), not the real one. Add it to your progress here anyway?` : "This file was saved on the real Mixer Lab, and this is a test version. Add it here anyway?")) return;
+    if (r.preview !== PREVIEW && !confirm(r.preview
+      ? translate("ui.progressBackupFromPreview", "This file was saved on a test version of Mixer Lab ({preview}), not the real one. Add it to your progress here anyway?", { preview: r.preview })
+      : translate("ui.progressBackupFromLive", "This file was saved on the real Mixer Lab, and this is a test version. Add it here anyway?"))) return;
     const added = this.progress.merge(r.progress);
-    if (added === null) return this.backupStatus("Couldn't save in this browser (private browsing or storage full?). Nothing was changed.", "bad");
+    if (added === null) return this.backupStatus(translate("ui.progressBackupSaveFailed", "Couldn't save in this browser (private browsing or storage full?). Nothing was changed."), "bad");
     this.renderLists();
     this.renderPreview();
-    this.backupStatus(`Loaded. ${added ? `${added} more scenario${added === 1 ? "" : "s"} solved here now` : "No new scenarios solved"}; for each scenario the larger time and action count is kept.`, "ok");
+    this.backupStatus(translate(added ? "ui.progressBackupLoaded" : "ui.progressBackupLoadedNone", `Loaded. ${added ? `${added} more scenario${added === 1 ? "" : "s"} solved here now` : "No new scenarios solved"}; for each scenario the larger time and action count is kept.`, { added }), "ok");
   }
 
   async copy() {

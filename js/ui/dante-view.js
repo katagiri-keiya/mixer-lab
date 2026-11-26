@@ -119,7 +119,7 @@ export class DanteView {
       <div class="dialog-body dante-body">
         <div class="dante-head">
           <h2 id="dante-title">Laptop · ${title}</h2>
-          <button type="button" class="chip" data-dante="language">${language() === "ja" ? "English" : "日本語"}</button>
+          <button type="button" class="chip" data-dante="language" aria-label="${language() === "ja" ? "Switch to English" : "日本語に切り替え"}" title="${language() === "ja" ? "Switch to English" : "日本語に切り替え"}">${language() === "ja" ? "日本語" : "English"}</button>
           <button type="button" class="btn" data-dante="close" aria-label="${esc(translate("ui.danteClose", "Close"))}">${esc(translate("ui.danteClose", "Close"))}</button>
         </div>
         <div class="dante-tabs" role="tablist">${tab("daw", translate("ui.danteDawTab", "DAW (track outputs)"))}${tab("dvs", "Dante Virtual Soundcard")}${tab("controller", translate("ui.danteControllerTab", "Dante Controller (routing)"))}</div>
