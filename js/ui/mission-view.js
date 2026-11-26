@@ -15,7 +15,7 @@
 
 import { fillTerms, shortTitle } from "../scenarios.js";
 import { SKINS } from "../mixer-models.js";
-import { CANVAS_SCENARIOS, GIGS, MIXERS, THEMES, consoleOf, gigOf, mixerScenarios, skinOf, themeOf, themeScenarios } from "../themes.js";
+import { CANVAS_SCENARIOS, GIGS, MIXERS, THEMES, consoleOf, mixerScenarios, skinOf, themeOf, themeScenarios } from "../themes.js";
 import { legacyHref } from "../deploy-context.js";
 import { count } from "../submission.js";
 import { nameMode } from "../names.js";
@@ -196,8 +196,6 @@ export class ThemeDrawer {
     });
   }
 
-  // `tab`: "topic", "mixer" or "gig" (by default the one last shown). A gig's
-  // scenario opens on the gigs, whichever tab was asked for.
   syncLanguage() {
     if (!this.el.open) return;
     const controls = "button, a, summary";
@@ -210,9 +208,10 @@ export class ThemeDrawer {
     this.el.scrollTop = scrollTop;
   }
 
+  // The caller chooses the initial tab; clicks and language refreshes use
+  // the selected tab ID directly, regardless of the current scenario.
   open(currentId, tab = this.tab, { keepPosition = false } = {}) {
     const p = this.progress;
-    if (tab === "topic" && gigOf(currentId)) tab = "gig";
     this.currentId = currentId;
     this.tab = tab;
     const by = tab === "mixer" ? "mixer" : "topic";

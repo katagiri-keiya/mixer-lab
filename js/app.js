@@ -215,7 +215,7 @@ const missionView = new MissionView($("#mission"), {
   onSeek: (t) => engine.seek(t),
   onFreeConsole: (id) => openFree(id),
   onMixer: (model) => openMixer(model),
-  onOpenDrawer: (tab) => drawer.open(current.def.id, tab),
+  onOpenDrawer: openScenarioDrawer,
   onUndo: () => undoLast(),
   canUndo: () => undo.stack.length > 0,
 });
@@ -547,7 +547,11 @@ document.querySelector(".mode-switch").addEventListener("click", (e) => {
   else if (b.dataset.mode === "mixer") openMixer();
   else openScenario(readPref("mixer-lab-last") || nextInTheme(THEMES_BY_ID.system, (id) => progress.has(id)).id);
 });
-document.querySelector("[data-open-drawer]").addEventListener("click", () => drawer.open(current.def.id, mode === "mixer" ? "mixer" : "topic"));
+function openScenarioDrawer(tab = mode === "mixer" ? "mixer" : "topic") {
+  const id = current.def.id;
+  drawer.open(id, tab === "topic" && gigOf(id) ? "gig" : tab);
+}
+document.querySelector("[data-open-drawer]").addEventListener("click", () => openScenarioDrawer());
 
 // ---------- track names: instruments or the musicians on the recording ----------
 
