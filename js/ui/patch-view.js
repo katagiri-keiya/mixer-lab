@@ -214,6 +214,7 @@ export class PatchView {
   }
 
   renderSources(mix) {
+    const cob = this.getGigId?.() === "cob";
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
     const mariachi = this.getGigId?.() === "mariachi";
     const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
@@ -226,6 +227,8 @@ export class PatchView {
     const pairs = rig.devices.filter((d) => d.type === "stereo-mic-pair" || d.type === "piano-mic-pair");
     const cards = sources.map((d) => {
       const src = SOURCES_BY_ID[d.sourceId];
+      const headset = cob && /^Wireless headset ([A-K]) \(receiver channel \1\)$/.exec(src.device);
+      const cobTrack = cob && src.id === "track";
       const handheld = vocalJazz && /^Wireless handheld (\d+), ([\w/]+) \(receiver channel \1\)$/.exec(src.device);
       const recordingHandheld = recordingGig && /^Wireless handheld (\d+), ([\w/]+) → receiver (\d+) CH (\d+) \(CH \1\)$/.exec(src.device);
       const deviceText = handheld
@@ -265,17 +268,22 @@ export class PatchView {
             ? sourceText(src, (model === "x32c" || model === "gdig") && src.id === "synths" ? "noteAux12" : "noteStereo", "A laptop's 3.5 mm headphone jack is a stereo line output: a stereo line channel or the tape input takes it, with a breakout, RCA (Y) or 3.5 mm cable to suit the jacks.")
             : sourceText(src, "note", d.sourceId === "preshow" ? gearText("preshowNote") : src.note);
       const mariachiMic = mariachi && /^Wireless handheld, (\w+) windscreen, (\w+) ring → receiver (\d+) CH (\d+) \(CH (\d+)\)$/.exec(src.device);
-      const device = cme ? translate(`ui.cmeInputText.${src.id}.device`, deviceText)
+      const device = headset ? translate("ui.cobHeadset", deviceText, { letter: headset[1] })
+        : cobTrack ? translate("ui.cobTrackDevice", deviceText)
+        : cme ? translate(`ui.cmeInputText.${src.id}.device`, deviceText)
         : mariachiMic ? translate("ui.mariachiHandheld", deviceText, {
           windscreen: mariachiMic[1], ring: mariachiMic[2], receiver: mariachiMic[3], channel: mariachiMic[4], input: mariachiMic[5],
         }) : deviceText;
-      const note = cme ? translate(`ui.cmeInputText.${src.id}.note`, sourceNote ?? "")
+      const note = cobTrack ? translate("ui.cobTrackNote", sourceNote ?? "")
+        : cme ? translate(`ui.cmeInputText.${src.id}.note`, sourceNote ?? "")
         : mariachi ? translate(`ui.mariachiInputNotes.${src.id}`, sourceNote ?? "") : sourceNote;
+      const name = sourceText(src, "name", src.name);
+      const title = cobTrack ? translate("ui.cobTrackName", name) : name;
       return this.card(d.id, `<li class="source-card status-${status}">
         <div class="source-top">
           <span class="source-order" aria-label="Input list number">${esc(listNo)}</span>
           <span class="dev-ico">${icon(deviceIconName(d), { size: 40 })}</span>
-          <div class="source-names"><strong>${esc(displayDevice(sourceText(src, "name", src.name)))}</strong><span>${nameMode() === "musicians" && src.musician ? `${esc(sourceText(src, "name"))} · ` : ""}${esc(device)}</span></div>
+          <div class="source-names"><strong>${esc(displayDevice(title))}</strong><span>${nameMode() === "musicians" && src.musician ? `${esc(title)} · ` : ""}${esc(device)}</span></div>
           <span class="status-pill status-${status}">${pill}</span>
         </div>
         <div class="tags">${tags}</div>
@@ -453,6 +461,7 @@ export class PatchView {
   }
 
   renderOutputs(mix) {
+    const cob = this.getGigId?.() === "cob";
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
     const mariachi = this.getGigId?.() === "mariachi";
     const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
@@ -600,7 +609,7 @@ export class PatchView {
           ${knobsHtml(d)}
           ${powerHtml(rig, d)}
           ${ep.messages.map((m) => {
-            const amp = vocalJazz && /^The amp's Input ([AB]) has nothing plugged in\.$/.exec(m);
+            const amp = (vocalJazz || cob) && /^The amp's Input ([AB]) has nothing plugged in\.$/.exec(m);
             const volumeDrop = (recordingGig || cme || mariachi) && /^Turned down: (.+): (4\/5 LEVEL|VOLUME|CH 2 level) is all the way down, so this speaker plays nothing\. The chain to it works\.$/.exec(m);
             const lowered = volumeDrop && (mariachi || volumeDrop[2] !== "CH 2 level") ? volumeDrop : null;
             const off = recordingGig && /^No power: (NX3000 · monitor amp rack) is switched off\.$/.exec(m);
@@ -610,7 +619,7 @@ export class PatchView {
               : off ? translate("ui.vjrAmpOff", m, { device: off[1] })
               : quiet ? translate("ui.cmeOutputQuiet", m, { device: quiet[1], control: quiet[2], value: quiet[3], db: quiet[4] })
               : (cme || mariachi) && m === "Everything on the way is plugged into the right jack, but nothing gets through. What's left is a cable itself."
-                ? translate("ui.cmeCableFault", m) : advanced ? cmeAdvancedWarning(m) : connectionMessage(m);
+                ? translate("ui.cmeCableFault", m) : advanced || cob ? cmeAdvancedWarning(m) : connectionMessage(m);
             return `<p class="port-msg">${esc(text)}</p>`;
           }).join("")}
         </li>`);

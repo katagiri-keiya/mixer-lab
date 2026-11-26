@@ -3,6 +3,10 @@ export const uiEn = {
 };
 
 export const uiJa = {
+  cobHeadset: "ワイヤレスヘッドセット{letter}（受信機のチャンネル{letter}）",
+  cobTrackName: "伴奏音源",
+  cobTrackDevice: "伴奏用ノートPC",
+  cobTrackNote: "ノートPCの3.5 mmヘッドホン出力を、1/4インチ2本に分かれるケーブルでAUX IN 1（左）と2（右）へ送ります。代役のアンサンブルは伴奏なしで録音されたため、ラボでは伴奏は無音で、メーターも振れません。ルーティングとセンドは引き続き判定の対象です。",
   mariachiHandheld: "ワイヤレスハンドマイク、ウインドスクリーン：{windscreen}、リング：{ring} → 受信機{receiver}のCH {channel}（CH {input}）",
   mariachiInputNotes: {
     "mar-gtrn": "Mariachiの低音を担う楽器です。スタンドに固定したハンドマイクを背面に向けます。",
