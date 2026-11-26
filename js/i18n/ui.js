@@ -4,6 +4,12 @@ export const uiEn = {
 
 export const uiJa = {
   cmeInputText: {
+    "cme-guest": {
+      device: "ワイヤレスボディパックのヘッドセットマイク → PTU-7000 CH 1 → LOCAL 25",
+      note: "ゲスト歌手はヘッドセットを使います。ボディパックはラベリア・ヘッドセット用のPTU-7000とペアリング済みで、AF OUT 1はLOCAL 25につながっています。",
+    },
+    "cme-kick": { device: "キック内のダイナミックマイク → S32 IN 9" },
+    "cme-snare": { device: "スネアを拾うSM57 → S32 IN 10" },
     "cme-red": {
       "device": "ワイヤレスハンドマイク、赤リング、ウインドスクリーンなし → 受信機3のCH 1（CH 17）",
       "note": "グランドピアノ上のブームに取り付けたハンドマイクです。ピアノ奏者がリードを歌う曲に使います。"
@@ -56,6 +62,10 @@ export const uiJa = {
   cmeRackOff: "{receiver}のスイッチはオンですが、{power}がオフのため給電されていません。",
   cmeOutputQuiet: "音量が小さすぎます。{device}の{control}は{value}（{db} dB）です。",
   cmeCableFault: "すべて正しい端子につながっていますが、音が通りません。ケーブル自体に問題がないか確認してください。",
+  cmeAdvancedIecUnplugged: "電源なし：{device}のIEC電源ケーブルがつながっていません。",
+  cmeAdvancedSourceUnplugged: "無音：{device}の電源ケーブルがつながっていません。",
+  cmeAdvancedSpeakerCable: "1/4インチTSの楽器用ケーブルにスピーカーレベルが流れています。細いシールド線は過熱することがあるため、スピーカーケーブルを使ってください。",
+  cmeAdvancedPoweredSpeaker: "アンプのスピーカーレベル出力をパワードスピーカーのLINE入力に入れると、破損するおそれがあります。パワードスピーカーはアンプ内蔵です。",
   vocalJazzHandheld: "ワイヤレスハンドマイク{number}、{color}（受信機の{number}ch）",
   vocalJazzStageBox: "S32 · ステージ脇のラック",
   vocalJazzMicTap: "短く押す",

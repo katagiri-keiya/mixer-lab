@@ -81,6 +81,21 @@ export const connectionMessage = (message) => {
 const displayDevice = (value) => value === "Laptop · Preshow Music" ? gearText("preshowLaptop") : value === "Powered speaker · house left" ? `${gearText("poweredSpeaker")} · ${gearText("houseLeft")}` : value === "Powered speaker · house right" ? `${gearText("poweredSpeaker")} · ${gearText("houseRight")}` : gearText(value);
 const inputText = (key, fallback, vars = {}) => translate(`ui.${key}`, fallback, vars);
 const outputDeviceName = (label) => translate(`ui.outputDeviceNames.${label}`, displayDevice(label));
+function cmeAdvancedWarning(message) {
+  const iec = /^No power: (.+): its IEC power cable isn't plugged in\.$/.exec(message);
+  if (iec) return translate("ui.cmeAdvancedIecUnplugged", message, { device: iec[1] });
+  const source = /^No sound: (.+): its power cable isn't plugged in\.$/.exec(message);
+  if (source) return translate("ui.cmeAdvancedSourceUnplugged", message, { device: source[1] });
+  const off = /^No power: (.+) is switched off\.$/.exec(message);
+  if (off) return translate("ui.vjrAmpOff", message, { device: off[1] });
+  if (message === '1/4" TS instrument cable carrying speaker level: use real speaker cable (thin shielded wire can overheat).') {
+    return translate("ui.cmeAdvancedSpeakerCable", message);
+  }
+  if (message === "Speaker level into a powered speaker's line input can damage it. A powered speaker already has its amp.") {
+    return translate("ui.cmeAdvancedPoweredSpeaker", message);
+  }
+  return connectionMessage(message);
+}
 const connectionReason = (reason) => {
   if (!reason) return reason;
   if (reason === "That would loop a device back into itself.") return translate("ui.selfLoop", reason);
@@ -201,7 +216,8 @@ export class PatchView {
   renderSources(mix) {
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
     const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
-    const cme = this.getGigId?.() === "cme";
+    const advanced = this.getGigId?.() === "cme-advanced";
+    const cme = this.getGigId?.() === "cme" || advanced;
     const state = this.store.state;
     const rig = state.rig;
     const { SOURCES_BY_ID } = this.manifest;
@@ -263,7 +279,8 @@ export class PatchView {
         ${powerHtml(rig, d)}
         ${msgs.map((m) => {
           const rack = cme && /^No power: (.+) is switched on, but (.+) is off\.$/.exec(m);
-          const text = rack ? translate("ui.cmeRackOff", m, { receiver: rack[1], power: rack[2] }) : connectionMessage(m);
+          const text = rack ? translate("ui.cmeRackOff", m, { receiver: rack[1], power: rack[2] })
+            : advanced ? cmeAdvancedWarning(m) : connectionMessage(m);
           return `<p class="port-msg">${esc(text)}</p>`;
         }).join("")}
         ${note ? `<p class="source-note">${esc(note)}</p>` : ""}
@@ -361,9 +378,10 @@ export class PatchView {
     const rig = this.store.state.rig;
     const type = DEVICE_TYPES[d.type];
     const gig = this.getGigId?.();
-    const cmeSnake = gig === "cme" && d.label === "Hosa sub snake · by the piano";
+    const cme = gig === "cme" || gig === "cme-advanced";
+    const cmeSnake = cme && d.label === "Hosa sub snake · by the piano";
     const label = cmeSnake ? translate("ui.cmeSnakeLabel", d.label)
-      : (gig === "vocal-jazz" || gig === "vocal-jazz-recording" || gig === "cme") && d.label === "S32 · stage-side rack"
+      : (gig === "vocal-jazz" || gig === "vocal-jazz-recording" || cme) && d.label === "S32 · stage-side rack"
         ? translate("ui.vocalJazzStageBox", d.label) : d.label || type.name;
     const blurb = gearTypeText(d.type, "blurb", type.blurb);
     const links = throughLinks(rig).filter((l) => l.via === d.id);
@@ -431,7 +449,8 @@ export class PatchView {
   renderOutputs(mix) {
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
     const recordingGig = this.getGigId?.() === "vocal-jazz-recording";
-    const cme = this.getGigId?.() === "cme";
+    const advanced = this.getGigId?.() === "cme-advanced";
+    const cme = this.getGigId?.() === "cme" || advanced;
     const state = this.store.state;
     const rig = state.rig;
     const terms = this.getTerms();
@@ -583,7 +602,7 @@ export class PatchView {
               : off ? translate("ui.vjrAmpOff", m, { device: off[1] })
               : quiet ? translate("ui.cmeOutputQuiet", m, { device: quiet[1], control: quiet[2], value: quiet[3], db: quiet[4] })
               : cme && m === "Everything on the way is plugged into the right jack, but nothing gets through. What's left is a cable itself."
-                ? translate("ui.cmeCableFault", m) : connectionMessage(m);
+                ? translate("ui.cmeCableFault", m) : advanced ? cmeAdvancedWarning(m) : connectionMessage(m);
             return `<p class="port-msg">${esc(text)}</p>`;
           }).join("")}
         </li>`);
