@@ -14,9 +14,9 @@
 
 import { LAWS, eqIsOn, hpfHz, levelLaw, peqBands } from "../compact.js";
 import { formatDb, formatPan } from "../levels.js";
-import { t as translate } from "../i18n/index.js";
+import { language, t as translate } from "../i18n/index.js";
 import { eqGraph } from "./viz.js";
-import { button, el, fader, knob, meterBar, row } from "./mixer-digital-view.js";
+import { button, el, fader as buildFader, knob as buildKnob, meterBar, row } from "./mixer-digital-view.js";
 
 const MODES = ["MASTER", "A", "B", "C", "D", "E", "F"];
 const lawFormat = (law) => (v) => formatDb(law.toDb(v), { unity: true });
@@ -24,6 +24,33 @@ const hz = (f) => (f >= 1000 ? `${(f / 1000).toFixed(f >= 10000 ? 0 : 1)}k` : `$
 const logPos = (f, lo, hi) => Math.log(f / lo) / Math.log(hi / lo);
 const logFreq = (p, lo, hi) => lo * Math.pow(hi / lo, p);
 const mixerDev = (s) => s.rig.devices.find((d) => d.id === "mixer");
+const onOff = (on) => on ? translate("ui.recorderStateOn", "on") : translate("ui.recorderStateOff", "off");
+const channelSwitch = (channel, control, state) => translate("ui.l20ChannelSwitch", "Channel {channel} {control}: {state}", { channel, control, state });
+
+function localizedAttribute(view, element, attribute, get) {
+  const run = () => {
+    const value = get();
+    if (element.getAttribute(attribute) !== value) element.setAttribute(attribute, value);
+  };
+  run();
+  view.bindings.push({ kind: "fn", run });
+}
+
+function rangeLabel(view, control, heading) {
+  const slider = control.querySelector("[role=slider]");
+  slider.removeAttribute("aria-labelledby");
+  localizedAttribute(view, slider, "aria-label", heading);
+  return control;
+}
+
+const fader = (view, options) => rangeLabel(view, buildFader(view, options), options.sheetLabel);
+const knob = (view, options, get) => rangeLabel(view, buildKnob(view, options, get), options.sheetLabel);
+
+export function l20FaderModeText(mode) {
+  return mode === "MASTER"
+    ? translate("ui.l20MasterModeHint", "Faders: each channel's level in the MASTER mix (the MASTER OUT jacks). MUTE and the EFX sends belong to this mix. The green LED beside a fader is its real level: the faders aren't motorized, so a cap moves nothing until it reaches its LED.")
+    : translate("ui.l20MonitorModeHint", "Faders: each channel's level in MONITOR {mix}. It is its own mix: the MASTER faders don't change it, MUTE still silences the channel in it. Send it to a jack with that jack's switch (set to {mix}) below. The caps stayed where they were: the green LEDs show this mix's levels.", { mix: mode });
+}
 
 export function renderL20(view, def) {
   if (!view.l20 || view.l20.id !== def.id) view.l20 = { id: def.id, mode: "MASTER", sel: 0 };
@@ -40,7 +67,7 @@ export function renderL20(view, def) {
   // ---------- FADER MODE ----------
   const bar = el("div", "dg-bar l20-mode");
   bar.setAttribute("role", "tablist");
-  bar.setAttribute("aria-label", "FADER MODE: which mix the faders control");
+  localizedAttribute(view, bar, "aria-label", () => translate("ui.l20FaderModeAria", "FADER MODE: which mix the faders control"));
   bar.appendChild(el("span", "dg-note", "FADER MODE"));
   for (const m of MODES) {
     const b = el("button", `dg-tab${m === "MASTER" ? "" : " is-aux"}`, m);
@@ -54,13 +81,10 @@ export function renderL20(view, def) {
     });
     bar.appendChild(b);
   }
-  const hint = el(
-    "p",
-    "dg-hint",
-    ui.mode === "MASTER"
-      ? "Faders: each channel's level in the MASTER mix (the MASTER OUT jacks). MUTE and the EFX sends belong to this mix. The green LED beside a fader is its real level: the faders aren't motorized, so a cap moves nothing until it reaches its LED."
-      : `Faders: each channel's level in MONITOR ${ui.mode}. It is its own mix: the MASTER faders don't change it, MUTE still silences the channel in it. Send it to a jack with that jack's switch (set to ${ui.mode}) below. The caps stayed where they were: the green LEDs show this mix's levels.`,
-  );
+  const hint = el("p", "dg-hint");
+  const hintText = () => l20FaderModeText(ui.mode);
+  hint.textContent = hintText();
+  view.bindings.push({ kind: "text", el: hint, get: hintText });
 
   // ---------- phantom power: four channels at a time ----------
   const phantom = row("l20-phantom", el("span", "dg-note", def.phantom.label));
@@ -75,7 +99,9 @@ export function renderL20(view, def) {
           const want = !on(view.store.state);
           g.forEach((i) => view.store.setChannel(i, "phantom", want));
         },
-        aria: (s) => `48V for inputs ${g[0] + 1} to ${g[g.length - 1] + 1}: ${on(s) ? "on" : "off"}`,
+        aria: (s) => translate("ui.l20PhantomBank", "48V for inputs {first} to {last}: {state}", {
+          first: g[0] + 1, last: g[g.length - 1] + 1, state: onOff(on(s)),
+        }),
       }),
     );
   }
@@ -83,7 +109,9 @@ export function renderL20(view, def) {
   // ---------- the faders ----------
   const bank = el("div", "mixer-strips dg-bank l20-bank");
   bank.setAttribute("role", "group");
-  bank.setAttribute("aria-label", `Channels: ${ui.mode === "MASTER" ? "MASTER" : `MONITOR ${ui.mode}`}`);
+  localizedAttribute(view, bank, "aria-label", () => translate("ui.l20ChannelGroup", "Channels: {mix}", {
+    mix: ui.mode === "MASTER" ? "MASTER" : `MONITOR ${ui.mode}`,
+  }));
   def.channels.forEach((_, i) => bank.appendChild(buildStrip(view, def, i, ui, rerender)));
   for (const b of ["fx1", "fx2"]) bank.appendChild(buildEfxStrip(view, def, b, ui));
   bank.appendChild(buildMasterStrip(view, def, ui));
@@ -102,12 +130,12 @@ function buildStrip(view, def, i, ui, rerender) {
   const ch = (s) => s.channels[i];
   const stereo = c.kind === "stereo";
   const strip = el("section", `strip dg-strip${stereo ? " is-stereo" : ""}${ui.sel === i ? " is-sel" : ""}`);
-  strip.setAttribute("aria-label", `Channel ${n}`);
+  localizedAttribute(view, strip, "aria-label", () => translate("ui.l20Channel", "Channel {channel}", { channel: n }));
 
   const head = el("button", "strip-head");
   head.type = "button";
   head.addEventListener("click", () => view.onPatchChannel(i));
-  view.bindings.push({ kind: "head", el: head, index: i });
+  view.bindings.push({ kind: "head", el: head, index: i, inputAria: l20InputAria });
   view.dgHeads[i] = head;
 
   // GAIN, with PAD (inputs 3–16) or Hi-Z (inputs 1–2): the range shifts down. The stereo inputs have no gain.
@@ -119,21 +147,21 @@ function buildStrip(view, def, i, ui, rerender) {
   };
   const gainKnob =
     g.min !== undefined
-      ? knob(view, { label: "GAIN", sheetLabel: `Ch ${n} gain`, min: g.min, max: g.max, step: 0.5, defaultValue: g.min, tone: "gain", format: shown, onInput: (v) => store.setChannel(i, "gainDb", v) }, (s) => ch(s).gainDb)
+      ? knob(view, { label: "GAIN", sheetLabel: () => translate("ui.l20GainSheet", "Ch {channel} gain", { channel: n }), min: g.min, max: g.max, step: 0.5, defaultValue: g.min, tone: "gain", format: shown, onInput: (v) => store.setChannel(i, "gainDb", v) }, (s) => ch(s).gainDb)
       : el("span", "dg-note", "LINE");
   const switchBtn = g.pad
-    ? button(view, { label: "PAD", tone: "pfl", get: (s) => !!ch(s).pad, onPress: () => store.setChannel(i, "pad", !ch(store.state).pad), aria: (s) => `Channel ${n} PAD: ${ch(s).pad ? "on, 26 dB less gain" : "off"}` })
+    ? button(view, { label: "PAD", tone: "pfl", get: (s) => !!ch(s).pad, onPress: () => store.setChannel(i, "pad", !ch(store.state).pad), aria: (s) => channelSwitch(n, "PAD", ch(s).pad ? translate("ui.l20PadOn", "on, 26 dB less gain") : onOff(false)) })
     : c.hiZ
-      ? button(view, { label: "Hi-Z", tone: "pfl", get: (s) => !!ch(s).hiZ, onPress: () => store.setChannel(i, "hiZ", !ch(store.state).hiZ), aria: (s) => `Channel ${n} Hi-Z: ${ch(s).hiZ ? "on" : "off"}` })
+      ? button(view, { label: "Hi-Z", tone: "pfl", get: (s) => !!ch(s).hiZ, onPress: () => store.setChannel(i, "hiZ", !ch(store.state).hiZ), aria: (s) => channelSwitch(n, "Hi-Z", onOff(ch(s).hiZ)) })
       : null;
   const comp = c.comp
-    ? knob(view, { label: "COMP", sheetLabel: () => translate("ui.compSheet", "Ch {channel} compressor", { channel: n, control: "COMP" }), defaultValue: 0, tone: "gain", format: (v) => (v <= 0.02 ? "off" : `${Math.round(v * 100)}%`), onInput: (v) => store.setChannel(i, "comp", v) }, (s) => ch(s).comp)
+    ? knob(view, { label: "COMP", sheetLabel: () => translate("ui.compSheet", "Ch {channel} compressor", { channel: n, control: "COMP" }), defaultValue: 0, tone: "gain", format: (v) => (v <= 0.02 ? onOff(false) : `${Math.round(v * 100)}%`), onInput: (v) => store.setChannel(i, "comp", v) }, (s) => ch(s).comp)
     : el("span", "dg-note", "");
 
   const sel = el("button", `dg-sel${ui.sel === i ? " on" : ""}`, "SEL");
   sel.type = "button";
   sel.setAttribute("aria-pressed", String(ui.sel === i));
-  sel.setAttribute("aria-label", `Select channel ${n}: the CHANNEL STRIP section edits it`);
+  localizedAttribute(view, sel, "aria-label", () => translate("ui.l20SelectChannel", "Select channel {channel}: the CHANNEL STRIP section edits it", { channel: n }));
   sel.addEventListener("click", () => {
     if (ui.sel === i) return;
     ui.sel = i;
@@ -166,7 +194,8 @@ function buildStrip(view, def, i, ui, rerender) {
   let led = null;
   const control = fader(view, {
     label: "",
-    sheetLabel: mon ? `Ch ${n} fader, MONITOR ${ui.mode}` : `Ch ${n} fader`,
+    sheetLabel: () => mon ? translate("ui.l20MonitorFader", "Ch {channel} fader, MONITOR {mix}", { channel: n, mix: ui.mode })
+      : translate("ui.l20ChannelFader", "Ch {channel} fader", { channel: n }),
     defaultValue: mon ? 0 : 0.75,
     tone: mon ? "aux1" : undefined,
     format: lawFormat(law),
@@ -187,18 +216,21 @@ function buildStrip(view, def, i, ui, rerender) {
   if (slot) {
     led = el("i", "l20-led");
     led.setAttribute("aria-hidden", "true");
-    led.title = "The real level (the cap may differ)";
+    localizedAttribute(view, led, "title", () => translate("ui.l20FaderLed", "The real level (the cap may differ)"));
     slot.appendChild(led);
     view.bindings.push({
       kind: "fn",
       run: (s) => {
         led.style.setProperty("--pos", String(truth(s)));
-        led.classList.toggle("is-apart", Math.abs(capOf(s) - truth(s)) >= 0.02);
+        const apart = Math.abs(capOf(s) - truth(s)) >= 0.02;
+        led.classList.toggle("is-apart", apart);
+        if (apart) slot.setAttribute("aria-description", translate("ui.l20FaderPickupWarning", "The cap differs from the actual level. Move it to the green LED to adjust the level."));
+        else slot.removeAttribute("aria-description");
       },
     });
   }
-  const mute = button(view, { label: "MUTE", tone: "mute", small: false, get: (s) => !ch(s).enabled, onPress: () => store.setChannel(i, "enabled", !ch(store.state).enabled), aria: (s) => `Channel ${n} MUTE: ${ch(s).enabled ? "off" : "on, out of the MASTER and every monitor mix"}` });
-  const solo = button(view, { label: "SOLO", tone: "pfl", get: (s) => !!ch(s).solo, onPress: () => store.setChannel(i, "solo", !ch(store.state).solo), aria: (s) => `Channel ${n} SOLO: ${ch(s).solo ? "on, in the PHONES" : "off"}` });
+  const mute = button(view, { label: "MUTE", tone: "mute", small: false, get: (s) => !ch(s).enabled, onPress: () => store.setChannel(i, "enabled", !ch(store.state).enabled), aria: (s) => channelSwitch(n, "MUTE", ch(s).enabled ? onOff(false) : translate("ui.l20MuteOn", "on, out of the MASTER and every monitor mix")) });
+  const solo = button(view, { label: "SOLO", tone: "pfl", get: (s) => !!ch(s).solo, onPress: () => store.setChannel(i, "solo", !ch(store.state).solo), aria: (s) => channelSwitch(n, "SOLO", ch(s).solo ? translate("ui.l20SoloOn", "on, in the PHONES") : onOff(false)) });
   view.bindings.push({ kind: "fn", run: (s) => strip.classList.toggle("is-muted", !ch(s).enabled) });
 
   strip.append(head, row("dg-extra", gainKnob, switchBtn), row("dg-extra", comp), sel, row("dg-fader", control, meterBar(view, i)), row("dg-btns", mute, solo));
@@ -210,7 +242,7 @@ function buildEfxStrip(view, def, b, ui) {
   const store = view.store;
   const bus = def.buses[b];
   const strip = el("section", "strip dg-strip dg-master l20-efx");
-  strip.setAttribute("aria-label", `${bus.label} return`);
+  localizedAttribute(view, strip, "aria-label", () => translate("ui.l20EffectReturn", "{effect} return", { effect: bus.label }));
   strip.appendChild(el("div", "dg-master-name", `${bus.label} RTN`));
   strip.appendChild(el("p", "dg-note", bus.fx.name));
   const key = ui.mode === "MASTER" ? "level" : `ret_mon${ui.mode}`;
@@ -230,10 +262,16 @@ function buildMasterStrip(view, def, ui) {
   const meters = row("dg-master-meters", meterBar(view, "L"), meterBar(view, "R"));
   strip.append(
     el("div", "dg-extra"),
-    row("dg-fader", fader(view, { label: "", sheetLabel: "MASTER fader", format: lawFormat(LAWS[def.main.law]), get: (s) => s.main.level, onInput: (v) => store.setBus("main", "level", v) }), meters),
-    row("dg-btns", button(view, { label: "MUTE", tone: "mute", small: false, get: (s) => !!s.main.mute, onPress: () => store.setBus("main", "mute", !store.state.main.mute), aria: (s) => `MASTER MUTE: ${s.main.mute ? "on, the MASTER OUT jacks are silent" : "off"}` })),
+    row("dg-fader", fader(view, { label: "", sheetLabel: () => translate("ui.l20MasterFader", "MASTER fader"), format: lawFormat(LAWS[def.main.law]), get: (s) => s.main.level, onInput: (v) => store.setBus("main", "level", v) }), meters),
+    row("dg-btns", button(view, { label: "MUTE", tone: "mute", small: false, get: (s) => !!s.main.mute, onPress: () => store.setBus("main", "mute", !store.state.main.mute), aria: (s) => translate("ui.l20MasterMute", "MASTER MUTE: {state}", { state: s.main.mute ? translate("ui.l20MasterMuteOn", "on, the MASTER OUT jacks are silent") : onOff(false) }) })),
   );
-  if (ui.mode !== "MASTER") strip.appendChild(el("p", "dg-note", "Monitor mixes have no master fader."));
+  if (ui.mode !== "MASTER") {
+    const note = el("p", "dg-note");
+    const get = () => translate("ui.l20MonitorNoMaster", "Monitor mixes have no master fader.");
+    note.textContent = get();
+    view.bindings.push({ kind: "text", el: note, get });
+    strip.appendChild(note);
+  }
   return strip;
 }
 
@@ -247,7 +285,7 @@ function buildSidePanel(view, def, ui, rerender) {
   const ch = (s) => s.channels[i];
   const set = (key) => (v) => store.setChannel(i, key, v);
   const panel = el("section", "dg-panel l20-panel");
-  panel.setAttribute("aria-label", `Selected channel ${n}`);
+  localizedAttribute(view, panel, "aria-label", () => translate("ui.l20SelectedChannel", "Selected channel {channel}", { channel: n }));
 
   const title = el("h4", "dg-panel-title");
   view.bindings.push({ kind: "fn", run: () => (title.textContent = `CH ${n} · ${view.dgHeads[i]?.querySelector(".strip-name")?.textContent || "—"}`) });
@@ -255,7 +293,7 @@ function buildSidePanel(view, def, ui, rerender) {
   const next = el("button", "dg-step", "›");
   for (const [b, d, label] of [[prev, -1, "Previous channel"], [next, 1, "Next channel"]]) {
     b.type = "button";
-    b.setAttribute("aria-label", label);
+    localizedAttribute(view, b, "aria-label", () => translate(d < 0 ? "ui.l20PreviousChannel" : "ui.l20NextChannel", label));
     b.addEventListener("click", () => {
       ui.sel = (ui.sel + d + def.channels.length) % def.channels.length;
       rerender();
@@ -277,7 +315,7 @@ function buildSidePanel(view, def, ui, rerender) {
   panel.appendChild(
     section(
       "SEND EFX",
-      ...["fx1", "fx2"].map((sid) => knob(view, { label: def.sends[sid].label.replace("SEND ", ""), sheetLabel: `Ch ${n} ${def.sends[sid].label}`, defaultValue: 0, tone: "eq", format: lawFormat(LAWS[def.sends[sid].law]), onInput: set(`sends.${sid}`) }, (s) => ch(s).sends[sid])),
+      ...["fx1", "fx2"].map((sid) => knob(view, { label: def.sends[sid].label.replace("SEND ", ""), sheetLabel: () => translate("ui.channelSendSheet", "Ch {channel} {label}", { channel: n, label: def.sends[sid].label, bus: def.sends[sid].label.replace("SEND ", "") }), defaultValue: 0, tone: "eq", format: lawFormat(LAWS[def.sends[sid].law]), onInput: set(`sends.${sid}`) }, (s) => ch(s).sends[sid])),
     ),
   );
   panel.appendChild(
@@ -296,9 +334,13 @@ function buildSidePanel(view, def, ui, rerender) {
   panel.appendChild(
     section(
       "PAN · LOW CUT · Φ",
-      knob(view, { label: c.kind === "stereo" ? "BAL" : "PAN", sheetLabel: `Ch ${n} ${c.kind === "stereo" ? "balance" : "pan"}`, min: -1, max: 1, step: 0.02, defaultValue: 0, bipolar: true, tone: "pan", format: formatPan, onInput: set("pan") }, (s) => ch(s).pan),
-      knob(view, { label: "LOW CUT", sheetLabel: () => translate("ui.channelLowCutSheet", "Ch {channel} low cut", { channel: n }), defaultValue: 0, tone: "eq", format: (v) => (v <= 0.02 ? "off" : `${hz(hpfHz(c, v))} Hz`), onInput: set("hpf") }, (s) => ch(s).hpf),
-      button(view, { label: "Φ", get: (s) => !!ch(s).polarity, onPress: () => store.setChannel(i, "polarity", !ch(store.state).polarity), aria: (s) => `Channel ${n} polarity: ${ch(s).polarity ? "reversed" : "normal"}` }),
+      knob(view, { label: c.kind === "stereo" ? "BAL" : "PAN", sheetLabel: () => c.kind === "stereo"
+        ? translate("ui.l20BalanceSheet", "Ch {channel} balance", { channel: n })
+        : translate("ui.l20PanSheet", "Ch {channel} pan", { channel: n }), min: -1, max: 1, step: 0.02, defaultValue: 0, bipolar: true, tone: "pan", format: formatPan, onInput: set("pan") }, (s) => ch(s).pan),
+      knob(view, { label: "LOW CUT", sheetLabel: () => translate("ui.channelLowCutSheet", "Ch {channel} low cut", { channel: n }), defaultValue: 0, tone: "eq", format: (v) => (v <= 0.02 ? onOff(false) : `${hz(hpfHz(c, v))} Hz`), onInput: set("hpf") }, (s) => ch(s).hpf),
+      button(view, { label: "Φ", get: (s) => !!ch(s).polarity, onPress: () => store.setChannel(i, "polarity", !ch(store.state).polarity), aria: (s) => translate("ui.sd442Polarity", "Channel {n} polarity: {state}", {
+        n, state: ch(s).polarity ? translate("ui.sd442PolarityReverse", "reversed") : translate("ui.sd442PolarityNormal", "normal"),
+      }) }),
     ),
   );
 
@@ -306,19 +348,34 @@ function buildSidePanel(view, def, ui, rerender) {
   const outs = def.routing.outputs.map((o) => {
     const x = o.slice(3);
     const own = `mon${x}`;
+    const output = `MONITOR OUT ${x}`;
     const sw = def.outSwitches.find((w) => w.ports.includes(o));
     return row(
       "l20-out",
-      el("span", "f8-outname", `MONITOR OUT ${x}`),
-      knob(view, { label: "VOL", sheetLabel: `MONITOR OUT ${x} volume`, defaultValue: def.routing.volume.start, tone: "level", format: lawFormat(LAWS[def.routing.volume.law]), onInput: (v) => store.setBus(o, "level", v) }, (s) => s[o].level),
-      ...[[own, x], ["main", "MASTER"]].map(([src, label]) => button(view, { label, tone: "assign", get: (s) => s.routing[o] === src, onPress: () => store.setBus("routing", o, src), aria: (s) => `MONITOR OUT ${x} carries ${src === "main" ? "the MASTER mix" : `its own mix, ${x}`}${s.routing[o] === src ? " (selected)" : ""}` })),
-      ...sw.labels.map((l, k) => button(view, { label: l, tone: "pfl", get: (s) => (mixerDev(s)?.[sw.key] ?? 0) === k, onPress: () => store.setDevice("mixer", sw.key, k), aria: (s) => `MONITOR OUT ${x} ${l}${(mixerDev(s)?.[sw.key] ?? 0) === k ? " (selected)" : ""}` })),
+      el("span", "f8-outname", output),
+      knob(view, { label: "VOL", sheetLabel: () => translate("ui.l20OutputVolume", "{output} volume", { output }), defaultValue: def.routing.volume.start, tone: "level", format: lawFormat(LAWS[def.routing.volume.law]), onInput: (v) => store.setBus(o, "level", v) }, (s) => s[o].level),
+      ...[[own, x], ["main", "MASTER"]].map(([src, label]) => button(view, { label, tone: "assign", get: (s) => s.routing[o] === src, onPress: () => store.setBus("routing", o, src), aria: (s) => translate("ui.l20OutputRoute", "{output} carries {mix}{selected}", {
+        output, mix: src === "main" ? translate("ui.l20OutputMasterMix", "the MASTER mix") : translate("ui.l20OutputOwnMix", "its own mix, {mix}", { mix: x }),
+        selected: s.routing[o] === src ? translate("ui.l20OutputSelected", " (selected)") : "",
+      }) })),
+      ...sw.labels.map((l, k) => button(view, { label: l, tone: "pfl", get: (s) => (mixerDev(s)?.[sw.key] ?? 0) === k, onPress: () => store.setDevice("mixer", sw.key, k), aria: (s) => `${output} ${l}${(mixerDev(s)?.[sw.key] ?? 0) === k ? translate("ui.l20OutputSelected", " (selected)") : ""}` })),
     );
   });
-  const phones = knob(view, { label: "PHONES", sheetLabel: "PHONES volume", defaultValue: 0.5, tone: "level", format: lawFormat(LAWS.master), onInput: (v) => store.setBus("cr", "level", v) }, (s) => s.cr.level);
+  const phones = knob(view, { label: "PHONES", sheetLabel: () => translate("ui.l20OutputVolume", "{output} volume", { output: "PHONES" }), defaultValue: 0.5, tone: "level", format: lawFormat(LAWS.master), onInput: (v) => store.setBus("cr", "level", v) }, (s) => s.cr.level);
   panel.appendChild(section("OUTPUT", ...outs, phones));
   const note = el("p", "dg-note");
   view.bindings.push({ kind: "text", el: note, get: () => translate("ui.l20MonitorOutNote", "MONITOR OUT: the A–F switch picks the jack's own mix; MASTER copies the MASTER mix. PHONES/SPEAKER only labels the jack here: the lab has no headphones to plug in.") });
   panel.appendChild(note);
   return panel;
+}
+
+export function l20InputAria(channel, input, name, problem) {
+  if (language() !== "ja") return null;
+  const path = input.stereo ? translate("ui.l20InputStereo", "stereo line input")
+    : input.path === "line" ? translate("ui.l20InputLine", "line input") : translate("ui.l20InputMic", "mic input");
+  const source = name ? translate("ui.l20InputPath", "{source} ({path})", { source: name, path })
+    : translate("ui.notConnected", "Not connected");
+  return translate("ui.l20ChannelInput", "Channel {channel} input: {source}{problem}", {
+    channel, source, problem: problem ? translate("ui.l20InputProblem", ". Problem: {message}", { message: problem.replace(/[。.!！]$/, "") }) : "",
+  });
 }

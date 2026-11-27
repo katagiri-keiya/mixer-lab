@@ -218,14 +218,16 @@ function createSheet() {
     }
   };
   languageBtn.addEventListener("click", () => setLanguage(language() === "ja" ? "en" : "ja"));
-  onLanguageChange(() => {
-    if (dlg.open) syncLabel();
-  });
   const sync = () => {
     value.textContent = ctl.o.format(ctl.value);
     range.value = String(Math.round(ctl.frac() * 1000));
     range.setAttribute("aria-valuetext", ctl.o.format(ctl.value));
   };
+  onLanguageChange(() => {
+    if (!dlg.open) return;
+    syncLabel();
+    sync();
+  });
   range.addEventListener("input", () => {
     const o = ctl.o;
     ctl.setValue(o.min + (Number(range.value) / 1000) * (o.max - o.min), false);

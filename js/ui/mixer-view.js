@@ -16,8 +16,8 @@ import { renderF8 } from "./mixer-f8-view.js";
 import { renderL20 } from "./mixer-l20-view.js";
 import { COMPACT } from "../compact-defs.js";
 import { sourceAlt, sourceName, sourceShort } from "../names.js";
-import { language } from "../i18n/index.js";
-import { connectionMessage } from "./patch-view.js";
+import { language, t as translate } from "../i18n/index.js";
+import { connectionMessage, recordingMessage } from "./patch-view.js";
 
 const FADER_MARKS = [10, 5, 0, -5, -10, -20, -30, -50].map((db) => ({ value: dbToLevel(db), label: db === 0 ? "U" : db > 0 ? `+${db}` : `${db}` }));
 FADER_MARKS.push({ value: 0, label: "−∞" });
@@ -464,7 +464,13 @@ export class MixerView {
       }
     }
     for (const b of this.bindings) {
-      if (b.kind === "range") b.control.setValue(b.get(s), true);
+      if (b.kind === "range") {
+        b.control.setValue(b.get(s), true);
+        if (this.skin.layout === "l20" && b.language !== language()) {
+          b.language = language();
+          b.control.render();
+        }
+      }
       else if (b.kind === "text") {
         const v = b.get(s);
         if (b.el.textContent !== v) b.el.textContent = v;
@@ -482,12 +488,16 @@ export class MixerView {
         b.html = html;
         b.language = language();
         b.el.innerHTML = html;
-        const problem = warn ? connectionMessage(c.input.messages[0]) : "";
+        const problem = (warn ? (b.inputAria ? recordingMessage : connectionMessage)(c.input.messages[0]) : "") || "";
+        const channel = s.channels[b.index].label;
+        const name = src ? `${sourceName(src)}${sourceAlt(src) ? ` (${sourceAlt(src)})` : ""}` : "";
         b.el.setAttribute(
           "aria-label",
-          `Channel ${s.channels[b.index].label} input: ${src ? `${sourceName(src)}${sourceAlt(src) ? ` (${sourceAlt(src)})` : ""}${c.input.stereo ? ", on the stereo line input" : c.input.path === "line" ? ", on the line input" : ", on the mic input"}` : "nothing patched"}${warn ? ". Problem: " + problem.replace(/[.!]$/, "") : ""}. Tap to patch.`,
+          b.inputAria?.(channel, c.input, name, problem) ??
+          `Channel ${channel} input: ${src ? `${name}${c.input.stereo ? ", on the stereo line input" : c.input.path === "line" ? ", on the line input" : ", on the mic input"}` : "nothing patched"}${warn ? ". Problem: " + problem.replace(/[.!]$/, "") : ""}. Tap to patch.`,
         );
-        b.el.title = warn ? problem : src ? `${sourceName(src)}${sourceAlt(src) ? ` (${sourceAlt(src)})` : ""} · ${src.device}` : "Tap to patch a source";
+        b.el.title = warn ? problem : src ? `${name} · ${src.device}`
+          : b.inputAria && language() === "ja" ? translate("ui.tapToPatch", "Tap to patch a source") : "Tap to patch a source";
       } else if (b.kind === "status" && mix) {
         const ch = s.channels[b.index];
         const words = [];
