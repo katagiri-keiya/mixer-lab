@@ -267,6 +267,7 @@ export function buildRecorder(ctx, { onUpdate }) {
     apply,
     record,
     stop,
+    stopPlayback,
     play,
     pop,
     dispose,

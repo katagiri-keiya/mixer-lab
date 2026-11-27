@@ -240,7 +240,7 @@ const drawer = new ThemeDrawer($("#drawer"), {
   onSelect: (id, by) => openScenario(id, { by }),
   onTopic: (themeId) => openScenario(nextInTheme(themeId, (id) => progress.has(id)).id),
   onFree: (skinId) => openFree(skinId),
-  onHome: () => showStart(),
+  onHome: goHome,
 });
 
 const listenBar = new ListenBar($("#listen-bar"), {
@@ -689,8 +689,9 @@ const startScreen = new StartScreen(overlay, {
 
 // Audio needs a gesture: every card on the start screen is one.
 function startAudio() {
-  if (engine.started) return;
+  const alreadyStarted = engine.started;
   engine.start(); // synchronous inside the gesture: creates/resumes the AudioContext
+  if (alreadyStarted) return;
   loadingText = () => t("ui.audioLoadingStems", "Loading stems…");
   loadSources();
   missionView.renderMusic();
@@ -712,10 +713,16 @@ function showStart() {
 document.addEventListener("click", (e) => {
   if (e.target.closest("[data-home]")) {
     e.preventDefault();
-    resumeHash = location.hash;
-    showStart();
+    goHome();
   }
 });
+
+function goHome() {
+  if (!overlay.classList.contains("dismissed")) return;
+  resumeHash = location.hash;
+  if (engine.started) engine.stopSessionAudio();
+  showStart();
+}
 
 // "#/x32-stagebox" opens that scenario on its console (by topic);
 // "#/by-mixer/x32-stagebox" the same, stepping through the X32's list;

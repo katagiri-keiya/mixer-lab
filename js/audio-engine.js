@@ -70,10 +70,13 @@ export class AudioEngine {
     return this.transport ? this.transport.section : "excerpt";
   }
 
-  // Must be called from a user gesture (click/tap handler).
+  // Entering from the start screen is a user gesture. The scenario's source
+  // load starts playback only after the new sources are ready.
   start() {
+    this.wantPlay = true;
     if (this.ctx) {
       if (this.ctx.state !== "running") this.ctx.resume();
+      for (const p of this.loops.values()) p.start();
       return;
     }
     const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -92,7 +95,7 @@ export class AudioEngine {
     this.unsubscribe = this.store.subscribe((state, change) => this.onChange(state, change));
     this.rewire();
     this.applyAll();
-    for (const p of this.loops.values()) p.start(); // once; never restarted or stopped by patching
+    for (const p of this.loops.values()) p.start(); // independent of the band's controls
   }
 
   // ---------- graph ----------
@@ -410,6 +413,14 @@ export class AudioEngine {
     this.wantPlay = false;
     for (const { voice } of this.voiceLinks.values()) voice.stop();
     if (this.transport) this.transport.stop();
+  }
+
+  stopSessionAudio() {
+    this.stop();
+    for (const player of this.loops.values()) player.stop();
+    for (const { type, rt } of this.devices.values()) {
+      if (type === "recorder") rt.stopPlayback();
+    }
   }
 
   // Mutes the stems of whoever isn't on stage, and puts each voice on its mic

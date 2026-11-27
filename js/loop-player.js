@@ -6,7 +6,7 @@
 // laptop are independent of it. Like a transport output, `out` is persistent and
 // wired at zero gain to the destination (keep-alive), so patching, unpatching
 // and muting only change what happens downstream and never touch the player.
-// It starts once and loops until the context closes.
+// It loops while a session is open, independently of the band transport.
 
 export class LoopPlayer {
   constructor(ctx, { sourceId, url, errors, emit }) {
@@ -24,21 +24,28 @@ export class LoopPlayer {
     this.keepAlive.gain.value = 0;
     this.out.connect(this.keepAlive).connect(ctx.destination);
     this.started = false;
+    this.token = 0;
+  }
+
+  async load() {
+    try {
+      const res = await fetch(this.url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await this.ctx.decodeAudioData(await res.arrayBuffer());
+    } catch (err) {
+      this.errors.set(this.url, `${this.url.split("/").pop()}: ${err.message || err}`);
+      this.emit({ type: "load-errors", errors: [...this.errors.entries()] });
+      return testTone(this.ctx);
+    }
   }
 
   async start() {
     if (this.started) return;
     this.started = true;
-    let buffer;
-    try {
-      const res = await fetch(this.url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      buffer = await this.ctx.decodeAudioData(await res.arrayBuffer());
-    } catch (err) {
-      this.errors.set(this.url, `${this.url.split("/").pop()}: ${err.message || err}`);
-      buffer = testTone(this.ctx);
-      this.emit({ type: "load-errors", errors: [...this.errors.entries()] });
-    }
+    const token = ++this.token;
+    this.loading ||= this.load();
+    const buffer = await this.loading;
+    if (token !== this.token) return;
     const src = this.ctx.createBufferSource();
     src.buffer = buffer;
     src.loop = true;
@@ -46,6 +53,15 @@ export class LoopPlayer {
     src.start();
     this.source = src;
     this.duration = buffer.duration;
+  }
+
+  stop() {
+    this.started = false;
+    this.token++;
+    if (!this.source) return;
+    this.source.stop();
+    this.source.disconnect();
+    this.source = null;
   }
 }
 
