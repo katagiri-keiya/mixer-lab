@@ -39,7 +39,8 @@ import { nameMode, sourceName } from "../names.js";
 import { dvsRunning } from "../dante.js";
 import { isRecordingMac, logicTracks } from "../recording.js";
 import { count } from "../submission.js";
-import { localized, sourceText, t as translate } from "../i18n/index.js";
+import { language, localized, sourceText, t as translate } from "../i18n/index.js";
+import { connectionReasonsJa } from "../i18n/connection-ui.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
@@ -96,7 +97,7 @@ function cmeAdvancedWarning(message) {
   }
   return connectionMessage(message);
 }
-const connectionReason = (reason) => {
+export const connectionReason = (reason) => {
   if (!reason) return reason;
   if (reason === "That would loop a device back into itself.") return translate("ui.selfLoop", reason);
   if (reason === "Cables run from an output to an input.") return translate("ui.outputInput", reason);
@@ -107,7 +108,18 @@ const connectionReason = (reason) => {
   if (m) return translate("ui.otherEndDoesNotFit", reason, { plug: m[1], jack: m[2], port: m[3] });
   m = reason.match(/^(.+) already has a cable\.$/);
   if (m) return translate("ui.alreadyHasCable", reason, { port: m[1] });
-  return reason;
+  m = reason.match(/^(.+) is already in use\. Use one input per channel\.$/);
+  if (m) return translate("ui.connectionInputInUse", reason, { port: m[1] });
+  m = reason.match(/^(.+) is (\w+); (.+) is (\w+)\. They don't talk to each other\.$/);
+  if (m) return translate("ui.connectionNetworkMismatch", reason, { from: m[1], fromType: m[2], to: m[3], toType: m[4] });
+  return language() === "ja" && Object.hasOwn(connectionReasonsJa, reason) ? connectionReasonsJa[reason] : reason;
+};
+
+export const patchCandidateText = (target, total) => {
+  const cables = count(total, "cable");
+  return translate("ui.toTarget", `To ${target}. ${cables} fit both ends; they don't all do the same job.`, {
+    target, count: language() === "ja" ? total : cables,
+  });
 };
 
 export function portLabel(rig, ref, { short = false } = {}) {
@@ -213,6 +225,10 @@ export class PatchView {
     this.renderOutputs(mix);
   }
 
+  syncLanguage() {
+    this.dialog.syncLanguage();
+  }
+
   renderSources(mix) {
     const cob = this.getGigId?.() === "cob";
     const vocalJazz = this.getGigId?.() === "vocal-jazz";
@@ -281,7 +297,7 @@ export class PatchView {
       const title = cobTrack ? translate("ui.cobTrackName", name) : name;
       return this.card(d.id, `<li class="source-card status-${status}">
         <div class="source-top">
-          <span class="source-order" aria-label="Input list number">${esc(listNo)}</span>
+          <span class="source-order" aria-label="${esc(translate("ui.inputListNumber", "Input list number"))}">${esc(listNo)}</span>
           <span class="dev-ico">${icon(deviceIconName(d), { size: 40 })}</span>
           <div class="source-names"><strong>${esc(displayDevice(title))}</strong><span>${nameMode() === "musicians" && src.musician ? `${esc(title)} · ` : ""}${esc(device)}</span></div>
           <span class="status-pill status-${status}">${pill}</span>
@@ -586,7 +602,7 @@ export class PatchView {
         ${type.console ? "" : knobsHtml(d)}
         ${powerHtml(rig, d)}
         ${listPorts(rig, d).map((p) => this.portButton(p.ref, p.dir)).join("")}
-        ${type.console ? `<button type="button" class="btn btn-start" data-open-console="${esc(d.id)}">Open Console: ${esc(type.name.replace(/^Mackie /, ""))}</button>` : ""}
+        ${type.console ? `<button type="button" class="btn btn-start" data-open-console="${esc(d.id)}">${esc(translate("ui.patchConsoleOpen", "Open Console: {name}", { name: type.name.replace(/^Mackie /, "") }))}</button>` : ""}
       </li>`);
       })
       .join("");
@@ -643,8 +659,8 @@ export class PatchView {
       ${outList}
       ${reverbs.length ? `<h3 class="group-title">${esc(translate("ui.externalEffects", "Effects"))}</h3><ul class="device-list">${reverbHtml}</ul>` : ""}
       ${recorders.length ? `<h3 class="group-title">${translate("ui.recorderHeading", "Recorder")}</h3><ul class="device-list">${recHtml}</ul>` : ""}
-      ${amps.length ? `<h3 class="group-title">${karaoke ? translate("ui.karaokeAmplifier", "Amplifier") : electroacoustic ? translate("ui.electroacousticAmplifier", "Amplifier") : "Amplifier"}</h3><ul class="device-list">${ampHtml}</ul>` : ""}
-      ${gear.length ? `<h3 class="group-title">${electroacoustic ? translate("ui.electroacousticRackGear", "Rack gear") : "Rack gear"}</h3><ul class="device-list">${gearHtml}</ul>` : ""}
+      ${amps.length ? `<h3 class="group-title">${translate("ui.patchAmplifier", "Amplifier")}</h3><ul class="device-list">${ampHtml}</ul>` : ""}
+      ${gear.length ? `<h3 class="group-title">${translate("ui.patchRackGear", "Rack gear")}</h3><ul class="device-list">${gearHtml}</ul>` : ""}
       <h3 class="group-title">${icon("role-destination", { size: 22 })}${speakers.every((d) => DEVICE_TYPES[d.type].camera) ? translate("ui.cameraLevelHeading", "Camera — does the level match?") : translate("ui.speakersWhereAmp", "Speakers — where is the amplifier?")}</h3>
       <ul class="device-list">${spkHtml}</ul>`;
   }
@@ -785,6 +801,22 @@ class PatchDialog {
     return this.view.store.state.rig;
   }
 
+  syncLanguage() {
+    if (!this.el.open || !this.redraw) return;
+    const scrollTop = this.el.scrollTop;
+    const focusIndex = [...this.el.querySelectorAll("button, summary")].indexOf(document.activeElement);
+    const expanded = this.el.querySelector(".nofit")?.open;
+    const cablePreview = this.el.querySelector(".pv-cable")?.dataset.shown;
+    const targetPreview = this.el.querySelector(".pv-to")?.dataset.shown;
+    this.redraw();
+    const details = this.el.querySelector(".nofit");
+    if (details) details.open = !!expanded;
+    if (cablePreview) this.showCableArt(cablePreview);
+    if (targetPreview) this.showTargetArt(targetPreview);
+    this.el.querySelectorAll("button, summary")[focusIndex]?.focus({ preventScroll: true });
+    this.el.scrollTop = scrollTop;
+  }
+
   open(ref) {
     this.ref = ref;
     this.cable = null;
@@ -800,7 +832,7 @@ class PatchDialog {
     const p = getPort(this.rig, this.ref);
     const dev = p.device.label || DEVICE_TYPES[p.device.type].name;
     return `<div class="pv">
-      <figure class="pv-end pv-from">${jackArt(p.jack, p.dir)}<figcaption><small>${p.parallel || p.dir === "out" ? "From" : "Into"}</small> ${esc(isMixer(p.device) ? "Mixer" : dev)} · ${esc(p.name)}</figcaption></figure>
+      <figure class="pv-end pv-from">${jackArt(p.jack, p.dir)}<figcaption><small>${p.parallel || p.dir === "out" ? translate("ui.patchFrom", "From") : translate("ui.patchInto", "Into")}</small> ${esc(isMixer(p.device) ? "Mixer" : dev)} · ${esc(p.name)}</figcaption></figure>
       <div class="pv-cable">${this.cableArt(cable)}</div>
       <figure class="pv-end pv-to">${this.targetArt(target)}</figure>
     </div>`;
@@ -819,9 +851,10 @@ class PatchDialog {
   }
 
   targetArt(ref) {
-    if (!ref) return `<div class="pv-unknown" aria-hidden="true">?</div><figcaption><small>To</small> …</figcaption>`;
+    const to = translate("ui.patchTo", "To");
+    if (!ref) return `<div class="pv-unknown" aria-hidden="true">?</div><figcaption><small>${esc(to)}</small> …</figcaption>`;
     const q = getPort(this.rig, ref);
-    return `${jackArt(q.jack, q.dir)}<figcaption><small>${q.parallel || q.dir === "in" ? "To" : "From"}</small> ${esc(portLabel(this.rig, ref))}</figcaption>`;
+    return `${jackArt(q.jack, q.dir)}<figcaption><small>${esc(q.parallel || q.dir === "in" ? to : translate("ui.patchFrom", "From"))}</small> ${esc(portLabel(this.rig, ref))}</figcaption>`;
   }
 
   showCableArt(cableId) {
@@ -846,12 +879,14 @@ class PatchDialog {
     const b = getPort(this.rig, bRef);
     if (!a || !b) return;
     const ends = orient(this.rig, aRef, bRef);
-    if (!ends) return this.view.toast(translate("ui.bothSameDirection", `Both are ${a.dir === "out" ? "outputs" : "inputs"}. A cable runs from an output to an input.`, { direction: a.dir === "out" ? "outputs" : "inputs" }), "bad");
+    if (!ends) return this.view.toast(translate("ui.bothSameDirection", "", { direction: a.dir === "out" ? translate("ui.patchDirectionOut", "outputs") : translate("ui.patchDirectionIn", "inputs") }), "bad");
     const [from, to] = ends;
     const fits = Object.values(CABLES).filter((c) => checkConnection(this.rig, from, to, c.id).ok);
     if (!fits.length) {
       const why = Object.values(CABLES).map((c) => checkConnection(this.rig, from, to, c.id)).find((r) => !/doesn't fit/.test(r.reason || ""));
-      return this.view.toast(why ? connectionReason(why.reason) : translate("ui.noCableFits", `No cable in the lab fits both the ${JACKS[getPort(this.rig, from).jack].name} and the ${JACKS[getPort(this.rig, to).jack].name} jack.`, { from: JACKS[getPort(this.rig, from).jack].name, to: JACKS[getPort(this.rig, to).jack].name }), "bad");
+      return this.view.toast(() => why ? connectionReason(why.reason) : translate("ui.noCableFits", "", {
+        from: JACKS[getPort(this.rig, from).jack].name, to: JACKS[getPort(this.rig, to).jack].name,
+      }), "bad");
     }
     this.ref = aRef;
     if (fits.length === 1) {
@@ -860,6 +895,13 @@ class PatchDialog {
     }
     this.cable = null;
     this.pair = bRef;
+    this.showBetweenChoices(a, b, fits, bRef);
+    if (!this.el.open) this.el.showModal();
+    this.el.querySelector(".cable-card").focus();
+  }
+
+  showBetweenChoices(a, b, fits, bRef) {
+    this.redraw = () => this.showBetweenChoices(a, b, fits, bRef);
     const card = (c) => {
       const ends = cableEndFor(c.id, a.jack);
       return `<button type="button" class="cable-card" data-act="pair-cable" data-cable="${c.id}">
@@ -870,31 +912,35 @@ class PatchDialog {
     this.el.innerHTML = `<div class="patch-inner">
       ${this.header(translate("ui.pickCable", "Pick a cable"))}
       ${this.visual({ target: bRef })}
-      <p class="patch-sub">${translate("ui.toTarget", `To ${portLabel(this.rig, bRef)}. ${count(fits.length, "cable")} fit both ends; they don't all do the same job.`, { target: portLabel(this.rig, bRef), count: count(fits.length, "cable") })}</p>
+      <p class="patch-sub">${esc(patchCandidateText(portLabel(this.rig, bRef), fits.length))}</p>
       <div class="cable-grid">${fits.map(card).join("")}</div>
     </div>`;
-    if (!this.el.open) this.el.showModal();
-    this.el.querySelector(".cable-card").focus();
   }
 
   header(step) {
     const p = getPort(this.rig, this.ref);
     const lvl = SIGNAL_LEVELS[p.level];
+    const jack = JACKS[p.jack].name;
+    const languageAction = language() === "ja" ? "Switch to English" : "日本語に切り替え";
     return `<header class="patch-head">
       <p class="patch-kicker">${step}</p>
       <h2 id="patch-title">${esc(portLabel(this.rig, this.ref))}</h2>
-      <p class="patch-sub">${icon(jackIconName(p.jack, p.dir), { size: 28 })}${p.parallel ? translate("ui.eitherWay", "Either way (wired in parallel)") : p.dir === "out" ? translate("ui.output", "Output") : translate("ui.input", "Input")} · ${esc(JACKS[p.jack].name)} jack · ${esc(gearText(lvl ? lvl.name : LEVEL_SHORT[p.level] || p.level))}</p>
-      <button type="button" class="patch-x" data-act="close" aria-label="Close">✕</button>
+      <p class="patch-sub">${icon(jackIconName(p.jack, p.dir), { size: 28 })}${p.parallel ? translate("ui.eitherWay", "Either way (wired in parallel)") : p.dir === "out" ? translate("ui.output", "Output") : translate("ui.input", "Input")} · ${esc(translate("ui.patchJack", "{jack} jack", { jack }))} · ${esc(gearText(lvl ? lvl.name : LEVEL_SHORT[p.level] || p.level))}</p>
+      <button type="button" class="chip" data-language-toggle aria-label="${languageAction}" title="${languageAction}">${language() === "ja" ? "日本語" : "English"}</button>
+      <button type="button" class="patch-x" data-act="close" aria-label="${esc(translate("ui.patchClose", "Close"))}">✕</button>
     </header>`;
   }
 
   showExisting(cable) {
+    this.redraw = () => this.showExisting(cable);
     const other = cable.from === this.ref ? cable.to : cable.from;
+    const name = esc(cableText(cable.cable, "name", CABLES[cable.cable].name));
+    const port = `<strong>${esc(portLabel(this.rig, other))}</strong>`;
     this.el.innerHTML = `<div class="patch-inner">
       ${this.header(translate("ui.connected", "Connected"))}
       <p class="patch-current"><span class="cable-dot" style="--hue:${cableHue(cable.id)}" aria-hidden="true"></span>
-        ${esc(cableText(cable.cable, "name", CABLES[cable.cable].name))} to <strong>${esc(portLabel(this.rig, other))}</strong></p>
-      ${cable.fixed ? `<p class="port-msg">Wired into a permanent rack: this cable stays where it is.</p>` : ""}
+        ${translate("ui.patchCurrentCable", "{cable} to {port}", { cable: name, port })}</p>
+      ${cable.fixed ? `<p class="port-msg">${esc(translate("ui.fixedCableDetail", "Wired into a permanent rack: this cable stays where it is."))}</p>` : ""}
       <div class="patch-actions">
         ${cable.fixed ? "" : `<button type="button" class="btn btn-stop" data-act="unplug" data-cable="${esc(cable.id)}">${translate("ui.unplug", "Unplug")}</button>`}
         <button type="button" class="btn btn-start" data-act="close">${cable.fixed ? "OK" : translate("ui.keepIt", "Keep it")}</button>
@@ -904,6 +950,7 @@ class PatchDialog {
   }
 
   showCables() {
+    this.redraw = () => this.showCables();
     const p = getPort(this.rig, this.ref);
     const fits = cablesForPort(p);
     const nofit = Object.values(CABLES).filter((c) => !fits.includes(c));
@@ -932,6 +979,7 @@ class PatchDialog {
   }
 
   chooseCable(cableId) {
+    this.redraw = () => this.chooseCable(cableId);
     this.cable = cableId;
     const rig = this.rig;
     const p = getPort(rig, this.ref);
@@ -967,12 +1015,12 @@ class PatchDialog {
   connect(targetRef) {
     const [from, to] = orient(this.rig, this.ref, targetRef) || [this.ref, targetRef];
     const result = this.view.store.connect(from, to, this.cable);
-      if (!result.ok) {
-      this.view.toast(connectionReason(result.reason), "bad");
+    if (!result.ok) {
+      this.view.toast(() => connectionReason(result.reason), "bad");
       return;
     }
     this.el.close();
-    this.view.toast(translate("ui.patchSuccess", `Patched: ${portLabel(this.rig, from)} → ${portLabel(this.rig, to)}`, { from: portLabel(this.rig, from), to: portLabel(this.rig, to) }), "ok");
+    this.view.toast(() => translate("ui.patchSuccess", "", { from: portLabel(this.rig, from), to: portLabel(this.rig, to) }), "ok");
   }
 
   unplug(cableId) {

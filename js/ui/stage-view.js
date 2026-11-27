@@ -11,11 +11,11 @@
 import { CABLES, DEVICE_TYPES, JACKS, SIGNAL_LEVELS, cableAt, getPort, isMixer, mixerOf, orient, powerSpec, powerState, powerWhy } from "../connection-model.js";
 import { deviceIconName, icon, jackIconName } from "./icons.js";
 import { JACK, layoutStage } from "./stage-layout.js";
-import { cableHue, portLabel } from "./patch-view.js";
+import { cableHue, connectionReason, portLabel } from "./patch-view.js";
 import { figureSvg } from "./listen-bar.js";
 import { listenGroupOf } from "../mixer-state.js";
 import { sourceName } from "../names.js";
-import { t as translate } from "../i18n/index.js";
+import { language, t as translate } from "../i18n/index.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const DIR = { right: [1, 0], left: [-1, 0], down: [0, 1], up: [0, -1] };
@@ -102,7 +102,10 @@ export class StageView {
       const [act, type] = b.dataset.gear.split(":");
       if (act === "add") {
         this.store.addDevice({ id: type === "snake" ? "snake" : "sb", type, label: DEVICE_TYPES[type].name });
-        this.patchView.toast(`${DEVICE_TYPES[type].name} on stage. Patch the band into it, then ${type === "snake" ? "its tails into the console" : "its AES50 A into the console's AES50 A, and set ROUTING"}.`, "");
+        const name = DEVICE_TYPES[type].name;
+        this.patchView.toast(() => type === "snake"
+          ? translate("ui.stageSnakeAdded", "{name} on stage. Patch the band into it, then its tails into the console.", { name })
+          : translate("ui.stageBoxAdded", "{name} on stage. Patch the band into it, then its AES50 A into the console's AES50 A, and set ROUTING.", { name }), "");
       } else this.store.removeDevice(type);
     });
     patchView.bindRoot(this.inspector);
@@ -205,7 +208,7 @@ export class StageView {
         <text class="col-label" x="${c.x}" y="22">${esc(stageText(c.label).toUpperCase())}</text>${c.sub ? `<text class="col-sub" x="${c.x}" y="36">${esc(stageText(c.sub))}</text>` : ""}</g>`);
     }
     // Racks: one frame around each rack's gear (the amp rack, the hall's mains rack).
-    for (const r of L.racks || []) parts.push(`<g class="rack-frame"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="10"/><text x="${r.x + 10}" y="${r.y + 17}">${esc(r.title.toUpperCase())}</text></g>`);
+    for (const r of L.racks || []) parts.push(`<g class="rack-frame"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" rx="10"/><text x="${r.x + 10}" y="${r.y + 17}">${esc(translate(`ui.stageRackTitles.${r.id}`, r.title).toUpperCase())}</text></g>`);
     for (const b of L.boxes) parts.push(this.boxSvg(b, rig, status));
     // Above the cables: each box's title row (a tap there opens the box, not a cable crossing it) and its power tab.
     const tops = L.boxes.map((b) => {
@@ -223,7 +226,7 @@ export class StageView {
     for (const m of L.links || []) {
       if (m.kind === "rf") cables.push(`<g class="cable cable-radio fixed"><title>Radio: a wireless handheld reaches the antennas at FOH, no cable</title><path class="cable-core" d="${cablePath(m.a, m.b)}"/></g>`);
       else if (m.kind === "tail") cables.push(`<g class="cable cable-tail fixed"><path class="cable-shadow" d="${cablePath(m.a, m.b)}"/><path class="cable-core" d="${cablePath(m.a, m.b)}"/></g>`);
-      else cables.push(`<g class="cable cable-multicore fixed"><title>${esc(m.title || "Multicore: every snake channel and return in one cable, stage ↔ FOH")}</title><path class="cable-shadow" d="${cablePath(m.a, m.b)}"/><path class="cable-core" d="${cablePath(m.a, m.b)}"/></g>`);
+      else cables.push(`<g class="cable cable-multicore fixed"><title>${esc(m.title ? translate("ui.stageSubsnakeMulticore", m.title) : translate("ui.stageMulticore", "Multicore: every snake channel and return in one cable, stage ↔ FOH"))}</title><path class="cable-shadow" d="${cablePath(m.a, m.b)}"/><path class="cable-core" d="${cablePath(m.a, m.b)}"/></g>`);
     }
 
     const plugs = [];
@@ -303,8 +306,8 @@ export class StageView {
     return spots
       .map((s) => {
         const name = s.phones ? s.place.place : rig.devices.find((d) => d.id === s.deviceId)?.short || s.place.place;
-        const label = `Listen here: ${name} (${s.place.label})`;
-        if (s === mine) return `<g class="ear-here" aria-label="You are listening here: ${esc(s.place.place)}">${figureSvg(s.x, s.y, { scale: 0.95, phones: !!s.phones })}</g>`;
+        const label = translate("ui.stageListenHere", "Listen here: {name} ({mix})", { name, mix: s.place.label });
+        if (s === mine) return `<g class="ear-here" aria-label="${esc(translate("ui.stageListeningHere", "You are listening here: {place}", { place: s.place.place }))}">${figureSvg(s.x, s.y, { scale: 0.95, phones: !!s.phones })}</g>`;
         return `<g class="ear-btn" data-listen="${esc(s.dest)}" tabindex="0" role="button" aria-label="${esc(label)}"><title>${esc(label)}</title>
           <rect class="ear-btn-hit" x="${s.x - 13}" y="${s.y - 36}" width="26" height="38" rx="8"/>${figureSvg(s.x, s.y, { scale: 0.85, phones: !!s.phones, cls: "ear-figure ear-ghost" })}</g>`;
       })
@@ -323,20 +326,28 @@ export class StageView {
       // A radio handheld: by its receiver's channel, which goes silent if the rack, the antennas or the mic are off.
       if (DEVICE_TYPES[d.type].rf) {
         const ch = mix.channels.find((c) => c.sourceId === d.sourceId);
-        devices.set(d.id, d.dead ? { tone: "warn", text: "! Dead mic" } : !ch ? { tone: "warn", text: "! No channel" } : ch.band === "none" ? { tone: "warn", text: "! No audio" } : { tone: "ok", text: `✓ Radio · CH ${ch.index + 1}` });
+        devices.set(d.id, d.dead ? { tone: "warn", text: translate("ui.stageDeadMic", "! Dead mic") }
+          : !ch ? { tone: "warn", text: translate("ui.noChannelStatus", "! No channel") }
+          : ch.band === "none" ? { tone: "warn", text: translate("ui.noAudioStatus", "! No audio") }
+          : { tone: "ok", text: translate("ui.stageRadioChannel", "✓ Radio · CH {channel}", { channel: ch.index + 1 }) });
         continue;
       }
       // Its own gear switched off or unplugged (a guitar amp, the Nord, the Mac mini).
       const pst = powerState(rig, d);
       if (pst && pst !== "on") {
-        devices.set(d.id, { tone: "warn", text: pst === "unplugged" ? "! Unplugged" : pst === "off" ? "! Switched off" : "! No power" });
+        devices.set(d.id, { tone: "warn", text: pst === "unplugged" ? translate("ui.unpluggedStatus", "! Unplugged")
+          : pst === "off" ? translate("ui.switchedOffStatus", "! Switched off") : translate("ui.noPowerStatus", "! No power") });
         continue;
       }
       const mine = inputs.filter((i) => i.sourceDeviceId === d.id);
       const worst = mine.find((i) => i.status === "danger") || mine.find((i) => i.status !== "ok");
       // Plugged in (into a snake or stage box) but no channel hears it.
       const plugged = DEVICE_TYPES[d.type].ports.some((p) => cableAt(rig, `${d.id}/${p.id}`));
-      devices.set(d.id, !mine.length ? (plugged ? { tone: "warn", text: "! No channel" } : { tone: "idle", text: "Unpatched" }) : worst ? { tone: tone(worst.status), text: worst.status === "danger" ? "✕ Danger" : worst.status === "no-power" ? "! No power" : "! Check" } : { tone: "ok", text: "✓ Signal" });
+      devices.set(d.id, !mine.length ? (plugged ? { tone: "warn", text: translate("ui.noChannelStatus", "! No channel") }
+        : { tone: "idle", text: translate("ui.unpatched", "Unpatched") })
+        : worst ? { tone: tone(worst.status), text: worst.status === "danger" ? translate("ui.dangerStatus", "✕ Danger")
+          : worst.status === "no-power" ? translate("ui.noPowerStatus", "! No power") : translate("ui.checkStatus", "! Check") }
+        : { tone: "ok", text: translate("ui.signalPresent", "✓ Signal") });
     }
     const mixer = mixerOf(rig);
     const mixerPorts = mixer ? DEVICE_TYPES[mixer.type].ports : [];
@@ -356,7 +367,11 @@ export class StageView {
       const out = routed && routed !== "off" ? routed : ep.output;
       const busName = ({ "main-l": "Main L", "main-r": "Main R" })[out] || terms[out] || (routed ? out.toUpperCase().replace(/^([A-Z]+)(\d+)$/, "$1 $2") : mixerPorts.find((p) => p.id === out)?.name) || out;
       // `off`: a working chain with a knob turned all the way down on purpose (the hall's speakers at CME).
-      const text = ep.status === "off" ? `○ Off · ${busName}` : ep.valid ? `${ep.cableWarn ? "⚠ Wrong cable ·" : ep.status === "hot" ? "⚠ Hot" : ep.status === "weak" ? "⚠ Weak" : "✓"} ${busName}` : ep.status === "unpatched" ? "Silent" : ep.status === "danger" ? "✕ Danger" : ep.status === "no-power" ? "✕ No power" : "✕ No sound";
+      const text = ep.status === "off" ? `${translate("ui.stageOutputOff", "○ Off")} · ${busName}`
+        : ep.valid ? `${ep.cableWarn ? `${translate("ui.wrongCable", "⚠ Wrong cable")} ·`
+          : ep.status === "hot" ? translate("ui.stageOutputHot", "⚠ Hot") : ep.status === "weak" ? translate("ui.stageOutputWeak", "⚠ Weak") : "✓"} ${busName}`
+        : ep.status === "unpatched" ? translate("ui.silentOutput", "Silent") : ep.status === "danger" ? translate("ui.dangerStatus", "✕ Danger")
+          : ep.status === "no-power" ? `✕ ${translate("ui.noPower", "No power")}` : `✕ ${translate("ui.gear.noSound", "No sound")}`;
       devices.set(ep.deviceId, { tone: ep.status === "off" ? "idle" : ep.valid ? (ep.status === "ok" && !ep.cableWarn ? "ok" : "warn") : tone(ep.status), text });
       const into = rig.cables.find((c) => c.to.startsWith(`${ep.deviceId}/`));
       if (into) cables.set(into.id, ep.status === "off" ? "ok" : ep.valid ? (ep.status === "ok" && !ep.cableWarn ? "ok" : "warn") : ep.status === "danger" ? "bad" : "warn");
@@ -389,13 +404,17 @@ export class StageView {
       parts.push(`<g class="box-ico" transform="translate(${icoX} ${b.y + 8})">${icon(ico, { size: 40 })}</g>`);
       const tx = b.kind === "source" ? b.x + 56 : b.kind === "endpoint" ? b.x + 40 : b.x + 12;
       const short = type.source && src ? sourceName(src) || title : title.replace(/^(Powered|Passive) (speaker|wedge) · /, "");
-      const sub = b.kind === "source" ? src?.device || type.name : b.kind === "endpoint" ? (type.camera ? "Camera input" : type.amp === "internal" ? "Powered: amp inside" : "Passive: needs an amp") : type.name;
+      const sub = b.kind === "source" ? src?.device || type.name : b.kind === "endpoint" ? (type.camera ? translate("ui.stageCameraInput", "Camera input")
+        : type.amp === "internal" ? translate("ui.stagePoweredEndpoint", "Powered: amp inside") : translate("ui.stagePassiveEndpoint", "Passive: needs an amp")) : type.name;
       parts.push(`<text class="box-name" x="${tx}" y="${b.y + 22}">${esc(clip(short, b.kind === "rack" ? 17 : 20))}</text><text class="box-sub" x="${tx}" y="${b.y + 37}">${esc(clip(sub, 26))}</text>`);
-      if (st) parts.push(`<g class="pill pill-${st.tone}" transform="translate(${tx} ${b.y + 44})"><rect width="${8 + st.text.length * 6.2}" height="16" rx="8"/><text x="6" y="11.5">${esc(st.text)}</text></g>`);
+      if (st) {
+        const wide = st.text.match(/[\u3000-\u9fff\uff00-\uffef]/gu)?.length ?? 0;
+        parts.push(`<g class="pill pill-${st.tone}" transform="translate(${tx} ${b.y + 44})"><rect width="${8 + st.text.length * 6.2 + wide * 4}" height="16" rx="8"/><text x="6" y="11.5">${esc(st.text)}</text></g>`);
+      }
       if (type.dante) parts.push(`<text class="box-sub" x="${tx}" y="${b.y + b.h - 10}">Tracks go out over Dante</text>`);
     }
     const pst = b.id === d.id ? powerState(rig, d) : null;
-    return `<g class="sbox kind-${b.kind} ${st ? `tone-${st.tone}` : ""}${pst && pst !== "on" ? " dark" : ""}" data-box="${esc(b.id)}" tabindex="0" role="button" aria-label="${esc(label)}: show details">${parts.join("")}</g>`;
+    return `<g class="sbox kind-${b.kind} ${st ? `tone-${st.tone}` : ""}${pst && pst !== "on" ? " dark" : ""}" data-box="${esc(b.id)}" tabindex="0" role="button" aria-label="${esc(translate("ui.stageShowDetails", "{name}: show details", { name: label }))}">${parts.join("")}</g>`;
   }
 
   // Power, on the box's top edge: its plug and its switch, each tappable. The
@@ -404,15 +423,17 @@ export class StageView {
   powerTab(b, d, st, rig) {
     const spec = powerSpec(d);
     const name = d.label || DEVICE_TYPES[d.type].name;
-    const plugName = spec.gear ? `${spec.gear}'s power cable` : spec.plug || "power cable";
+    const plugName = spec.gear ? translate("ui.stageGearPowerCable", "{gear}'s power cable", { gear: spec.gear }) : spec.plug || translate("ui.stagePowerCableName", "power cable");
     const plugged = (d.plugged ?? 1) === 1;
     const on = (d.on ?? 1) === 1;
     const w = spec.noSwitch ? 26 : 50;
     const x = b.x + b.w - w - 14;
     const y = b.y - 10;
-    const why = st === "on" ? "Power: on." : powerWhy(rig, d);
-    const plugLabel = `${name}: ${plugName} ${plugged ? "plugged in. Tap to unplug" : "unplugged. Tap to plug it in"}. ${why}`;
-    const swLabel = `${name}: power switch ${on ? "on. Tap to switch off" : "off. Tap to switch on"}. ${why}`;
+    const why = stagePowerReason(st, powerWhy(rig, d));
+    const plugLabel = translate(plugged ? "ui.stagePowerPlugIn" : "ui.stagePowerPlugOut",
+      plugged ? "{name}: {plug} plugged in. Tap to unplug." : "{name}: {plug} unplugged. Tap to plug it in.", { name, plug: plugName }) + ` ${why}`;
+    const swLabel = translate(on ? "ui.stagePowerSwitchOn" : "ui.stagePowerSwitchOff",
+      on ? "{name}: power switch on. Tap to switch off." : "{name}: power switch off. Tap to switch on.", { name }) + ` ${why}`;
     const plug = `<g class="pwr-btn pwr-plug ${plugged ? "is-in" : "is-out"}" data-power="${esc(d.id)}" data-power-key="plugged" tabindex="0" role="button" aria-label="${esc(plugLabel)}"><title>${esc(plugLabel)}</title>
       <rect class="pwr-hit" x="1" y="1" width="24" height="18" rx="9"/>
       ${plugged ? `<path class="pwr-cord" d="M4 10h4"/><rect class="pwr-body" x="8" y="6" width="7" height="8" rx="1.5"/><path class="pwr-prong" d="M15 8.2h4M15 11.8h4"/>`
@@ -431,7 +452,8 @@ export class StageView {
     const name = jackIconName(p.jack, p.dir);
     const other = cable ? (cable.from === j.ref ? cable.to : cable.from) : null;
     const lvl = SIGNAL_LEVELS[p.level];
-    const desc = `${portLabel(rig, j.ref)} (${JACKS[p.jack]?.name || p.jack}${lvl ? `, ${lvl.name.toLowerCase()}` : ""}): ${other ? `connected to ${portLabel(rig, other)}` : "empty"}`;
+    const level = lvl ? language() === "ja" ? translate(`ui.gear.${lvl.name}`, lvl.name.toLowerCase()) : lvl.name.toLowerCase() : "";
+    const desc = `${portLabel(rig, j.ref)} (${JACKS[p.jack]?.name || p.jack}${level ? `, ${level}` : ""}): ${other ? translate("ui.connectedTo", "connected to {port}", { port: portLabel(rig, other) }) : translate("ui.empty", "empty")}`;
     const size = p.jack === "mini" ? 16 : p.jack === "rca" ? 18 : 23;
     // A sub snake's tail: a loose XLR plug while it's unplugged, just the cable once it's in.
     const art = j.tail
@@ -471,9 +493,9 @@ export class StageView {
     const d = rig.devices.find((x) => x.id === deviceId);
     const html = this.patchView.cards.get(deviceId);
     this.inspector.hidden = false;
-    const title = isMixer(d) ? `${this.getSkin().name}: outputs` : d.label || DEVICE_TYPES[d.type].name;
-    this.inspector.innerHTML = `<div class="insp-head"><h3>${esc(title)}</h3><button type="button" class="patch-x" data-close-insp aria-label="Close details">✕</button></div>
-      ${html ? `<ul class="${isMixer(d) ? "" : "source-list device-list"} insp-body">${html}</ul>` : `<p class="insp-empty">Its jacks are on the diagram: tap one to patch it.</p>`}`;
+    const title = isMixer(d) ? translate("ui.stageMixerOutputs", "{name}: outputs", { name: this.getSkin().name }) : d.label || DEVICE_TYPES[d.type].name;
+    this.inspector.innerHTML = `<div class="insp-head"><h3>${esc(title)}</h3><button type="button" class="patch-x" data-close-insp aria-label="${esc(translate("ui.closeDetails", "Close details"))}">✕</button></div>
+      ${html ? `<ul class="${isMixer(d) ? "" : "source-list device-list"} insp-body">${html}</ul>` : `<p class="insp-empty">${esc(translate("ui.jacksDiagram", "Its jacks are on the diagram: tap one to patch it."))}</p>`}`;
     this.inspector.querySelector("[data-close-insp]").addEventListener("click", () => this.select(null));
   }
 
@@ -547,7 +569,7 @@ export class StageView {
     if (!target) return;
     const to = target.dataset.port;
     if (!d.cable) return this.patchView.openBetween(d.ref, to);
-    if (d.cable.fixed) return this.patchView.toast("That cable is wired into a permanent rack: it stays where it is.", "bad");
+    if (d.cable.fixed) return this.patchView.toast(() => translate("ui.fixedCableMove", "That cable is wired into a permanent rack: it stays where it is."), "bad");
     // Move a plugged cable's end: same cable, new jack. Put it back if it doesn't go.
     const keep = d.cable.from === d.ref ? d.cable.to : d.cable.from;
     const keepPort = getPort(this.store.state.rig, keep);
@@ -557,9 +579,25 @@ export class StageView {
     if (!r.ok) {
       const [f0, t0] = [d.cable.from, d.cable.to];
       this.store.connect(f0, t0, d.cable.cable);
-      this.patchView.toast(r.reason, "bad");
-    } else this.patchView.toast(`Moved: ${portLabel(this.store.state.rig, from)} → ${portLabel(this.store.state.rig, into)}`, "ok");
+      this.patchView.toast(() => connectionReason(r.reason), "bad");
+    } else this.patchView.toast(() => translate("ui.cableMoved", "Moved: {from} → {to}", {
+      from: portLabel(this.store.state.rig, from), to: portLabel(this.store.state.rig, into),
+    }), "ok");
   }
+}
+
+function stagePowerReason(state, reason) {
+  if (state === "on") return translate("ui.stagePowerOn", "Power: on.");
+  const unplugged = /^(.+): its (.+) isn't plugged in\.$/.exec(reason);
+  if (unplugged) return translate("ui.stagePowerUnplugged", reason, {
+    name: unplugged[1], plug: unplugged[2] === "power cable" ? translate("ui.stagePowerCableName", "power cable") : unplugged[2],
+  });
+  const rack = /^(.+) is switched on, but (.+) is off\.$/.exec(reason);
+  if (rack) return translate("ui.stageRackPowerOff", reason, {
+    name: rack[1], rack: rack[2] === "its rack's power" ? translate("ui.stageRackPowerName", "its rack's power") : rack[2],
+  });
+  const off = /^(.+) is switched off\.$/.exec(reason);
+  return off ? translate("ui.vjrAmpOff", reason, { device: off[1] }) : reason;
 }
 
 const clip = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);

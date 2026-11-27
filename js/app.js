@@ -287,6 +287,7 @@ function refreshLocalizedViews() {
     stageView.render(lastMix);
     renderFlow($("#flow"), skin);
   }
+  patchView.syncLanguage();
   danteView.sync();
   if (recorderView.isOpen) recorderView.syncLanguage();
   listenBar.render();
