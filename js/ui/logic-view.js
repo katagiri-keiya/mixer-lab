@@ -15,6 +15,7 @@ import { LOGIC, cardSource, logicTracks, macOnCard, recordingMac } from "../reco
 import { sourceShort } from "../names.js";
 import { language, t as translate } from "../i18n/index.js";
 import { danteOneToOneHtml, danteSubscriptionLabel, syncDanteDialog } from "./dante-view.js";
+import { recordingMessage } from "./patch-view.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const RX_PAGE = 16;
@@ -137,7 +138,11 @@ export class LogicView {
       this.el.innerHTML = `<div class="dialog-body"><p>${esc(translate("ui.danteNoRecordingComputer", "No recording computer in this rig."))}</p><button type="button" class="btn" data-logic="close">${esc(translate("ui.danteClose", "Close"))}</button></div>`;
       return;
     }
-    const title = Object.fromEntries(TABS)[this.tab];
+    const labels = TABS.map(([id, label]) => [id,
+      id === "logic" ? translate("ui.logicTracksTab", label)
+        : id === "audio" ? translate("ui.logicAudioTab", label) : label,
+    ]);
+    const title = Object.fromEntries(labels)[this.tab];
     const tab = (id, label) => `<button type="button" role="tab" class="chip ${this.tab === id ? "active" : ""}" aria-selected="${this.tab === id}" data-logic="tab" data-tab="${id}">${label}</button>`;
     const body = { logic: () => this.logicHtml(mac), audio: () => this.audioHtml(mac), dvs: () => this.dvsHtml(mac), controller: () => this.controllerHtml(mac) }[this.tab]();
     const languageAction = language() === "ja" ? "Switch to English" : "日本語に切り替え";
@@ -149,7 +154,7 @@ export class LogicView {
           <button type="button" class="chip" data-language-toggle aria-label="${languageAction}" title="${languageAction}">${language() === "ja" ? "日本語" : "English"}</button>
           <button type="button" class="btn" data-logic="close" aria-label="${close}">${close}</button>
         </div>
-        <div class="dante-tabs" role="tablist">${TABS.map(([id, label]) => tab(id, label)).join("")}</div>
+        <div class="dante-tabs" role="tablist">${labels.map(([id, label]) => tab(id, esc(label))).join("")}</div>
         ${body}
       </div>`;
   }
@@ -157,36 +162,41 @@ export class LogicView {
   logicHtml(mac) {
     const { SOURCES_BY_ID, STEMS } = this.manifest;
     const tracks = logicTracks(this.store.state, SOURCES_BY_ID, STEMS);
+    const noInput = esc(translate("ui.logicNoInput", "No input"));
     const warn = !macOnCard(this.store.state.rig, mac)
       ? translate("ui.danteLogicNoCard", "The Mac mini isn't cabled to the X32's X-DANTE card.")
       : mac.dvs === 0 ? danteTrackMessage("Dante Virtual Soundcard is stopped.")
         : mac.logicIn === 1 ? translate("ui.danteLogicWrongInput", "Logic's input device is the SSL 2+, not Dante Virtual Soundcard.") : "";
     const rows = tracks
       .map((t) => {
+        const n = t.track + 1;
+        const armLabel = translate("ui.recorderArm", "Record-enable Audio {n}", {
+          n, state: t.arm ? translate("ui.recorderStateOn", "on") : translate("ui.recorderStateOff", "off"),
+        });
         const meter = t.ok && t.arm ? Math.max(0, Math.min(100, ((t.peakDb + 60) / 60) * 100)) : 0;
         const hears = t.ok ? `${esc(sourceShort(SOURCES_BY_ID[t.sourceId]) || t.sourceId)} · ${esc(t.jack)}` : esc(danteTrackMessage(t.why));
         const picker =
           this.picking === t.track
-            ? `<tr class="logic-picker"><td colspan="6"><div class="logic-ins" role="group" aria-label="Audio ${t.track + 1} input">
-              <button type="button" class="chip" data-logic="input" data-in="0">No input</button>
-              ${Array.from({ length: LOGIC.inputs }, (_, i) => `<button type="button" class="chip ${t.in === i + 1 ? "active" : ""}" data-logic="input" data-in="${i + 1}">Input ${i + 1}</button>`).join("")}
+            ? `<tr class="logic-picker"><td colspan="6"><div class="logic-ins" role="group" aria-label="${esc(translate("ui.logicTrackInputPicker", "Audio {n} input", { n }))}">
+              <button type="button" class="chip" data-logic="input" data-in="0">${noInput}</button>
+              ${Array.from({ length: LOGIC.inputs }, (_, i) => `<button type="button" class="chip ${t.in === i + 1 ? "active" : ""}" data-logic="input" data-in="${i + 1}">${esc(translate("ui.logicInputNumber", "Input {n}", { n: i + 1 }))}</button>`).join("")}
             </div></td></tr>`
             : "";
         return `<tr class="${t.ok ? "logic-ok" : "logic-flat"}">
-          <td><input type="checkbox" data-logic-select="${t.track}" ${this.selected.has(t.track) ? "checked" : ""} aria-label="Select Audio ${t.track + 1}" /></td>
+          <td><input type="checkbox" data-logic-select="${t.track}" ${this.selected.has(t.track) ? "checked" : ""} aria-label="${esc(translate("ui.logicSelectTrack", "Select Audio {n}", { n }))}" /></td>
           <td class="daw-name">Audio ${t.track + 1}</td>
-          <td><button type="button" class="btn logic-in" data-logic="pick" data-track="${t.track}" aria-expanded="${this.picking === t.track}">${t.in ? `In ${t.in}` : "No input"}</button></td>
-          <td><button type="button" class="btn logic-arm ${t.arm ? "on" : ""}" data-logic="arm" data-track="${t.track}" aria-pressed="${t.arm}" aria-label="Record-enable Audio ${t.track + 1}">R</button></td>
+          <td><button type="button" class="btn logic-in" data-logic="pick" data-track="${t.track}" aria-expanded="${this.picking === t.track}">${t.in ? `In ${t.in}` : noInput}</button></td>
+          <td><button type="button" class="btn logic-arm ${t.arm ? "on" : ""}" data-logic="arm" data-track="${t.track}" aria-pressed="${t.arm}" aria-label="${esc(armLabel)}">R</button></td>
           <td class="logic-meter"><span class="logic-bar" style="width:${meter.toFixed(0)}%"></span><b>${t.ok && t.arm ? t.peakDb.toFixed(1) : "—"}</b></td>
           <td class="logic-hears">${hears}</td>
         </tr>${picker}`;
       })
       .join("");
     return `
-      <p class="dante-note">Each track records one input. In 1–32 are the Dante channels from the X32's card, as Dante Controller routes them. A meter moves only on a record-enabled track (R).</p>
+      <p class="dante-note">${esc(translate("ui.logicTracksNote", "Each track records one input. In 1–32 are the Dante channels from the X32's card, as Dante Controller routes them. A meter moves only on a record-enabled track (R)."))}</p>
       ${warn ? `<p class="dante-note"><b>${esc(warn)}</b></p>` : ""}
-      <p class="dante-note"><label><input type="checkbox" data-logic-ascending ${this.ascending ? "checked" : ""} /> ⌥ Ascending</label> Tick the tracks, then pick an input with Option held (or this ticked): the ticked tracks get that input and the ones after it, in order.</p>
-      <div class="dc-wrap"><table class="daw-table logic-table"><thead><tr><th></th><th>Track</th><th>Input</th><th>R</th><th>Level</th><th>Hears</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      <p class="dante-note"><label><input type="checkbox" data-logic-ascending ${this.ascending ? "checked" : ""} /> ${esc(translate("ui.logicAscending", "⌥ Ascending"))}</label> ${esc(translate("ui.logicAscendingNote", "Tick the tracks, then pick an input with Option held (or this ticked): the ticked tracks get that input and the ones after it, in order."))}</p>
+      <div class="dc-wrap"><table class="daw-table logic-table"><thead><tr><th></th><th>${esc(translate("ui.danteTrack", "Track"))}</th><th>${esc(translate("ui.logicInputColumn", "Input"))}</th><th>R</th><th>${esc(translate("ui.logicLevelColumn", "Level"))}</th><th>${esc(translate("ui.logicHearsColumn", "Hears"))}</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
 
   audioHtml(mac) {
@@ -241,6 +251,7 @@ export class LogicView {
 
 export function danteTrackMessage(reason) {
   if (language() !== "ja") return reason;
+  if (reason === "No input") return translate("ui.logicNoInput", reason);
   if (reason === "Dante Virtual Soundcard is stopped.") {
     return `${translate("ui.danteStopped", reason.slice(0, -1))}。`;
   }
@@ -258,10 +269,12 @@ export function danteTrackMessage(reason) {
     [/^No stage box for (.+)$/, "ui.danteLogicNoStageBox", "jack"],
     [/^No AES50 link: (.+) never reaches the X32$/, "ui.danteLogicNoAes50", "jack"],
     [/^Nothing is plugged into (.+)$/, "ui.danteLogicUnplugged", "jack"],
+    [/^No signal on (.+)$/, "ui.logicNoSignal", "jack"],
+    [/^(.+): almost nothing \(its GAIN is far too low\)$/, "ui.logicGainTooLow", "jack"],
   ];
   for (const [pattern, key, param] of rules) {
     const match = pattern.exec(reason);
     if (match) return translate(key, reason, { [param]: match[1] });
   }
-  return reason;
+  return recordingMessage(reason);
 }

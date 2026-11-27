@@ -39,7 +39,7 @@ import { nameMode, sourceName } from "../names.js";
 import { dvsRunning } from "../dante.js";
 import { isRecordingMac, logicTracks } from "../recording.js";
 import { count } from "../submission.js";
-import { language, localized, sourceText, t as translate } from "../i18n/index.js";
+import { LANGUAGES, language, localized, sourceText, t as translate } from "../i18n/index.js";
 import { connectionReasonsJa } from "../i18n/connection-ui.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -78,6 +78,11 @@ export const connectionMessage = (message) => {
     return translate(mini ? "ui.cameraHotMiniInput" : "ui.cameraHotMicInput", message, { level: translate(`ui.${levelKey}`, level), db });
   }
   return message;
+};
+export const recordingMessage = (message) => {
+  const errors = LANGUAGES[language()].ui.recorderErrors;
+  if (/^(No sound|No power): /.test(message)) return localizedPowerWarning(message);
+  return errors && Object.hasOwn(errors, message) ? errors[message] : connectionMessage(message);
 };
 const displayDevice = (value) => value === "Laptop · Preshow Music" ? gearText("preshowLaptop") : value === "Powered speaker · house left" ? `${gearText("poweredSpeaker")} · ${gearText("houseLeft")}` : value === "Powered speaker · house right" ? `${gearText("poweredSpeaker")} · ${gearText("houseRight")}` : gearText(value);
 const inputText = (key, fallback, vars = {}) => translate(`ui.${key}`, fallback, vars);
@@ -312,7 +317,7 @@ export class PatchView {
           const text = rack ? translate("ui.cmeRackOff", m, { receiver: rack[1], power: rack[2] })
             : src.id === "ky-mic2" && m === 'Mic level on the 1/4" line input skips the mic preamp\'s range — very quiet. Use XLR into the mic input.'
               ? translate("ui.karaokeMicInLine", m)
-            : rf && /^(No sound|No power): /.test(m) ? rfPowerWarning(m)
+            : rf && /^(No sound|No power): /.test(m) ? localizedPowerWarning(m)
               : advanced ? cmeAdvancedWarning(m) : connectionMessage(m);
           return `<p class="port-msg">${esc(text)}</p>`;
         }).join("")}
@@ -724,7 +729,7 @@ export function localizedPowerReason(reason) {
   return off ? translate("ui.rfPowerSwitchedOff", reason, { device: off[1] }) : reason;
 }
 
-function rfPowerWarning(message) {
+function localizedPowerWarning(message) {
   if (language() !== "ja") return message;
   const separator = message.indexOf(": ");
   const prefix = message.slice(0, separator);

@@ -8,8 +8,8 @@ import { MeterView } from "../meters.js";
 import { F8, cardStats, trackInputs } from "../devices.js";
 import { encodeWav } from "../wav.js";
 import { formatDb } from "../levels.js";
-import { LANGUAGES, language, setLanguage, t as translate } from "../i18n/index.js";
-import { connectionMessage } from "./patch-view.js";
+import { language, setLanguage, t as translate } from "../i18n/index.js";
+import { recordingMessage } from "./patch-view.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const MARKS = [
@@ -26,7 +26,7 @@ const hours = (sec) => {
   const minutes = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
   return translate("ui.recorderHours", `${hours} h ${minutes} min`, { hours, minutes });
 };
-const recorderMessage = (message) => LANGUAGES[language()].ui.recorderErrors?.[message] ?? connectionMessage(message);
+const recorderState = (on) => on ? translate("ui.recorderStateOn", "on") : translate("ui.recorderStateOff", "off");
 const trackText = (key, fallback, n, extra = {}) => translate(`ui.recorder${key}`, fallback, { n, ...extra });
 
 export class RecorderView {
@@ -76,7 +76,7 @@ export class RecorderView {
     const rt = this.rt();
     if (!rt) return this.toast(translate("ui.recorderStartBeforeRecording", "Press Start Audio first: the recorder needs the audio engine."), "bad");
     const r = await rt.record();
-    if (!r.ok) this.toast(recorderMessage(r.reason), "bad");
+    if (!r.ok) this.toast(() => recordingMessage(r.reason), "bad");
     else this.recStart = performance.now();
   }
 
@@ -126,7 +126,7 @@ export class RecorderView {
       const b = new LitButton({ label: `LINK ${p * 2 + 1}/${p * 2 + 2}`, tone: "assign", small: true, onPress: () => store.setDevice(this.id, `link.${p}`, !this.dev.link[p]) });
       this.bindings.push(() => {
         const a = p * 2 + 1, bTrack = a + 1, lit = this.dev.link[p], state = lit ? "on" : "off";
-        b.setLit(lit, translate("ui.recorderPairLink", `Link tracks ${a} and ${bTrack} as a stereo pair: ${state}`, { a, b: bTrack, state }));
+        b.setLit(lit, translate("ui.recorderPairLink", `Link tracks ${a} and ${bTrack} as a stereo pair: ${state}`, { a, b: bTrack, state: recorderState(lit) }));
       });
       links.appendChild(b.el);
     }
@@ -151,7 +151,8 @@ export class RecorderView {
         defaultValue: 30,
         size: "xs",
         tone: "gain",
-        format: (v) => (this.paths?.[trackInputs(this.dev)[t]] === "line" ? `${formatDb(v - 20)} line` : `+${Math.round(v)} dB`),
+        format: (v) => (this.paths?.[trackInputs(this.dev)[t]] === "line"
+          ? translate("ui.recorderLineTrim", "{level} line", { level: formatDb(v - 20) }) : `+${Math.round(v)} dB`),
         onInput: (v) => store.setDevice(this.id, `tracks.${t}.trimDb`, v),
       });
       this.bindings.push(() => trim.setValue(this.dev.tracks[t].trimDb, true));
@@ -160,19 +161,19 @@ export class RecorderView {
       const p48 = new LitButton({ label: "48V", tone: "phantom", small: true, onPress: () => store.setDevice(this.id, `tracks.${t}.phantom`, !this.dev.tracks[t].phantom) });
       this.bindings.push(() => {
         const lit = this.dev.tracks[t].phantom, state = lit ? "on" : "off";
-        p48.setLit(lit, trackText("Phantom", `Track ${n} phantom power: ${state}`, n, { state }));
+        p48.setLit(lit, trackText("Phantom", `Track ${n} phantom power: ${state}`, n, { state: recorderState(lit) }));
       });
       const arm = new LitButton({ label: "REC", tone: "mute", small: true, onPress: () => store.setDevice(this.id, `tracks.${t}.arm`, !this.dev.tracks[t].arm) });
       this.bindings.push(() => {
         const lit = this.dev.tracks[t].arm;
-        arm.setLit(lit, trackText("Arm", `Track ${n} armed: ${lit ? "yes" : "no"}`, n, { state: lit ? "on" : "off" }));
+        arm.setLit(lit, trackText("Arm", `Track ${n} armed: ${lit ? "yes" : "no"}`, n, { state: recorderState(lit) }));
       });
       col.append(meter.el, trim.el, p48.el, arm.el);
       if (t < 4) {
         const dual = new LitButton({ label: `DUAL→${t + 5}`, tone: "assign", small: true, onPress: () => store.setDevice(this.id, `dual.${t}`, !this.dev.dual[t]) });
         this.bindings.push(() => {
           const track = t + 5, lit = this.dev.dual[t], state = lit ? "on" : "off";
-          dual.setLit(lit, translate("ui.recorderDual", `Dual channel recording: input ${n} also on track ${track}: ${state}`, { input: n, track, state }));
+          dual.setLit(lit, translate("ui.recorderDual", `Dual channel recording: input ${n} also on track ${track}: ${state}`, { input: n, track, state: recorderState(lit) }));
         });
         col.appendChild(dual.el);
       }
@@ -246,7 +247,7 @@ export class RecorderView {
         const source = !fromDev ? "?" : fromDev.type === "cr1604" ? from[1].toUpperCase() : room || fromDev.label;
         text = `${inp.path === "mic" ? "XLR" : "TRS"} · ${source}`;
       }
-      const warn = inp && inp.connected && inp.status !== "ok" && src === t ? recorderMessage(inp.messages[0]) : "";
+      const warn = inp && inp.connected && inp.status !== "ok" && src === t ? recordingMessage(inp.messages[0]) : "";
       const el = col.querySelector(".rec-src");
       col.setAttribute("aria-label", trackText("Track", `Track ${t + 1}`, t + 1));
       this.meters[t].el.setAttribute("aria-label", trackText("TrackMeter", `Track ${t + 1} meter`, t + 1));
@@ -271,7 +272,10 @@ export class RecorderView {
     this.el.querySelector(".rec-card").textContent = translate("ui.recorderCardSpace", `SD card ${F8.cardGB} GB · ${free} GB free · ${detail}`, { size: F8.cardGB, free, detail });
     const status = this.el.querySelector(".rec-status");
     const recording = rt && rt.recording;
-    status.textContent = !rt ? translate("ui.recorderStartAudio", "Press Start Audio to use the recorder.") : recording ? `● REC ${clock((performance.now() - (this.recStart || performance.now())) / 1000)}` : rt.playing ? "▶ PLAY" : rt.error ? recorderMessage(rt.error) : "■ STOP";
+    status.textContent = !rt ? translate("ui.recorderStartAudio", "Press Start Audio to use the recorder.")
+      : recording ? `● REC ${clock((performance.now() - (this.recStart || performance.now())) / 1000)}`
+        : rt.playing ? translate("ui.recorderPlaying", "▶ PLAY") : rt.error ? recordingMessage(rt.error)
+          : translate("ui.recorderStopped", "■ STOP");
     status.classList.toggle("is-rec", !!recording);
     this.el.querySelector('[data-rec="rec"]').classList.toggle("lit", !!recording);
     const takes = rt ? rt.takes : [];
