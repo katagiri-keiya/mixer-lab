@@ -13,7 +13,7 @@ import { ActiveTime, Progress, numberedScenarios } from "./progress.js";
 import { FREE_PLAY_STAT_IDS, freePlayStatId } from "./export.js";
 import { pickSection, sittingOut, stageFor, stageNote } from "./music.js";
 import { nameMode, setNameMode, setStandIns } from "./names.js";
-import { renderFlow } from "./ui/flow.js";
+import { renderFlow, syncFlowLanguage } from "./ui/flow.js";
 import { ListenBar } from "./ui/listen-bar.js";
 import { MixerView } from "./ui/mixer-view.js";
 import { PatchView } from "./ui/patch-view.js";
@@ -285,7 +285,7 @@ function refreshLocalizedViews() {
     syncConsoles(lastMix);
     patchView.render(lastMix);
     stageView.render(lastMix);
-    renderFlow($("#flow"), skin);
+    syncFlowLanguage($("#flow"), skin);
   }
   patchView.syncLanguage();
   danteView.sync();

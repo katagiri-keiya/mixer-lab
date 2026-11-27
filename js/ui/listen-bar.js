@@ -172,7 +172,10 @@ export class ListenBar {
       .map((p) => {
         const on = state.listen === p.dest;
         const target = this.nudgeDest === p.dest ? "target" : "";
-        const aria = `${p.place} (${p.label})${p.dead ? ", silent" : ""}`;
+        const placeLabel = `${p.place} (${p.label})`;
+        const aria = p.dead
+          ? translate("ui.listenSpotSilent", `${placeLabel}, silent`, { place: p.place, label: p.label, status: translate("ui.silent", "silent") })
+          : placeLabel;
         return `<g class="ear-spot kind-${p.kind} ${on ? "on" : ""} ${p.dead ? "dead" : ""} ${target}" data-dest="${esc(p.dest)}" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}" aria-label="${esc(aria)}">
           <title>${esc(aria)}</title>
           <circle class="spot-hit" cx="${p.x}" cy="${p.y - 10}" r="12"/>
@@ -275,7 +278,7 @@ export class ListenBar {
     const whereText = here ? `${here.place} · ${here.label}${here.dead ? ` (${translate("ui.silent", "silent")})` : ""}` : this.label(dest);
     if (this.where.textContent !== whereText) this.where.textContent = whereText;
 
-    const busName = dest === "main" ? (real ? "the MAIN mix" : "Main L/R") : t[dest] || dest;
+    const busName = dest === "main" ? (real ? translate("ui.listenMainMix", "the MAIN mix") : "Main L/R") : t[dest] || dest;
     let msg;
     if (dest === "rec" && this.getRecorder()?.playing) msg = rec.msg; // a take plays even with the band stopped
     else if (!ready) msg = loadingText || translate("ui.loading", "Loading…");

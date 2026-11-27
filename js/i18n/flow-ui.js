@@ -3,3 +3,14 @@ export const flowJa = { preamp: "マイクプリアンプ", splitFour: "4方向�
 
 Object.assign(flowEn, { source: "Source", meter: "Meter", houseSpeakers: "House speakers", wedge: "A wedge", engineerHeadphones: "Engineer's headphones", send: "send", bus: "bus", level: "level", master: "master", compactOutput: "The outputs are line level. A speaker only makes sound if an amplifier is somewhere in the chain: inside it (powered) or in front of it (passive + power amp)." });
 Object.assign(flowJa, { source: "入力", meter: "メーター", houseSpeakers: "客席スピーカー", wedge: "ウェッジ", engineerHeadphones: "エンジニア用ヘッドホン", send: "センド", bus: "バス", level: "レベル", master: "マスター", compactOutput: "出力はラインレベルです。スピーカーを鳴らすには、信号経路のどこかにアンプが必要です。パワードスピーカーなら内部に、パッシブスピーカーなら前段にパワーアンプがあります。" });
+
+Object.assign(flowJa, {
+  flowBipolarSend: "1つのノブで調整します。中央より左では{left}（{leftTap}）、右では{right}（{rightTap}）へ送ります。各チャンネルから送れるのはどちらか一方です。",
+  flowSendTap: "は{tap}から取り出します。",
+  flowXlrInput: "XLR入力",
+  flowAmpSpeakers: "アンプ → スピーカー",
+  flowSubgroups: "サブグループ",
+  flowAuxSends: "AUXセンド",
+  flowLitInMain: "{label}（点灯時はMAINに送る）",
+  flowLitOutOfMain: "{label}（点灯時はMAINに送らない）",
+});

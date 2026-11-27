@@ -3,7 +3,7 @@
 // On touch screens a tap without dragging opens a large fine-adjust sheet, so
 // no control depends on precise finger work.
 
-import { language, onLanguageChange, setLanguage } from "../i18n/index.js";
+import { language, onLanguageChange, setLanguage, t as translate } from "../i18n/index.js";
 
 const coarse = () => window.matchMedia("(pointer: coarse)").matches;
 
@@ -183,19 +183,20 @@ function openFineSheet(control) {
 function createSheet() {
   const dlg = document.createElement("dialog");
   dlg.className = "fine-sheet";
+  dlg.setAttribute("aria-labelledby", "fine-adjust-label");
   dlg.innerHTML = `
     <form method="dialog" class="fine-inner">
-      <p class="fine-label"></p>
+      <p class="fine-label" id="fine-adjust-label"></p>
       <p class="fine-value" aria-live="polite"></p>
       <div class="fine-row">
-        <button type="button" class="btn-round" data-dir="-1" aria-label="Down">−</button>
-        <input type="range" class="big-slider" min="0" max="1000" step="1" />
-        <button type="button" class="btn-round" data-dir="1" aria-label="Up">+</button>
+        <button type="button" class="btn-round" data-dir="-1">−</button>
+        <input type="range" class="big-slider" aria-labelledby="fine-adjust-label" min="0" max="1000" step="1" />
+        <button type="button" class="btn-round" data-dir="1">+</button>
       </div>
       <div class="fine-actions">
-        <button type="button" class="chip fine-language" hidden></button>
-        <button type="button" class="chip fine-reset">Reset</button>
-        <button type="submit" class="btn btn-start">Done</button>
+        <button type="button" class="chip fine-language"></button>
+        <button type="button" class="chip fine-reset"></button>
+        <button type="submit" class="btn btn-start"></button>
       </div>
     </form>`;
   document.body.appendChild(dlg);
@@ -205,17 +206,20 @@ function createSheet() {
   const resetBtn = dlg.querySelector(".fine-reset");
   const languageBtn = dlg.querySelector(".fine-language");
   let ctl = null;
+  const doneBtn = dlg.querySelector('[type="submit"]');
+  const decreaseBtn = dlg.querySelector('[data-dir="-1"]');
+  const increaseBtn = dlg.querySelector('[data-dir="1"]');
   const syncLabel = () => {
     const heading = ctl.o.sheetLabel;
-    const canSwitchLanguage = typeof heading === "function";
-    label.textContent = canSwitchLanguage ? heading() : heading || ctl.o.label;
-    languageBtn.hidden = !canSwitchLanguage;
-    if (canSwitchLanguage) {
-      const japanese = language() === "ja";
-      languageBtn.textContent = japanese ? "日本語" : "English";
-      languageBtn.title = japanese ? "Switch to English" : "日本語に切り替え";
-      languageBtn.setAttribute("aria-label", languageBtn.title);
-    }
+    label.textContent = typeof heading === "function" ? heading() : heading || ctl.o.label;
+    resetBtn.textContent = translate("ui.fineReset", "Reset");
+    doneBtn.textContent = translate("ui.fineDone", "Done");
+    decreaseBtn.setAttribute("aria-label", translate("ui.fineDecrease", "Down"));
+    increaseBtn.setAttribute("aria-label", translate("ui.fineIncrease", "Up"));
+    const japanese = language() === "ja";
+    languageBtn.textContent = japanese ? "日本語" : "English";
+    languageBtn.title = japanese ? "Switch to English" : "日本語に切り替え";
+    languageBtn.setAttribute("aria-label", languageBtn.title);
   };
   languageBtn.addEventListener("click", () => setLanguage(language() === "ja" ? "en" : "ja"));
   const sync = () => {

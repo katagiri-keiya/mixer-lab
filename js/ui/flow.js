@@ -14,6 +14,17 @@ const flowModelText = (skin, field, fallback, vars = {}) => {
   return translate(`ui.flowModels.${modelId}.${field}`, fallback, vars);
 };
 
+export function syncFlowLanguage(root, skin) {
+  const previous = root.querySelector("details");
+  const bodyScroll = previous?.querySelector(".flow-body")?.scrollTop ?? 0;
+  const hadFocus = previous?.querySelector("summary") === root.ownerDocument.activeElement;
+  renderFlow(root, skin);
+  const details = root.querySelector("details");
+  details.open = previous?.open ?? false;
+  details.querySelector(".flow-body").scrollTop = bodyScroll;
+  if (hadFocus) details.querySelector("summary").focus({ preventScroll: true });
+}
+
 export function renderFlow(root, skin) {
   if (skin.layout === "cr1604") return renderFlow1604(root, skin);
   if (skin.layout === "compact") return renderFlowCompact(root, skin, COMPACT[skin.hardware]);
@@ -26,12 +37,14 @@ export function renderFlow(root, skin) {
   if (skin.layout === "l20") return renderFlowL20(root, skin);
   const t = skin.terms;
   const c = skin.enabledControl;
-  const enableWord = c.litWhenEnabled ? `${c.label} (lit = in Main)` : `${c.label} (lit = out of Main)`;
+  const enableWord = c.litWhenEnabled
+    ? flowText("flowLitInMain", "{label} (lit = in Main)", { label: c.label })
+    : flowText("flowLitOutOfMain", "{label} (lit = out of Main)", { label: c.label });
   root.innerHTML = `
     <details class="flow">
       <summary>${esc(translate("ui.signalFlowOn", `How the signal flows on ${skin.name}`, { skin: skin.name }))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every channel">
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyChannel", "Every channel"))}">
           <li class="flow-node">${esc(flowText("source", "Source"))}</li>
           <li class="flow-node">${esc(t.gain)} <small>${esc(translate("ui.preamp", "preamp"))}</small></li>
           <li class="flow-node">${esc(flowText("meter", "Meter"))}</li>
@@ -78,7 +91,7 @@ function renderFlow1604(root, skin) {
     <details class="flow">
       <summary>${esc(flowSummary(skin))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every channel">
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyChannel", "Every channel"))}">
           <li class="flow-node">${flowModelText(skin, "node1", "MIC or LINE jack")}</li>
           <li class="flow-node">${flowModelText(skin, "node2", "TRIM <small>preamp</small>")}</li>
           <li class="flow-node">${flowModelText(skin, "node3", "LOW CUT")}</li>
@@ -89,25 +102,25 @@ function renderFlow1604(root, skin) {
           <li class="flow-split">${flowModelText(skin, "node8", "assign: L-R, 1-2, 3-4")}</li>
         </ol>
         <div class="flow-branches">
-          <ol class="flow-branch branch-main" aria-label="Main path">
+          <ol class="flow-branch branch-main" aria-label="${esc(flowText("mainPath", "Main path"))}">
             <li class="flow-node">L-R</li>
-            <li class="flow-node">MAIN L-R MIX fader</li>
-            <li class="flow-node flow-end">MAIN OUTS (and MONO)</li>
+            <li class="flow-node">${flowModelText(skin, "branch1", "MAIN L-R MIX fader")}</li>
+            <li class="flow-node flow-end">${flowModelText(skin, "branch2", "MAIN OUTS (and MONO)")}</li>
           </ol>
-          <ol class="flow-branch branch-aux" aria-label="Subgroups">
-            <li class="flow-node">1-2 or 3-4 <small>odd = left, even = right</small></li>
-            <li class="flow-node">SUB faders</li>
-            <li class="flow-node flow-end">SUB OUTS, or back into MAIN with ASSIGN TO MAIN MIX</li>
+          <ol class="flow-branch branch-aux" aria-label="${esc(flowText("flowSubgroups", "Subgroups"))}">
+            <li class="flow-node">${flowModelText(skin, "branch3", "1-2 or 3-4 <small>odd = left, even = right</small>")}</li>
+            <li class="flow-node">${flowModelText(skin, "branch4", "SUB faders")}</li>
+            <li class="flow-node flow-end">${flowModelText(skin, "branch5", "SUB OUTS, or back into MAIN with ASSIGN TO MAIN MIX")}</li>
           </ol>
-          <ol class="flow-branch branch-aux" aria-label="Aux sends">
-            <li class="flow-node">AUX 1, 2 <small>post, or PRE: after LOW CUT, before EQ, MUTE and fader</small></li>
-            <li class="flow-node">AUX 3/4 <small>always post; 5/6 SHIFT moves them to 5/6</small></li>
-            <li class="flow-node flow-end">AUX SEND outs (masters on 1 and 2 only)</li>
+          <ol class="flow-branch branch-aux" aria-label="${esc(flowText("flowAuxSends", "Aux sends"))}">
+            <li class="flow-node">${flowModelText(skin, "branch6", "AUX 1, 2 <small>post, or PRE: after LOW CUT, before EQ, MUTE and fader</small>")}</li>
+            <li class="flow-node">${flowModelText(skin, "branch7", "AUX 3/4 <small>always post; 5/6 SHIFT moves them to 5/6</small>")}</li>
+            <li class="flow-node flow-end">${flowModelText(skin, "branch8", "AUX SEND outs (masters on 1 and 2 only)")}</li>
           </ol>
           <ol class="flow-branch branch-pfl" aria-label="${esc(flowText("headphonePathLabel", "Headphone path"))}">
             <li class="flow-node">SOURCE: MAIN MIX, SUBS, TAPE</li>
-            <li class="flow-node">SOLO replaces it <small>LEVEL SET (PFL): before the fader · NORMAL (AFL): after fader and pan</small></li>
-            <li class="flow-node flow-end">C-R/PHONES knob → C-R OUTS, PHONES</li>
+            <li class="flow-node">${flowModelText(skin, "branch9", "SOLO replaces it <small>LEVEL SET (PFL): before the fader · NORMAL (AFL): after fader and pan</small>")}</li>
+            <li class="flow-node flow-end">${flowModelText(skin, "branch10", "C-R/PHONES knob → C-R OUTS, PHONES")}</li>
           </ol>
         </div>
         <ul class="flow-notes">
@@ -127,8 +140,8 @@ function renderFlowDigital(root, skin, def) {
     <details class="flow">
       <summary>${esc(flowSummary(skin))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every channel">
-          <li class="flow-node">Input jack</li>
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyChannel", "Every channel"))}">
+          <li class="flow-node">${esc(flowText("inputJack", "Input jack"))}</li>
           <li class="flow-node">GAIN</li>
           <li class="flow-node">HPF</li>
           <li class="flow-node">COMP</li>
@@ -156,7 +169,7 @@ function renderFlowL20(root, skin) {
     <details class="flow">
       <summary>${esc(flowSummary(skin))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every channel">
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyChannel", "Every channel"))}">
           <li class="flow-node">${flowModelText(skin, "node1", "Input jack")}</li>
           <li class="flow-node">${flowModelText(skin, "node2", "GAIN <small>PAD / Hi-Z</small>")}</li>
           <li class="flow-node">${flowModelText(skin, "node3", "COMP")}</li>
@@ -185,7 +198,7 @@ function renderFlow01v96(root, skin) {
     <details class="flow">
       <summary>${esc(flowSummary(skin))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every channel">
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyChannel", "Every channel"))}">
           <li class="flow-node">${flowModelText(skin, "node1", "INPUT (A XLR / B TRS)")}</li>
           <li class="flow-node">${flowModelText(skin, "node2", "PAD · GAIN")}</li>
           <li class="flow-node">${flowModelText(skin, "node3", "Ø · EQ · COMP")}</li>
@@ -212,7 +225,7 @@ function renderFlowF8(root, skin) {
     <details class="flow">
       <summary>${esc(flowSummary(skin))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every track">
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyTrack", "Every track"))}">
           <li class="flow-node">${flowModelText(skin, "node1", "INPUT (XLR mic / TRS line)")}</li>
           <li class="flow-node">${flowModelText(skin, "node2", "TRIM, +48V")}</li>
           <li class="flow-node">${flowModelText(skin, "node3", "HPF · Ø")}</li>
@@ -237,7 +250,7 @@ function renderFlowDM2000(root, skin) {
     <details class="flow">
       <summary>${esc(flowSummary(skin))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every channel">
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyChannel", "Every channel"))}">
           <li class="flow-node">${flowModelText(skin, "node1", "INPUT (GAIN, PAD, +48V)")}</li>
           <li class="flow-node">${flowModelText(skin, "node2", "Ø")}</li>
           <li class="flow-node">${flowModelText(skin, "node3", "EQ (EQ ON)")}</li>
@@ -264,7 +277,7 @@ function renderFlowCL(root, skin) {
     <details class="flow">
       <summary>${esc(flowSummary(skin))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every channel">
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyChannel", "Every channel"))}">
           <li class="flow-node">${flowModelText(skin, "node1", "Mic → Rio IN (HA GAIN, +48V)")}</li>
           <li class="flow-node">${flowModelText(skin, "node2", "Dante → channel")}</li>
           <li class="flow-node">${flowModelText(skin, "node3", "HPF")}</li>
@@ -293,8 +306,8 @@ function renderFlowX32(root, skin) {
     <details class="flow">
       <summary>${esc(flowSummary(skin))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every channel">
-          <li class="flow-node">XLR input</li>
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyChannel", "Every channel"))}">
+          <li class="flow-node">${esc(flowText("flowXlrInput", "XLR input"))}</li>
           <li class="flow-node">GAIN</li>
           <li class="flow-node">LOW CUT</li>
           <li class="flow-node">DYN</li>
@@ -322,8 +335,8 @@ function renderFlowGdig(root, skin) {
     <details class="flow">
       <summary>${esc(flowSummary(skin))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every channel">
-          <li class="flow-node">XLR input</li>
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyChannel", "Every channel"))}">
+          <li class="flow-node">${esc(flowText("flowXlrInput", "XLR input"))}</li>
           <li class="flow-node">GAIN</li>
           <li class="flow-node">LOW CUT</li>
           <li class="flow-node">COMP</li>
@@ -360,8 +373,8 @@ function renderFlowCompact(root, skin, def) {
       ? `<li>${flowModelText(skin, sendKey(s.label), "")}</li>`
       :
     s.bipolar
-      ? `<li><strong>${esc(s.label)}</strong>: one knob. Left of centre feeds ${esc(def.buses[s.bipolar.left.bus].label)} (${tapWord[s.bipolar.left.tap]}); right feeds ${esc(def.buses[s.bipolar.right.bus].label)} (${tapWord[s.bipolar.right.tap]}). A channel can feed one or the other, not both.</li>`
-      : `<li><strong>${esc(s.label)}</strong> is taken ${tapWord[s.tap]}.${s.bus === "reverb" ? ` ${flowText("compactReverb", "It feeds the built-in reverb.")}` : def.fx && s.bus === def.fx.send ? ` ${flowText("compactEffects", "Through its master (AUX SEND 2) it feeds the built-in effects, which come back on STEREO AUX RETURN 2.")}` : ""}</li>`,
+      ? `<li><strong>${esc(s.label)}</strong>: ${flowText("flowBipolarSend", "one knob. Left of centre feeds {left} ({leftTap}); right feeds {right} ({rightTap}). A channel can feed one or the other, not both.", { left: esc(def.buses[s.bipolar.left.bus].label), leftTap: tapWord[s.bipolar.left.tap], right: esc(def.buses[s.bipolar.right.bus].label), rightTap: tapWord[s.bipolar.right.tap] })}</li>`
+      : `<li><strong>${esc(s.label)}</strong>${flowText("flowSendTap", " is taken {tap}.", { tap: tapWord[s.tap] })}${s.bus === "reverb" ? ` ${flowText("compactReverb", "It feeds the built-in reverb.")}` : def.fx && s.bus === def.fx.send ? ` ${flowText("compactEffects", "Through its master (AUX SEND 2) it feeds the built-in effects, which come back on STEREO AUX RETURN 2.")}` : ""}</li>`,
   );
   const notes = [
     def.field ? "" : def.channels.some((c) => c.gain.switch) ? `<li>${flowText("noGain", "There is no gain knob: the MIC/LINE switch sets the input gain, and each channel LEVEL does the rest.")}</li>` : `<li>${flowText("gainLevel", "GAIN/TRIM sets how hot the signal is; the channel LEVEL sets how much goes to the mix.")}</li>`,
@@ -392,13 +405,13 @@ function renderFlowCompact(root, skin, def) {
     <details class="flow">
       <summary>${esc(flowSummary(skin))}</summary>
       <div class="flow-body">
-        <ol class="flow-trunk" aria-label="Every channel">
+        <ol class="flow-trunk" aria-label="${esc(flowText("everyChannel", "Every channel"))}">
           <li class="flow-node">${esc(flowModelText(skin, "node1", flowText("inputJack", "Input jack")))}</li>
           <li class="flow-node">${flowModelText(skin, "node2", def.channels.some((c) => c.gain.switch) ? "MIC/LINE" : "GAIN")}</li>
           ${def.channels.some((c) => c.hpf) ? `<li class="flow-node">${flowModelText(skin, "node3", "HPF")}</li><li class="flow-node">${flowModelText(skin, "node4", "LIMITER")}</li>` : `<li class="flow-node">${flowModelText(skin, "node3", "EQ")}</li>`}
           <li class="flow-node">${flowModelText(skin, "node5", def.levelLaw || def.layout.level === "fader" ? "FADER" : "LEVEL")}</li>
           <li class="flow-node">${flowModelText(skin, "node6", def.channels.some((c) => c.kind === "stereo") ? "PAN / BAL" : "PAN")}</li>
-          <li class="flow-node flow-end">${esc(flowModelText(skin, "node7", `${def.main.label} → ${def.poweredAmp ? "amp → speakers" : def.outLevel ? flowText("xlrOut", "XLR OUT (MIC/−10/LINE)") : "MAIN OUT"}`))}</li>
+          <li class="flow-node flow-end">${esc(flowModelText(skin, "node7", `${def.main.label} → ${def.poweredAmp ? flowText("flowAmpSpeakers", "amp → speakers") : def.outLevel ? flowText("xlrOut", "XLR OUT (MIC/−10/LINE)") : "MAIN OUT"}`))}</li>
         </ol>
         <ul class="flow-notes">${notes.join("")}</ul>
       </div>

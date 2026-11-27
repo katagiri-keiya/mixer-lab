@@ -892,3 +892,12 @@ Object.assign(uiJa, {
   cameraTapeLevel: "−10（テープ）レベル",
   cameraMinus10Level: "−10レベル",
 });
+
+Object.assign(uiJa, {
+  fineReset: "リセット",
+  fineDone: "完了",
+  fineDecrease: "値を下げる",
+  fineIncrease: "値を上げる",
+  listenSpotSilent: "{place}（{label}、{status}）",
+  listenMainMix: "MAINミックス",
+});
