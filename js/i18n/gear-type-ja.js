@@ -1,5 +1,12 @@
 // Stable DEVICE_TYPES translations. Internal type IDs remain in connection-model.js.
+const antennaDistributionBlurb = "アンテナA・Bの信号を複数の受信機と次段の分配器に分けて送ります。";
 export const gearTypeJa = {
+  antenna: { blurb: "無線マイクのRF信号を受けます。同軸ケーブルをアンテナ分配器のANT AまたはANT Bに接続します。" },
+  pas225: { blurb: antennaDistributionBlurb },
+  pas225x: { blurb: antennaDistributionBlurb },
+  ptu6000: { blurb: "ワイヤレス8チャンネル。各チャンネルのXLR AF OUTからペアリング済みのマイクの音を出力し、VOLで出力レベルを調整します。" },
+  ptu7000: { blurb: "ワイヤレス4チャンネル。各チャンネルのXLR AF OUTからペアリング済みのマイクの音を出力し、VOLで出力レベルを調整します。" },
+  "iem-tx": { blurb: "イヤーモニターの送信機です。接続先の出力信号を送ります。この構成ではボディパックを装着している人がいないため、使用していません。" },
   "dynamic-mic": { name: "ダイナミックマイク", blurb: "頑丈で電源不要。マイクレベルです。" },
   "condenser-mic": { name: "コンデンサーマイク", blurb: "感度が高く、ミキサーから+48 Vファンタム電源が必要です。" },
   "di-box": { name: "DIボックス", blurb: "楽器レベル信号をバランス・マイクレベル信号へ変換します。" },

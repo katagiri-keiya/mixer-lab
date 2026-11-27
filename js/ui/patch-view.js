@@ -304,7 +304,7 @@ export class PatchView {
         </div>
         <div class="tags">${tags}</div>
         ${rf ? rfLine(rig, d) : this.portButton(ref, "out")}
-        ${sourceGearHtml(d, src, rig, !!handheld || ((cme || mariachi) && rf), mariachi)}
+        ${sourceGearHtml(d, src, rig)}
         ${isRecordingMac(d) ? this.logicHtml(mix) : ""}
         ${powerHtml(rig, d)}
         ${msgs.map((m) => {
@@ -312,6 +312,7 @@ export class PatchView {
           const text = rack ? translate("ui.cmeRackOff", m, { receiver: rack[1], power: rack[2] })
             : src.id === "ky-mic2" && m === 'Mic level on the 1/4" line input skips the mic preamp\'s range — very quiet. Use XLR into the mic input.'
               ? translate("ui.karaokeMicInLine", m)
+            : rf && /^(No sound|No power): /.test(m) ? rfPowerWarning(m)
               : advanced ? cmeAdvancedWarning(m) : connectionMessage(m);
           return `<p class="port-msg">${esc(text)}</p>`;
         }).join("")}
@@ -696,19 +697,62 @@ function powerHtml(rig, d) {
   const st = powerState(rig, d);
   const name = esc(displayDevice(d.label || DEVICE_TYPES[d.type].name));
   const sel = (key, label, opts) => `<label>${esc(label)} <select data-device="${esc(d.id)}" data-device-key="${key}" aria-label="${name}: ${esc(label)}">${opts.map((t, i) => `<option value="${i}"${(d[key] ?? 1) === i ? " selected" : ""}>${t}</option>`).join("")}</select></label>`;
+  const type = DEVICE_TYPES[d.type];
+  const wirelessRackPower = type.receiver || type.rfSplit || d.type === "rack-furman";
+  const plug = spec.gear ? `${spec.gear}: power cable`
+    : wirelessRackPower && spec.plug === "power cord" ? translate("ui.rfPowerCord", "Power cord")
+      : spec.plug ? spec.plug[0].toUpperCase() + spec.plug.slice(1) : gearText("powerCable");
+  const reason = powerWhy(rig, d);
   return `<div class="dev-settings power-row pwr-${st}" data-device-card="${esc(d.id)}">
-    ${sel("plugged", spec.gear ? `${spec.gear}: power cable` : spec.plug ? spec.plug[0].toUpperCase() + spec.plug.slice(1) : gearText("powerCable"), [translate("ui.unplugged", "Unplugged"), gearText("pluggedIn")])}
-    ${spec.noSwitch ? "" : sel("on", gearText("powerSwitch"), [gearText("powerOff"), "On"])}
-    <p class="power-state"><span class="pwr-dot" aria-hidden="true"></span>${st === "on" ? gearText("powerOn") : esc(powerWhy(rig, d))}</p>
+    ${sel("plugged", plug, [translate("ui.unplugged", "Unplugged"), gearText("pluggedIn")])}
+    ${spec.noSwitch ? "" : sel("on", gearText("powerSwitch"), [gearText("powerOff"), wirelessRackPower ? translate("ui.rfPowerOnOption", "On") : "On"])}
+    <p class="power-state"><span class="pwr-dot" aria-hidden="true"></span>${st === "on" ? gearText("powerOn") : esc(wirelessRackPower ? localizedPowerReason(reason) : reason)}</p>
   </div>`;
+}
+
+export function localizedPowerReason(reason) {
+  const unplugged = /^(.+): its (.+) isn't plugged in\.$/.exec(reason);
+  if (unplugged) return translate("ui.stagePowerUnplugged", reason, {
+    name: unplugged[1], plug: ["power cable", "power cord"].includes(unplugged[2])
+      ? translate("ui.stagePowerCableName", unplugged[2]) : unplugged[2],
+  });
+  const rack = /^(.+) is switched on, but (.+) is off\.$/.exec(reason);
+  if (rack) return translate("ui.stageRackPowerOff", reason, {
+    name: rack[1], rack: rack[2] === "its rack's power" ? translate("ui.stageRackPowerName", "its rack's power") : rack[2],
+  });
+  const off = /^(.+) is switched off\.$/.exec(reason);
+  return off ? translate("ui.rfPowerSwitchedOff", reason, { device: off[1] }) : reason;
+}
+
+function rfPowerWarning(message) {
+  if (language() !== "ja") return message;
+  const separator = message.indexOf(": ");
+  const prefix = message.slice(0, separator);
+  const reason = message.slice(separator + 2);
+  const status = prefix === "No sound" ? translate("ui.rfPowerWarningNoAudio", prefix) : translate("ui.rfPowerWarningNoPower", prefix);
+  return translate("ui.rfPowerWarning", message, { status, reason: localizedPowerReason(reason) });
+}
+
+function pairedReceiver(rig, sourceId) {
+  const device = rig.devices.find((x) => DEVICE_TYPES[x.type].receiver && Object.values(x.pairs || {}).includes(sourceId));
+  const port = device && Object.keys(device.pairs).find((key) => device.pairs[key] === sourceId);
+  return port ? { device, port, channel: Number(port.slice(3)) } : null;
 }
 
 // A radio handheld's way in: no cable, its receiver channel at FOH and the input that one plugs into.
 function rfLine(rig, d) {
-  const rx = rig.devices.find((x) => DEVICE_TYPES[x.type].receiver && Object.values(x.pairs || {}).includes(d.sourceId));
-  const port = rx && Object.keys(rx.pairs).find((k) => rx.pairs[k] === d.sourceId);
-  const into = port && rig.cables.find((c) => c.from === `${rx.id}/${port}`);
-  return `<p class="source-note">No cable: by radio to ${rx ? `${esc(rx.label)}, CH ${port.slice(3)}` : "no receiver"}${into ? `, whose AF OUT is in ${esc(into.to.replace("mixer/", "the console's ").replace(/ch(\d+)-mic/, "LOCAL $1"))}` : ""}.</p>`;
+  const pair = pairedReceiver(rig, d.sourceId);
+  if (!pair) return `<p class="source-note">${esc(translate("ui.rfPathUnpaired", "No cable: by radio to no receiver."))}</p>`;
+  const { device, port, channel } = pair;
+  const into = rig.cables.find((c) => c.from === `${device.id}/${port}`);
+  if (language() === "en") {
+    const route = into ? `, whose AF OUT is in ${into.to.replace("mixer/", "the console's ").replace(/ch(\d+)-mic/, "LOCAL $1")}` : "";
+    return `<p class="source-note">${esc(`No cable: by radio to ${device.label}, CH ${channel}${route}.`)}</p>`;
+  }
+  const route = translate("ui.rfPath", "", { receiver: device.label || DEVICE_TYPES[device.type].name, channel });
+  const local = into?.to.match(/^mixer\/ch(\d+)-mic$/);
+  const audio = into ? translate("ui.rfPathAudioOut", "", { port: local ? `LOCAL ${local[1]}` : portLabel(rig, into.to) }) : "";
+  return `<p class="source-note">${esc(route + audio)}</p>`;
 }
 
 // A receiver's channels: which mic each is paired with, and what its display shows.
@@ -717,36 +761,43 @@ function receiverHtml(rig, d, sources) {
     const ch = receiverChannel(rig, d, i + 1);
     const tx = ch.sourceId && rig.devices.find((x) => x.sourceId === ch.sourceId);
     const txOn = !!tx && (tx.mic || 0) !== 2 && !tx.dead;
-    const status = !ch.on ? "off" : !(ch.a || ch.b) ? "no antenna" : !ch.sourceId ? "no mic paired" : tx?.dead ? "no signal (the mic is dead)" : !txOn ? "no signal (the mic is off)" : tx.mic ? "signal ✓ · audio — (muted at the mic)" : "signal ✓ · audio ✓";
-    const one = ch.on && ch.sourceId && ch.a !== ch.b ? " · one antenna only" : "";
-    return `<li><strong>CH ${i + 1}</strong> ${esc(ch.sourceId ? sources[ch.sourceId]?.name || ch.sourceId : "—")} · ${status}${one}</li>`;
+    const status = !ch.on ? translate("ui.rfReceiverOff", "off") : !(ch.a || ch.b) ? translate("ui.rfNoAntenna", "no antenna")
+      : !ch.sourceId ? translate("ui.rfNoPairing", "no mic paired") : tx?.dead ? translate("ui.rfDead", "no signal (the mic is dead)")
+        : !txOn ? translate("ui.rfMicOff", "no signal (the mic is off)") : tx.mic ? translate("ui.rfMuted", "signal ✓ · audio — (muted at the mic)")
+          : translate("ui.rfSignal", "signal ✓ · audio ✓");
+    const one = ch.on && ch.sourceId && ch.a !== ch.b ? translate("ui.rfAntennaOne", " · one antenna only", { side: ch.a ? "A" : "B" }) : "";
+    const source = sources[ch.sourceId];
+    return `<li><strong>CH ${i + 1}</strong> ${esc(sourceText(source, "name", source?.name || ch.sourceId || "—"))} · ${esc(status + one)}</li>`;
   });
-  return `<ul class="rx-status">${rows.join("")}</ul>`;
+  return `<ul class="rx-status" aria-label="${esc(translate("ui.rfStatusGroup", "{name}: receiver status", { name: d.label || DEVICE_TYPES[d.type].name }))}">${rows.join("")}</ul>`;
 }
 
 // What a source's own gear lets you do: a wireless handheld's one button, or
 // the volume knob on the amp or instrument in front of its mic or DI.
-function sourceGearHtml(d, src, rig, localizeHandheld, mariachi) {
+function sourceGearHtml(d, src, rig) {
   if (d.type === "wireless-handheld" || d.type === "rf-handheld") {
     // A dead handheld (`dead`: it won't switch on, whatever its button does): set it aside.
     if (d.dead) {
       const english = "It won't switch on, with a fresh battery or without. Set it aside, tag it, and give the player a spare.";
       return `<div class="dev-settings mic-button" data-device-card="${esc(d.id)}">
-      <p class="mic-display"><strong>Mic: DEAD</strong> · Receiver: no signal</p>
-      <p class="source-note">${esc(mariachi ? translate("ui.mariachiDeadMic", english) : english)}</p>
+      <p class="mic-display"><strong>${esc(translate("ui.rfMicDisplay", "Mic: {state}", { state: translate("ui.rfMicDeadDisplay", "DEAD") }))}</strong> · ${esc(translate("ui.rfReceiverDisplay", "Receiver: {status}", { status: translate("ui.rfReceiverNoSignal", "no signal") }))}</p>
+      <p class="source-note">${esc(translate("ui.mariachiDeadMic", english))}</p>
     </div>`;
     }
     const st = d.mic || 0;
     // A radio handheld's receiver channel says what it really gets: power, antennas, then the mic.
-    const rxDev = d.type === "rf-handheld" && rig?.devices.find((x) => DEVICE_TYPES[x.type].receiver && Object.values(x.pairs || {}).includes(d.sourceId));
-    const port = rxDev && Object.keys(rxDev.pairs).find((k) => rxDev.pairs[k] === d.sourceId);
-    const ch = port && receiverChannel(rig, rxDev, Number(port.slice(3)));
-    const rx = ch && !ch.on ? "Receiver: off (no power)" : ch && !(ch.a || ch.b) ? "Receiver: no antenna signal" : ["Receiver: signal ✓ · audio ✓", "Receiver: signal ✓ · audio —", "Receiver: no signal"][st];
-    const instruction = (key, english) => localizeHandheld ? translate(`ui.${key}`, english) : english;
+    const pair = d.type === "rf-handheld" ? pairedReceiver(rig, d.sourceId) : null;
+    const ch = pair && receiverChannel(rig, pair.device, pair.channel);
+    const status = d.type === "rf-handheld" && !pair && language() === "ja" ? translate("ui.rfNoPairing", "no mic paired")
+      : ch && !ch.on ? translate("ui.rfReceiverPowerOff", "off (no power)")
+        : ch && !(ch.a || ch.b) ? translate("ui.rfNoAntenna", "no antenna signal")
+          : st === 0 ? translate("ui.rfSignal", "signal ✓ · audio ✓")
+            : st === 1 ? translate("ui.rfMicMutedDisplay", "signal ✓ · audio —") : translate("ui.rfReceiverNoSignal", "no signal");
+    const rx = translate("ui.rfReceiverDisplay", "Receiver: {status}", { status });
     return `<div class="dev-settings mic-button" data-device-card="${esc(d.id)}">
-      <p class="mic-display"><strong>Mic: ${MIC_STATES[st]}</strong> · ${rx}</p>
-      <div class="mic-press"><button type="button" class="btn" data-device="${esc(d.id)}" data-mic-press="tap">${instruction("vocalJazzMicTap", "Tap the button")}</button><button type="button" class="btn" data-device="${esc(d.id)}" data-mic-press="hold">${instruction("vocalJazzMicHold", "Press and hold")}</button></div>
-      <p class="source-note">${instruction("vocalJazzMicUse", "One button: a tap mutes or unmutes it, press and hold switches it on or off.")}</p>
+      <p class="mic-display"><strong>${esc(translate("ui.rfMicDisplay", "Mic: {state}", { state: MIC_STATES[st] }))}</strong> · ${esc(rx)}</p>
+      <div class="mic-press"><button type="button" class="btn" aria-label="${esc(translate("ui.rfMuteAction", "Tap the button"))}" data-device="${esc(d.id)}" data-mic-press="tap">${esc(translate("ui.vocalJazzMicTap", "Tap the button"))}</button><button type="button" class="btn" aria-label="${esc(translate("ui.rfPowerAction", "Press and hold"))}" data-device="${esc(d.id)}" data-mic-press="hold">${esc(translate("ui.vocalJazzMicHold", "Press and hold"))}</button></div>
+      <p class="source-note">${esc(translate("ui.vocalJazzMicUse", "One button: a tap mutes or unmutes it, press and hold switches it on or off."))}</p>
     </div>`;
   }
   const k = src.volumeKnob;

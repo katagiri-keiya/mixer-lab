@@ -21,6 +21,9 @@ export const stageGearEn = {
 };
 
 export const stageGearJa = {
+  "BNC (to the antenna distribution)": "BNC（アンテナ分配器へ）",
+  "ANT A input": "ANT A入力",
+  "ANT B input": "ANT B入力",
   '1/4" speaker cable': '標準フォーン端子のスピーカーケーブル',
   'Heavy, unshielded. Same plug as a guitar cable — different job.': '太い非シールドケーブル。ギター用ケーブルと同じ形状のプラグですが、用途は異なります。',
   'RCA cable': 'RCAケーブル',

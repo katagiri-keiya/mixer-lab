@@ -11,7 +11,7 @@
 import { CABLES, DEVICE_TYPES, JACKS, SIGNAL_LEVELS, cableAt, getPort, isMixer, mixerOf, orient, powerSpec, powerState, powerWhy } from "../connection-model.js";
 import { deviceIconName, icon, jackIconName } from "./icons.js";
 import { JACK, layoutStage } from "./stage-layout.js";
-import { cableHue, connectionReason, portLabel } from "./patch-view.js";
+import { cableHue, connectionReason, localizedPowerReason, portLabel } from "./patch-view.js";
 import { figureSvg } from "./listen-bar.js";
 import { listenGroupOf } from "../mixer-state.js";
 import { sourceName } from "../names.js";
@@ -224,7 +224,7 @@ export class StageView {
     // A snake's multicore: one thick jacket from the stage box to its fan-out at FOH.
     // A sub snake's tails: thin cables off the end of its multicore, each ending in a plug.
     for (const m of L.links || []) {
-      if (m.kind === "rf") cables.push(`<g class="cable cable-radio fixed"><title>Radio: a wireless handheld reaches the antennas at FOH, no cable</title><path class="cable-core" d="${cablePath(m.a, m.b)}"/></g>`);
+      if (m.kind === "rf") cables.push(`<g class="cable cable-radio fixed"><title>${esc(translate("ui.rfStagePath", "Radio: a wireless handheld reaches the antennas at FOH, no cable"))}</title><path class="cable-core" d="${cablePath(m.a, m.b)}"/></g>`);
       else if (m.kind === "tail") cables.push(`<g class="cable cable-tail fixed"><path class="cable-shadow" d="${cablePath(m.a, m.b)}"/><path class="cable-core" d="${cablePath(m.a, m.b)}"/></g>`);
       else cables.push(`<g class="cable cable-multicore fixed"><title>${esc(m.title ? translate("ui.stageSubsnakeMulticore", m.title) : translate("ui.stageMulticore", "Multicore: every snake channel and return in one cable, stage ↔ FOH"))}</title><path class="cable-shadow" d="${cablePath(m.a, m.b)}"/><path class="cable-core" d="${cablePath(m.a, m.b)}"/></g>`);
     }
@@ -429,7 +429,7 @@ export class StageView {
     const w = spec.noSwitch ? 26 : 50;
     const x = b.x + b.w - w - 14;
     const y = b.y - 10;
-    const why = stagePowerReason(st, powerWhy(rig, d));
+    const why = st === "on" ? translate("ui.stagePowerOn", "Power: on.") : localizedPowerReason(powerWhy(rig, d));
     const plugLabel = translate(plugged ? "ui.stagePowerPlugIn" : "ui.stagePowerPlugOut",
       plugged ? "{name}: {plug} plugged in. Tap to unplug." : "{name}: {plug} unplugged. Tap to plug it in.", { name, plug: plugName }) + ` ${why}`;
     const swLabel = translate(on ? "ui.stagePowerSwitchOn" : "ui.stagePowerSwitchOff",
@@ -584,20 +584,6 @@ export class StageView {
       from: portLabel(this.store.state.rig, from), to: portLabel(this.store.state.rig, into),
     }), "ok");
   }
-}
-
-function stagePowerReason(state, reason) {
-  if (state === "on") return translate("ui.stagePowerOn", "Power: on.");
-  const unplugged = /^(.+): its (.+) isn't plugged in\.$/.exec(reason);
-  if (unplugged) return translate("ui.stagePowerUnplugged", reason, {
-    name: unplugged[1], plug: unplugged[2] === "power cable" ? translate("ui.stagePowerCableName", "power cable") : unplugged[2],
-  });
-  const rack = /^(.+) is switched on, but (.+) is off\.$/.exec(reason);
-  if (rack) return translate("ui.stageRackPowerOff", reason, {
-    name: rack[1], rack: rack[2] === "its rack's power" ? translate("ui.stageRackPowerName", "its rack's power") : rack[2],
-  });
-  const off = /^(.+) is switched off\.$/.exec(reason);
-  return off ? translate("ui.vjrAmpOff", reason, { device: off[1] }) : reason;
 }
 
 const clip = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
