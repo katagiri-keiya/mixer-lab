@@ -702,24 +702,29 @@ function powerHtml(rig, d) {
   const st = powerState(rig, d);
   const name = esc(displayDevice(d.label || DEVICE_TYPES[d.type].name));
   const sel = (key, label, opts) => `<label>${esc(label)} <select data-device="${esc(d.id)}" data-device-key="${key}" aria-label="${name}: ${esc(label)}">${opts.map((t, i) => `<option value="${i}"${(d[key] ?? 1) === i ? " selected" : ""}>${t}</option>`).join("")}</select></label>`;
-  const type = DEVICE_TYPES[d.type];
-  const wirelessRackPower = type.receiver || type.rfSplit || d.type === "rack-furman";
-  const plug = spec.gear ? `${spec.gear}: power cable`
-    : wirelessRackPower && spec.plug === "power cord" ? translate("ui.rfPowerCord", "Power cord")
-      : spec.plug ? spec.plug[0].toUpperCase() + spec.plug.slice(1) : gearText("powerCable");
+  const plug = spec.gear ? translate("ui.stageGearPowerCable", "{gear}: power cable", { gear: spec.gear })
+    : spec.plug ? localizedPowerPlug(spec.plug, spec.plug[0].toUpperCase() + spec.plug.slice(1)) : gearText("powerCable");
   const reason = powerWhy(rig, d);
   return `<div class="dev-settings power-row pwr-${st}" data-device-card="${esc(d.id)}">
     ${sel("plugged", plug, [translate("ui.unplugged", "Unplugged"), gearText("pluggedIn")])}
-    ${spec.noSwitch ? "" : sel("on", gearText("powerSwitch"), [gearText("powerOff"), wirelessRackPower ? translate("ui.rfPowerOnOption", "On") : "On"])}
-    <p class="power-state"><span class="pwr-dot" aria-hidden="true"></span>${st === "on" ? gearText("powerOn") : esc(wirelessRackPower ? localizedPowerReason(reason) : reason)}</p>
+    ${spec.noSwitch ? "" : sel("on", gearText("powerSwitch"), [gearText("powerOff"), translate("ui.rfPowerOnOption", "On")])}
+    <p class="power-state"><span class="pwr-dot" aria-hidden="true"></span>${st === "on" ? gearText("powerOn") : esc(localizedPowerReason(reason))}</p>
   </div>`;
+}
+
+export function localizedPowerPlug(plug, fallback = plug) {
+  if (language() !== "ja") return fallback;
+  if (plug === "IEC power cable") return gearText("powerCable");
+  if (plug === "power cord") return translate("ui.rfPowerCord", fallback);
+  if (plug === "power cable") return translate("ui.stagePowerCableName", fallback);
+  return fallback;
 }
 
 export function localizedPowerReason(reason) {
   const unplugged = /^(.+): its (.+) isn't plugged in\.$/.exec(reason);
   if (unplugged) return translate("ui.stagePowerUnplugged", reason, {
-    name: unplugged[1], plug: ["power cable", "power cord"].includes(unplugged[2])
-      ? translate("ui.stagePowerCableName", unplugged[2]) : unplugged[2],
+    name: unplugged[1], plug: unplugged[2] === "power cord"
+      ? translate("ui.stagePowerCableName", unplugged[2]) : localizedPowerPlug(unplugged[2]),
   });
   const rack = /^(.+) is switched on, but (.+) is off\.$/.exec(reason);
   if (rack) return translate("ui.stageRackPowerOff", reason, {

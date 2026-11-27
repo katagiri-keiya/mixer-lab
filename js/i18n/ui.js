@@ -894,6 +894,8 @@ Object.assign(uiJa, {
 });
 
 Object.assign(uiJa, {
+  l20HighShelf: "HIGH（10 kHzの高域シェルビング）",
+  l20LowShelf: "LOW（100 Hzの低域シェルビング）",
   fineReset: "リセット",
   fineDone: "完了",
   fineDecrease: "値を下げる",

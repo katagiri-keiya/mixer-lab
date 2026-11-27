@@ -11,7 +11,7 @@
 import { CABLES, DEVICE_TYPES, JACKS, SIGNAL_LEVELS, cableAt, getPort, isMixer, mixerOf, orient, powerSpec, powerState, powerWhy } from "../connection-model.js";
 import { deviceIconName, icon, jackIconName } from "./icons.js";
 import { JACK, layoutStage } from "./stage-layout.js";
-import { cableHue, connectionReason, localizedPowerReason, portLabel } from "./patch-view.js";
+import { cableHue, connectionReason, localizedPowerPlug, localizedPowerReason, portLabel } from "./patch-view.js";
 import { figureSvg } from "./listen-bar.js";
 import { listenGroupOf } from "../mixer-state.js";
 import { sourceName } from "../names.js";
@@ -411,7 +411,7 @@ export class StageView {
         const wide = st.text.match(/[\u3000-\u9fff\uff00-\uffef]/gu)?.length ?? 0;
         parts.push(`<g class="pill pill-${st.tone}" transform="translate(${tx} ${b.y + 44})"><rect width="${8 + st.text.length * 6.2 + wide * 4}" height="16" rx="8"/><text x="6" y="11.5">${esc(st.text)}</text></g>`);
       }
-      if (type.dante) parts.push(`<text class="box-sub" x="${tx}" y="${b.y + b.h - 10}">Tracks go out over Dante</text>`);
+      if (type.dante) parts.push(`<text class="box-sub" x="${tx}" y="${b.y + b.h - 10}">${esc(translate("ui.dawMultitrack", "Tracks go out over Dante"))}</text>`);
     }
     const pst = b.id === d.id ? powerState(rig, d) : null;
     return `<g class="sbox kind-${b.kind} ${st ? `tone-${st.tone}` : ""}${pst && pst !== "on" ? " dark" : ""}" data-box="${esc(b.id)}" tabindex="0" role="button" aria-label="${esc(translate("ui.stageShowDetails", "{name}: show details", { name: label }))}">${parts.join("")}</g>`;
@@ -423,7 +423,7 @@ export class StageView {
   powerTab(b, d, st, rig) {
     const spec = powerSpec(d);
     const name = d.label || DEVICE_TYPES[d.type].name;
-    const plugName = spec.gear ? translate("ui.stageGearPowerCable", "{gear}'s power cable", { gear: spec.gear }) : spec.plug || translate("ui.stagePowerCableName", "power cable");
+    const plugName = spec.gear ? translate("ui.stageGearPowerCable", "{gear}'s power cable", { gear: spec.gear }) : localizedPowerPlug(spec.plug || "power cable");
     const plugged = (d.plugged ?? 1) === 1;
     const on = (d.on ?? 1) === 1;
     const w = spec.noSwitch ? 26 : 50;
