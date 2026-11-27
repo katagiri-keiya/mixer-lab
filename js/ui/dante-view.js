@@ -85,25 +85,7 @@ export class DanteView {
   }
 
   sync() {
-    if (!this.el.open) return;
-    const scroll = (node) => node && [node.scrollLeft, node.scrollTop];
-    const selectors = [".dante-body", ".dc-wrap"];
-    const dialogScroll = scroll(this.el);
-    const positions = selectors.map((selector) => scroll(this.el.querySelector(selector)));
-    const active = document.activeElement;
-    const data = this.el.contains(active) ? Object.entries(active.dataset) : [];
-    this.render();
-    if (data.length) {
-      const next = [...this.el.querySelectorAll("[data-dante], [data-daw-out]")].find((node) =>
-        node.tagName === active.tagName && node.getAttribute("role") === active.getAttribute("role") &&
-        Object.keys(node.dataset).length === data.length && data.every(([key, value]) => node.dataset[key] === value));
-      next?.focus({ preventScroll: true });
-    }
-    [this.el.scrollLeft, this.el.scrollTop] = dialogScroll;
-    selectors.forEach((selector, i) => {
-      const node = this.el.querySelector(selector);
-      if (node && positions[i]) [node.scrollLeft, node.scrollTop] = positions[i];
-    });
+    syncDanteDialog(this.el, () => this.render());
   }
 
   render() {
@@ -118,7 +100,7 @@ export class DanteView {
     this.el.innerHTML = `
       <div class="dialog-body dante-body">
         <div class="dante-head">
-          <h2 id="dante-title">Laptop · ${title}</h2>
+          <h2 id="dante-title">${esc(translate("ui.danteLaptopTitle", "Laptop · {title}", { title }))}</h2>
           <button type="button" class="chip" data-dante="language" aria-label="${language() === "ja" ? "Switch to English" : "日本語に切り替え"}" title="${language() === "ja" ? "Switch to English" : "日本語に切り替え"}">${language() === "ja" ? "日本語" : "English"}</button>
           <button type="button" class="btn" data-dante="close" aria-label="${esc(translate("ui.danteClose", "Close"))}">${esc(translate("ui.danteClose", "Close"))}</button>
         </div>
@@ -149,7 +131,7 @@ export class DanteView {
     return `
       <p class="dante-note">${esc(translate("ui.danteDvsNote", "The driver that puts the laptop on the Dante network. Check it first: while it's stopped, the DAW has nowhere to send its outputs and Dante Controller shows no transmitter for this laptop."))}</p>
       <p class="dvs-status"><span class="status-pill status-${on ? "ok" : "warn"}">${on ? translate("ui.danteRunning", "● Running") : translate("ui.danteDvsOff", "○ Stopped")}</span>
-        <button type="button" class="btn" data-dante="dvs" aria-label="${esc(on ? translate("ui.danteStopAria", "Stop") : translate("ui.danteStartAria", "Start"))}">${on ? "Stop" : "Start"}</button></p>`;
+        <button type="button" class="btn" data-dante="dvs" aria-label="${esc(on ? translate("ui.danteStopAria", "Stop") : translate("ui.danteStartAria", "Start"))}">${on ? translate("ui.danteStop", "Stop") : translate("ui.danteStart", "Start")}</button></p>`;
   }
 
   controllerHtml(mixer) {
@@ -168,18 +150,54 @@ export class DanteView {
       const m = first + r;
       const cells = Array.from({ length: DANTE.dvsChannels }, (_, k) => {
         const on = mixer.danteRx[m] === k + 1;
-        return `<td><button type="button" class="dc-cell ${on ? "on" : ""}" data-dante="sub" data-rx="${m}" data-tx="${k + 1}" aria-pressed="${on}" aria-label="${esc(on ? translate("ui.danteRxOn", "CL3 RX {rx} subscribed to DVS {tx}", { rx: m + 1, tx: k + 1 }) : translate("ui.danteRxOff", "CL3 RX {rx} subscribe to DVS {tx}", { rx: m + 1, tx: k + 1 }))}">${on ? "✓" : ""}</button></td>`;
+        const label = danteSubscriptionLabel(on, "CL3", m + 1, language() === "ja" ? "DVS TX" : "DVS", k + 1);
+        return `<td><button type="button" class="dc-cell ${on ? "on" : ""}" data-dante="sub" data-rx="${m}" data-tx="${k + 1}" aria-pressed="${on}" aria-label="${esc(label)}">${on ? "✓" : ""}</button></td>`;
       }).join("");
       return `<tr><th scope="row" class="dc-rx">${String(m + 1).padStart(2, "0")}</th>${cells}</tr>`;
     }).join("");
     const pager = pages > 1 ? `<div class="dante-tabs">${Array.from({ length: pages }, (_, p) => `<button type="button" class="chip ${p === this.rxPage ? "active" : ""}" data-dante="page" data-page="${p}">RX ${p * RX_PAGE + 1}–${Math.min(rx, (p + 1) * RX_PAGE)}</button>`).join("")}</div>` : "";
     return `
       <p class="dante-note">${esc(translate("ui.danteControllerNote", "Transmitters across (the laptop's DVS channels, named by what the DAW sends there), receivers down (the CL3's Dante RX channels; RX n feeds channel n). Click a square to subscribe a receiver to a transmitter."))}</p>
-      <p class="dante-note"><button type="button" class="btn dc-device" data-dante="one-to-one" aria-label="${esc(translate("ui.danteOneToOneAria", "Laptop × CL3: Ctrl-click to route one to one"))}">⊞ Laptop × CL3</button>${esc(translate("ui.danteDeviceIntersection", " where the two devices meet. "))}${this.tip ? `<b>${esc(translate("ui.danteCtrlClick", "Ctrl-click it"))}</b>${esc(translate("ui.danteOneToOneTip", " (Cmd-click works here too) and Dante Controller routes one to one: TX 01 → RX 01, 02 → 02, … "))}<button type="button" class="btn" data-dante="one-to-one" data-direct="1">Route one to one</button>` : translate("ui.danteOneToOneNote", "Ctrl-click it to route every channel one to one.")}</p>
+      ${danteOneToOneHtml("dante", "Laptop × CL3", this.tip)}
       ${pager}
       <div class="dc-wrap"><table class="dc-grid">
         <thead><tr><th class="dc-corner">CL3 RX ↓ · DVS TX →</th>${head}</tr></thead>
         <tbody>${body}</tbody>
       </table></div>`;
   }
+}
+
+export function danteSubscriptionLabel(on, receiver, rx, transmitter, tx) {
+  return translate(on ? "ui.danteRxOn" : "ui.danteRxOff",
+    on ? "{receiver} RX {rx} subscribed to {transmitter} {tx}" : "{receiver} RX {rx} subscribe to {transmitter} {tx}",
+    { receiver, rx, transmitter, tx });
+}
+
+export function syncDanteDialog(dialog, render) {
+  if (!dialog.open) return;
+  const scroll = (node) => node && [node.scrollLeft, node.scrollTop];
+  const selectors = [".dante-body", ".dc-wrap"];
+  const dialogScroll = scroll(dialog);
+  const positions = selectors.map((selector) => scroll(dialog.querySelector(selector)));
+  const active = document.activeElement;
+  const data = dialog.contains(active) ? Object.entries(active.dataset) : [];
+  render();
+  if (data.length) {
+    const next = [...dialog.querySelectorAll("button, input, select")].find((node) =>
+      node.tagName === active.tagName && node.getAttribute("role") === active.getAttribute("role") &&
+      Object.keys(node.dataset).length === data.length && data.every(([key, value]) => node.dataset[key] === value));
+    next?.focus({ preventScroll: true });
+  }
+  [dialog.scrollLeft, dialog.scrollTop] = dialogScroll;
+  selectors.forEach((selector, i) => {
+    const node = dialog.querySelector(selector);
+    if (node && positions[i]) [node.scrollLeft, node.scrollTop] = positions[i];
+  });
+}
+
+export function danteOneToOneHtml(control, devices, tip) {
+  const label = translate("ui.danteOneToOneAria", "{devices}: Ctrl-click to route one to one", { devices });
+  return `<p class="dante-note"><button type="button" class="btn dc-device" data-${control}="one-to-one" aria-label="${esc(label)}">⊞ ${esc(devices)}</button>${esc(translate("ui.danteDeviceIntersection", " where the two devices meet. "))}${tip
+    ? `<b>${esc(translate("ui.danteCtrlClick", "Ctrl-click it"))}</b>${esc(translate("ui.danteOneToOneTip", " (Cmd-click works here too) and Dante Controller routes one to one: TX 01 → RX 01, 02 → 02, … "))}<button type="button" class="btn" data-${control}="one-to-one" data-direct="1">${esc(translate("ui.danteRouteOneToOne", "Route one to one"))}</button>`
+    : esc(translate("ui.danteOneToOneNote", "Ctrl-click it to route every channel one to one."))}</p>`;
 }

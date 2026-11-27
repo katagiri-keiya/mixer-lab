@@ -368,7 +368,7 @@ export class PatchView {
       ? translate("ui.vjrLogicSummary", english, { live, total: tracks.length, armed }) : english;
     return `<p class="source-note">${esc(summary)}</p>
       <div class="dante-buttons">
-        <button type="button" class="btn btn-start" data-open-dante="logic">Open Logic</button>
+        <button type="button" class="btn btn-start" data-open-dante="logic">${esc(translate("ui.danteOpenLogic", "Open Logic"))}</button>
         <button type="button" class="btn btn-start" data-open-dante="dvs">Dante Virtual Soundcard</button>
         <button type="button" class="btn btn-start" data-open-dante="controller">${esc(translate("ui.danteOpenController", "Open Dante Controller"))}</button>
       </div>`;

@@ -13,6 +13,8 @@
 
 import { LOGIC, cardSource, logicTracks, macOnCard, recordingMac } from "../recording.js";
 import { sourceShort } from "../names.js";
+import { language, t as translate } from "../i18n/index.js";
+import { danteOneToOneHtml, danteSubscriptionLabel, syncDanteDialog } from "./dante-view.js";
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const RX_PAGE = 16;
@@ -68,7 +70,7 @@ export class LogicView {
   }
 
   sync() {
-    if (this.el.open) this.render();
+    syncDanteDialog(this.el, () => this.render());
   }
 
   onClick(e) {
@@ -132,17 +134,20 @@ export class LogicView {
   render() {
     const mac = this.mac;
     if (!mac) {
-      this.el.innerHTML = `<div class="dialog-body"><p>No recording computer in this rig.</p><button type="button" class="btn" data-logic="close">Close</button></div>`;
+      this.el.innerHTML = `<div class="dialog-body"><p>${esc(translate("ui.danteNoRecordingComputer", "No recording computer in this rig."))}</p><button type="button" class="btn" data-logic="close">${esc(translate("ui.danteClose", "Close"))}</button></div>`;
       return;
     }
     const title = Object.fromEntries(TABS)[this.tab];
     const tab = (id, label) => `<button type="button" role="tab" class="chip ${this.tab === id ? "active" : ""}" aria-selected="${this.tab === id}" data-logic="tab" data-tab="${id}">${label}</button>`;
     const body = { logic: () => this.logicHtml(mac), audio: () => this.audioHtml(mac), dvs: () => this.dvsHtml(mac), controller: () => this.controllerHtml(mac) }[this.tab]();
+    const languageAction = language() === "ja" ? "Switch to English" : "日本語に切り替え";
+    const close = esc(translate("ui.danteClose", "Close"));
     this.el.innerHTML = `
       <div class="dialog-body dante-body">
         <div class="dante-head">
           <h2 id="logic-title">FOH Mac mini · ${esc(title)}</h2>
-          <button type="button" class="btn" data-logic="close" aria-label="Close">Close</button>
+          <button type="button" class="chip" data-language-toggle aria-label="${languageAction}" title="${languageAction}">${language() === "ja" ? "日本語" : "English"}</button>
+          <button type="button" class="btn" data-logic="close" aria-label="${close}">${close}</button>
         </div>
         <div class="dante-tabs" role="tablist">${TABS.map(([id, label]) => tab(id, label)).join("")}</div>
         ${body}
@@ -152,11 +157,14 @@ export class LogicView {
   logicHtml(mac) {
     const { SOURCES_BY_ID, STEMS } = this.manifest;
     const tracks = logicTracks(this.store.state, SOURCES_BY_ID, STEMS);
-    const warn = !macOnCard(this.store.state.rig, mac) ? "The Mac mini isn't cabled to the X32's X-DANTE card." : mac.dvs === 0 ? "Dante Virtual Soundcard is stopped." : mac.logicIn === 1 ? "Logic's input device is the SSL 2+, not Dante Virtual Soundcard." : "";
+    const warn = !macOnCard(this.store.state.rig, mac)
+      ? translate("ui.danteLogicNoCard", "The Mac mini isn't cabled to the X32's X-DANTE card.")
+      : mac.dvs === 0 ? danteTrackMessage("Dante Virtual Soundcard is stopped.")
+        : mac.logicIn === 1 ? translate("ui.danteLogicWrongInput", "Logic's input device is the SSL 2+, not Dante Virtual Soundcard.") : "";
     const rows = tracks
       .map((t) => {
         const meter = t.ok && t.arm ? Math.max(0, Math.min(100, ((t.peakDb + 60) / 60) * 100)) : 0;
-        const hears = t.ok ? `${esc(sourceShort(SOURCES_BY_ID[t.sourceId]) || t.sourceId)} · ${esc(t.jack)}` : esc(t.why);
+        const hears = t.ok ? `${esc(sourceShort(SOURCES_BY_ID[t.sourceId]) || t.sourceId)} · ${esc(t.jack)}` : esc(danteTrackMessage(t.why));
         const picker =
           this.picking === t.track
             ? `<tr class="logic-picker"><td colspan="6"><div class="logic-ins" role="group" aria-label="Audio ${t.track + 1} input">
@@ -184,24 +192,24 @@ export class LogicView {
   audioHtml(mac) {
     const opt = (v, label) => `<option value="${v}" ${(mac.logicIn || 0) === v ? "selected" : ""}>${label}</option>`;
     return `
-      <p class="dante-note">Logic → Settings → Audio → Devices. Logic records from one input device at a time. Set this first: until it's Dante Virtual Soundcard, the X32's 32 channels aren't there to pick from.</p>
-      <p><label>Input Device <select data-logic-device>${opt(0, "Dante Virtual Soundcard")}${opt(1, "SSL 2+")}</select></label></p>
-      <p class="dante-note">Output Device: SSL 2+ (your headphones plug in there).</p>`;
+      <p class="dante-note">${esc(translate("ui.danteLogicInputNote", "Logic → Settings → Audio → Devices. Logic records from one input device at a time. Set this first: until it's Dante Virtual Soundcard, the X32's 32 channels aren't there to pick from."))}</p>
+      <p><label>${esc(translate("ui.danteLogicInputDevice", "Input Device"))} <select data-logic-device>${opt(0, "Dante Virtual Soundcard")}${opt(1, "SSL 2+")}</select></label></p>
+      <p class="dante-note">${esc(translate("ui.danteLogicOutputDevice", "Output Device: SSL 2+ (your headphones plug in there)."))}</p>`;
   }
 
   dvsHtml(mac) {
     const on = mac.dvs !== 0;
     return `
-      <p class="dante-note">The driver that puts the Mac mini on the Dante network. While it's stopped, Dante Controller shows no Mac mini to route to, and Logic has no Dante inputs.</p>
-      <p class="dvs-status"><span class="status-pill status-${on ? "ok" : "warn"}">${on ? "● Running" : "○ Stopped"}</span>
-        <button type="button" class="btn" data-logic="dvs">${on ? "Stop" : "Start"}</button></p>`;
+      <p class="dante-note">${esc(translate("ui.danteMacDvsNote", "The driver that puts the Mac mini on the Dante network. While it's stopped, Dante Controller shows no Mac mini to route to, and Logic has no Dante inputs."))}</p>
+      <p class="dvs-status"><span class="status-pill status-${on ? "ok" : "warn"}">${on ? translate("ui.danteRunning", "● Running") : translate("ui.danteDvsOff", "○ Stopped")}</span>
+        <button type="button" class="btn" data-logic="dvs" aria-label="${esc(on ? translate("ui.danteStopAria", "Stop") : translate("ui.danteStartAria", "Start"))}">${on ? translate("ui.danteStop", "Stop") : translate("ui.danteStart", "Start")}</button></p>`;
   }
 
   controllerHtml(mac) {
     const rig = this.store.state.rig;
     if (mac.dvs === 0) {
-      return `<p class="dante-note">Receivers: the Mac mini isn't on the network. The X32 is here as a transmitter, but there's nothing to route it to.</p>
-        <p class="dante-note"><b>Is Dante Virtual Soundcard running?</b></p>`;
+      return `<p class="dante-note">${esc(translate("ui.danteNoMacReceiver", "Receivers: the Mac mini isn't on the network. The X32 is here as a transmitter, but there's nothing to route it to."))}</p>
+        <p class="dante-note"><b>${esc(translate("ui.danteCheckDvs", "Is Dante Virtual Soundcard running?"))}</b></p>`;
     }
     const txName = (k) => {
       const src = cardSource(rig, k);
@@ -214,18 +222,46 @@ export class LogicView {
       const m = first + r;
       const cells = Array.from({ length: LOGIC.inputs }, (_, k) => {
         const on = mac.macRx[m] === k + 1;
-        return `<td><button type="button" class="dc-cell ${on ? "on" : ""}" data-logic="sub" data-rx="${m}" data-tx="${k + 1}" aria-pressed="${on}" aria-label="Mac mini RX ${m + 1} ${on ? "subscribed to" : "subscribe to"} X32 TX ${k + 1}">${on ? "✓" : ""}</button></td>`;
+        const label = danteSubscriptionLabel(on, "Mac mini", m + 1, "X32 TX", k + 1);
+        return `<td><button type="button" class="dc-cell ${on ? "on" : ""}" data-logic="sub" data-rx="${m}" data-tx="${k + 1}" aria-pressed="${on}" aria-label="${esc(label)}">${on ? "✓" : ""}</button></td>`;
       }).join("");
       return `<tr><th scope="row" class="dc-rx">${String(m + 1).padStart(2, "0")}</th>${cells}</tr>`;
     }).join("");
     const pager = `<div class="dante-tabs">${Array.from({ length: pages }, (_, p) => `<button type="button" class="chip ${p === this.rxPage ? "active" : ""}" data-logic="page" data-page="${p}">RX ${p * RX_PAGE + 1}–${Math.min(LOGIC.inputs, (p + 1) * RX_PAGE)}</button>`).join("")}</div>`;
     return `
-      <p class="dante-note">Filtered to <b>x32</b> (transmitter, across: its card outputs, named by ROUTING → CARD: L = the X32's own inputs, A = the S32's) and <b>bh100</b> (receiver, down: MUS-BH100-MINI, the FOH Mac mini). Click a square to subscribe.</p>
-      <p class="dante-note"><button type="button" class="btn dc-device" data-logic="one-to-one" aria-label="X32 × MUS-BH100-MINI: Ctrl-click to route one to one">⊞ X32 × MUS-BH100-MINI</button> where the two devices meet. ${this.tip ? `<b>Ctrl-click it</b> (Cmd-click works here too) and Dante Controller routes one to one: TX 01 → RX 01, 02 → 02, … <button type="button" class="btn" data-logic="one-to-one" data-direct="1">Route one to one</button>` : "Ctrl-click it to route every channel one to one."}</p>
+      <p class="dante-note">${translate("ui.danteMacControllerNote", "Filtered to {x32} (transmitter, across: its card outputs, named by ROUTING → CARD: L = the X32's own inputs, A = the S32's) and {bh100} (receiver, down: MUS-BH100-MINI, the FOH Mac mini). Click a square to subscribe.", { x32: "<b>x32</b>", bh100: "<b>bh100</b>" })}</p>
+      ${danteOneToOneHtml("logic", "X32 × MUS-BH100-MINI", this.tip)}
       ${pager}
       <div class="dc-wrap"><table class="dc-grid">
         <thead><tr><th class="dc-corner">Mac RX ↓ · X32 TX →</th>${head}</tr></thead>
         <tbody>${body}</tbody>
       </table></div>`;
   }
+}
+
+export function danteTrackMessage(reason) {
+  if (language() !== "ja") return reason;
+  if (reason === "Dante Virtual Soundcard is stopped.") {
+    return `${translate("ui.danteStopped", reason.slice(0, -1))}。`;
+  }
+  if (reason === "Dante Virtual Soundcard is stopped") return translate("ui.danteStopped", reason);
+  if (reason === "No Cat5e from the X32's CARD (X-DANTE) to the Mac mini") return translate("ui.danteLogicNoCard", reason);
+  const ssl = "Logic's input device is the SSL 2+: ";
+  if (reason.startsWith(ssl)) {
+    const detail = reason.slice(ssl.length);
+    const key = detail === "it has only two inputs" ? "ui.danteLogicSslTwo" : "ui.danteLogicSslEmpty";
+    return translate("ui.danteLogicSslInput", reason, { detail: translate(key, detail) });
+  }
+  const rules = [
+    [/^Dante Controller: the Mac mini's RX (\d+) isn't subscribed to the X32$/, "ui.danteLogicRxUnsubscribed", "rx"],
+    [/^CARD output (\d+) carries a block that isn't an input$/, "ui.danteLogicCardNotInput", "tx"],
+    [/^No stage box for (.+)$/, "ui.danteLogicNoStageBox", "jack"],
+    [/^No AES50 link: (.+) never reaches the X32$/, "ui.danteLogicNoAes50", "jack"],
+    [/^Nothing is plugged into (.+)$/, "ui.danteLogicUnplugged", "jack"],
+  ];
+  for (const [pattern, key, param] of rules) {
+    const match = pattern.exec(reason);
+    if (match) return translate(key, reason, { [param]: match[1] });
+  }
+  return reason;
 }

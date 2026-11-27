@@ -289,6 +289,7 @@ function refreshLocalizedViews() {
   }
   patchView.syncLanguage();
   danteView.sync();
+  logicView.sync();
   if (recorderView.isOpen) recorderView.syncLanguage();
   listenBar.render();
   if (lastMix) listenBar.update(lastMix, { playing: engine.playing, ready, loadingText: loadingText(), buffering });
